@@ -1,0 +1,305 @@
+package com.jager.tvquiz;
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.Service;
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.PixelFormat;
+import android.os.Build;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Looper;
+import android.provider.Settings;
+import android.view.Gravity;
+import android.view.WindowManager;
+import android.widget.Toast;
+
+import java.util.List;
+
+/**
+ * 常驻前台服务：倒计时到点后直接由 WindowManager 添加 TYPE_APPLICATION_OVERLAY 全屏窗口。
+ * 关键：加窗口不是 startActivity，因此不受 Android 10+ 后台启动 Activity(BAL) 限制；
+ * 也不需要 HIDE_OVERLAY_WINDOWS 的对抗，因为这是正常可聚焦的顶层窗口而非浮层小窗。
+ */
+public class QuizOverlayService extends Service {
+
+    public static final String ACTION_START = "com.jager.tvquiz.START";
+    public static final String ACTION_STOP = "com.jager.tvquiz.STOP";
+    public static final String ACTION_QUIZ_NOW = "com.jager.tvquiz.QUIZ_NOW";
+    public static final String ACTION_RELOAD = "com.jager.tvquiz.RELOAD";
+    public static final String ACTION_SYNC = "com.jager.tvquiz.SYNC";
+    public static final String EXTRA_STOP_VERIFIED = "com.jager.tvquiz.STOP_VERIFIED";
+
+    private static final int NOTIF_ID = 1;
+    private static final String CHANNEL = "tvquiz_guard";
+
+    private static volatile boolean running = false;
+    private static volatile boolean quizShowing = false;
+    private static volatile int remainSec = 0;
+
+    public static boolean isRunning() { return running; }
+    public static boolean isQuizShowing() { return quizShowing; }
+    public static int remainSec() { return remainSec; }
+
+    /** 统一关闭入口：verified=true 表示已经过家长密码门禁。 */
+    public static void requestStop(Context c, boolean verified) {
+        Intent i = new Intent(c, QuizOverlayService.class);
+        i.setAction(ACTION_STOP);
+        i.putExtra(EXTRA_STOP_VERIFIED, verified);
+        try { c.startService(i); }
+        catch (Exception e) {
+            Toast.makeText(c, "关闭守护失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private WindowManager wm;
+    private OverlayQuizView quizView;
+    private QuizEngine engine;
+    private QuizEngine.Question current;
+    private SettingsStore st;
+    private int interval = 30;
+    private long nextSyncAt = 0L;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+
+    private final Runnable tick = new Runnable() {
+        @Override public void run() {
+            if (!running) return;
+            if (!quizShowing) {
+                remainSec--;
+                if (remainSec <= 0) showQuiz();
+            }
+            long now = System.currentTimeMillis();
+            if (now >= nextSyncAt && !st.bankUrl().isEmpty()) {
+                nextSyncAt = now + st.syncIntervalMs();
+                syncNow(false);
+            }
+            handler.postDelayed(this, 1000);
+        }
+    };
+
+    @Override public void onCreate() {
+        super.onCreate();
+        st = new SettingsStore(this);
+        wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+        quizView = new OverlayQuizView(this, new OverlayQuizView.Listener() {
+            @Override public void onAnswer(int idx) { answer(idx); }
+            @Override public void onContinue() { finishQuiz(); }
+        });
+    }
+
+    @Override public int onStartCommand(Intent intent, int flags, int startId) {
+        String action = intent == null ? ACTION_START : intent.getAction();
+        if (action == null) action = ACTION_START;
+
+        if (ACTION_STOP.equals(action)) {
+            boolean verified = intent != null
+                    && intent.getBooleanExtra(EXTRA_STOP_VERIFIED, false);
+            if (!GuardPolicy.allowStop(st.hasPin(), verified)) {
+                Toast.makeText(this, "已设置家长密码：请在 APP 内验证后才能关闭守护",
+                        Toast.LENGTH_LONG).show();
+                if (!running) {
+                    // This call may have come from startForegroundService(). Android 8+
+                    // kills a service that does not call startForeground() within 5s, so
+                    // satisfy the contract and immediately stop instead of leaving a FGS.
+                    try {
+                        startForeground(NOTIF_ID, buildNotification());
+                        stopForeground(true);
+                    } catch (Exception ignored) { }
+                    stopSelf();
+                    return START_NOT_STICKY;
+                }
+                return START_STICKY;
+            }
+            stopAll();
+            return START_NOT_STICKY;
+        }
+        if (!running) startGuard();
+        if (!running) return START_NOT_STICKY;
+
+        if (ACTION_QUIZ_NOW.equals(action)) {
+            showQuiz();
+        } else if (ACTION_RELOAD.equals(action)) {
+            reload(false);
+            if (!quizShowing) remainSec = Math.min(remainSec, interval);
+        } else if (ACTION_SYNC.equals(action)) {
+            syncNow(true);
+        }
+        return START_STICKY;
+    }
+
+    @Override public IBinder onBind(Intent i) { return null; }
+
+    @Override public void onDestroy() {
+        handler.removeCallbacks(tick);
+        hideQuiz();
+        running = false;
+        super.onDestroy();
+    }
+
+    private boolean canDraw() {
+        if (Build.VERSION.SDK_INT < 23) return true;
+        return Settings.canDrawOverlays(this);
+    }
+
+    private void startGuard() {
+        if (!canDraw()) {
+            Toast.makeText(this, "请先授予「显示在其他应用上层」权限", Toast.LENGTH_LONG).show();
+            st.guardEnabled(false);
+            stopSelf();
+            return;
+        }
+        try {
+            startForeground(NOTIF_ID, buildNotification());
+        } catch (Exception e) {
+            Toast.makeText(this, "前台服务启动失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
+            st.guardEnabled(false);
+            stopSelf();
+            return;
+        }
+        running = true;
+        st.guardEnabled(true);
+        reload(true);
+        remainSec = interval;
+        handler.removeCallbacks(tick);
+        handler.postDelayed(tick, 1000);
+        Toast.makeText(this, "答题守护已开启，切到其他应用也会按时弹题", Toast.LENGTH_SHORT).show();
+    }
+
+    private void stopAll() {
+        handler.removeCallbacks(tick);
+        hideQuiz();
+        running = false;
+        st.guardEnabled(false);
+        stopForeground(true);
+        stopSelf();
+        Toast.makeText(this, "答题守护已关闭", Toast.LENGTH_SHORT).show();
+    }
+
+    private Notification buildNotification() {
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            NotificationChannel ch = new NotificationChannel(CHANNEL,
+                    getString(R.string.guard_channel), NotificationManager.IMPORTANCE_LOW);
+            ch.setDescription(getString(R.string.guard_notification_text));
+            nm.createNotificationChannel(ch);
+        }
+        Notification.Builder b = Build.VERSION.SDK_INT >= 26
+                ? new Notification.Builder(this, CHANNEL)
+                : new Notification.Builder(this);
+        b.setSmallIcon(R.drawable.ic_stat_quiz)
+                .setContentTitle(getString(R.string.guard_notification_title))
+                .setContentText(getString(R.string.guard_notification_text))
+                .setOngoing(true);
+        return b.build();
+    }
+
+    private void reload(boolean first) {
+        if (first) BankRepository.installBuiltin(this, st);
+        interval = st.intervalSec();
+        engine = new QuizEngine(st.grade(), st.edition(),
+                st.weight(QuizEngine.MATH), st.weight(QuizEngine.CHINESE), st.weight(QuizEngine.ENGLISH));
+        engine.setAllSubjects(st.allSubjects());
+        QuizDb cached = QuizDb.peek();
+        if (cached != null) {
+            engine.setDb(cached);
+        } else {
+            // First launch copies a ~4.5 MB database: do it off the main thread.
+            // Until it is ready QuizEngine falls back to its parameter generator.
+            final Context app = getApplicationContext();
+            new Thread(new Runnable() {
+                @Override public void run() {
+                    final QuizDb opened = QuizDb.open(app);
+                    handler.post(new Runnable() {
+                        @Override public void run() {
+                            if (running && engine != null) engine.setDb(opened);
+                        }
+                    });
+                }
+            }, "pohw-db-open").start();
+        }
+        List<QuizEngine.Question> qs = BankRepository.load(this, st.grade(), st.edition());
+        engine.setBank(qs);
+        nextSyncAt = System.currentTimeMillis() + (first ? 5000L : st.syncIntervalMs());
+    }
+
+    private void syncNow(final boolean force) {
+        BankRepository.sync(getApplicationContext(), st, st.bankUrl(), force,
+                new BankRepository.Callback() {
+                    @Override public void onDone(BankRepository.SyncResult r) {
+                        if (running) reload(false);
+                    }
+                });
+    }
+
+    private void showQuiz() {
+        if (quizShowing) return;
+        if (!canDraw()) {
+            stopAll();
+            return;
+        }
+        if (engine == null) reload(false);
+        current = engine.next();
+        st.bumpQuestioned();
+        String meta = st.gradeLabel() + " · " + st.edition()
+                + " · 答对解锁 " + interval + " 秒";
+        quizView.bind(current, meta);
+        try {
+            wm.addView(quizView.view(), buildParams());
+            quizShowing = true;
+            quizView.focusFirst();
+        } catch (Exception e) {
+            // addView 已成功但 focusFirst 抛异常时，旧代码只把 quizShowing 置回 false，
+            // 已添加的全屏窗口再也不会被 remove —— 会永久盖住系统界面（含卸载确认框）。
+            quizShowing = false;
+            removeOverlayNow();
+            Toast.makeText(this, "无法显示答题遮罩：" + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private WindowManager.LayoutParams buildParams() {
+        int type = Build.VERSION.SDK_INT >= 26
+                ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                : WindowManager.LayoutParams.TYPE_PHONE;
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                type,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                        | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                        | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                        | WindowManager.LayoutParams.FLAG_DIM_BEHIND,
+                PixelFormat.TRANSLUCENT);
+        lp.gravity = Gravity.TOP | Gravity.LEFT;
+        lp.dimAmount = 0.88f;
+        return lp;
+    }
+
+    private void answer(int idx) {
+        if (!quizShowing || current == null) return;
+        if (idx == current.answerIndex) {
+            st.bumpCorrect();
+            quizView.correct("✓ 答对啦！继续观看 " + interval + " 秒", current.explain);
+        } else {
+            quizView.wrong(idx, "✗ 再想想，答对才能继续哦");
+        }
+    }
+
+    private void finishQuiz() {
+        hideQuiz();
+        remainSec = interval;
+    }
+
+    private void hideQuiz() {
+        // 不再只依赖 quizShowing 标志：标志异常时也兜底移除，避免残留窗口卡住卸载流程。
+        removeOverlayNow();
+        quizShowing = false;
+    }
+
+    /** 无条件尝试移除答题窗口；未 attach 时会抛异常，直接忽略即可。 */
+    private void removeOverlayNow() {
+        if (wm == null || quizView == null) return;
+        try { wm.removeViewImmediate(quizView.view()); } catch (Exception ignored) { }
+    }
+}

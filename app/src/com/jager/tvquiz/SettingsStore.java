@@ -1,0 +1,198 @@
+package com.jager.tvquiz;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.Locale;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+
+/** 家长设置、答题统计、题库状态与密码哈希的持久化。 */
+public final class SettingsStore implements PinGate.Store {
+
+    public static final String PREF = "tvquiz_v2";
+    public static final String[] EDITIONS = {"通用(课标)", "人教版", "部编版", "北师大版", "苏教版", "外研版", "译林版", "沪教版"};
+    public static final int MIN_GRADE = 1;
+    public static final int MAX_GRADE = 9;
+
+    public static final int[] INTERVALS = {15, 30, 60, 300, 600, 1200, 1800};
+    public static final String[] INTERVAL_LABELS = {"15 秒(演示)", "30 秒(演示)", "1 分钟", "5 分钟", "10 分钟", "20 分钟", "30 分钟"};
+    public static final int[] SYNC_HOURS = {1, 6, 12, 24};
+    public static final String[] SYNC_LABELS = {"每 1 小时", "每 6 小时", "每 12 小时", "每天"};
+
+    private final SharedPreferences sp;
+
+    public SettingsStore(Context c) {
+        sp = c.getSharedPreferences(PREF, Context.MODE_PRIVATE);
+    }
+
+    private static int clamp(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+    public int grade() { return clamp(sp.getInt("grade", 3), MIN_GRADE, MAX_GRADE); }
+    // key settings are written synchronously: apply() can be lost if the process is killed
+    public void grade(int v) {
+        sp.edit().putInt("grade", clamp(v, MIN_GRADE, MAX_GRADE)).commit();
+    }
+
+    /** unified grade label: 1-6 primary, 7-9 junior high. */
+    public String gradeLabel() {
+        int g = grade();
+        return g <= 6 ? ("小学 " + g + " 年级") : ("初中 " + (g - 6) + " 年级");
+    }
+
+    /** false = three core subjects (default); true = all subjects of that grade. */
+    public boolean allSubjects() { return sp.getBoolean("allSubjects", false); }
+    public void allSubjects(boolean v) {
+        sp.edit().putBoolean("allSubjects", v).commit();
+    }
+
+    public int editionIndex() { return clamp(sp.getInt("edition", 0), 0, EDITIONS.length - 1); }
+    public void editionIndex(int v) { sp.edit().putInt("edition", clamp(v, 0, EDITIONS.length - 1)).apply(); }
+    public String edition() { return EDITIONS[editionIndex()]; }
+
+    public int intervalSec() { return sp.getInt("interval", 30); }
+    public void intervalSec(int v) { sp.edit().putInt("interval", v).apply(); }
+    public int intervalIndex() {
+        for (int i = 0; i < INTERVALS.length; i++) if (INTERVALS[i] == intervalSec()) return i;
+        return 1;
+    }
+
+    public int syncIndex() { return clamp(sp.getInt("syncIdx", 1), 0, SYNC_HOURS.length - 1); }
+    public void syncIndex(int v) { sp.edit().putInt("syncIdx", clamp(v, 0, SYNC_HOURS.length - 1)).apply(); }
+    public long syncIntervalMs() { return SYNC_HOURS[syncIndex()] * 3600L * 1000L; }
+
+    public int weight(int subject) {
+        int def = subject == 0 ? 5 : (subject == 1 ? 3 : 2);
+        return clamp(sp.getInt("w" + subject, def), 0, 5);
+    }
+    public void weight(int subject, int v) { sp.edit().putInt("w" + subject, clamp(v, 0, 5)).apply(); }
+
+    public String bankUrl() { return sp.getString("bankUrl", ""); }
+    public void bankUrl(String v) { sp.edit().putString("bankUrl", v == null ? "" : v.trim()).apply(); }
+
+    public boolean guardEnabled() { return sp.getBoolean("guard", false); }
+    public void guardEnabled(boolean v) {
+        sp.edit().putBoolean("guard", v).commit();
+    }
+
+    public int questioned() { return sp.getInt("questioned", 0); }
+    public int correct() { return sp.getInt("correct", 0); }
+    public void addResult(boolean ok) {
+        sp.edit().putInt("questioned", questioned() + 1)
+                .putInt("correct", correct() + (ok ? 1 : 0)).apply();
+    }
+    /** 出题时计数；答对时单独累加正确数，答错不跳过因此不会重复出题。 */
+    public void bumpQuestioned() { sp.edit().putInt("questioned", questioned() + 1).apply(); }
+    public void bumpCorrect() { sp.edit().putInt("correct", correct() + 1).apply(); }
+    public void resetStats() { sp.edit().putInt("questioned", 0).putInt("correct", 0).apply(); }
+
+    @Override public boolean hasPin() {
+        String h = sp.getString("pinHash", "");
+        return h != null && !h.isEmpty();
+    }
+
+    @Override public boolean checkPin(String pin) {
+        String hash = sp.getString("pinHash", "");
+        String salt = sp.getString("pinSalt", "");
+        if (hash == null || hash.isEmpty() || pin == null) return false;
+        int iter = sp.getInt("pinIter", 0);
+        if (iter <= 0) {
+            // v4.x legacy format: SHA-256(salt:pin). Re-setting the PIN migrates it.
+            String calc = sha256Hex(salt + ":" + pin);
+            return !calc.isEmpty() && MessageDigest.isEqual(hash.getBytes(), calc.getBytes());
+        }
+        byte[] derived = derive(pin, unhex(salt), iter);
+        byte[] stored = unhex(hash);
+        return derived != null && stored != null
+                && MessageDigest.isEqual(stored, derived);
+    }
+
+    /**
+     * 同步落盘（commit）并回读校验。
+     * 老版本用 apply() 且不校验，进程被回收时存在「提示设置成功但密码没保存」的窗口。
+     */
+    @Override public boolean setPin(String pin) {
+        if (pin == null || pin.length() < 4) return false;
+        byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
+        byte[] derived = derive(pin, salt, PBKDF2_ITER);
+        if (derived == null) return false;
+        boolean ok = sp.edit().putString("pinSalt", hex(salt))
+                .putString("pinHash", hex(derived))
+                .putInt("pinIter", PBKDF2_ITER).commit();
+        return ok && hasPin() && checkPin(pin);
+    }
+
+    public boolean changePin(String oldPin, String newPin) {
+        if (!checkPin(oldPin)) return false;
+        return setPin(newPin);
+    }
+
+    public String bankSource() { return sp.getString("bank_source", "未初始化"); }
+    public String bankVersion() { return sp.getString("bank_version", "-"); }
+    public String bankUpdated() { return sp.getString("bank_updated", "-"); }
+    public long bankChecked() { return sp.getLong("bank_checked", 0L); }
+    public int bankPacks() { return sp.getInt("bank_packs", 0); }
+    public int bankQuestions() { return sp.getInt("bank_questions", 0); }
+    public String bankMessage() { return sp.getString("bank_message", "尚未同步"); }
+
+    public void setBankStatus(String source, String version, String updatedAt,
+                              long checkedAt, int packs, int questions, String message) {
+        sp.edit().putString("bank_source", source)
+                .putString("bank_version", version)
+                .putString("bank_updated", updatedAt)
+                .putLong("bank_checked", checkedAt)
+                .putInt("bank_packs", packs)
+                .putInt("bank_questions", questions)
+                .putString("bank_message", message).apply();
+    }
+
+    private static final int PBKDF2_ITER = 60000;
+    private static final int KEY_BITS = 256;
+
+    /** PBKDF2WithHmacSHA1 is available on API 21+ and any standard JVM. */
+    private static byte[] derive(String pin, byte[] salt, int iter) {
+        if (pin == null || salt == null || salt.length == 0 || iter <= 0) return null;
+        PBEKeySpec spec = null;
+        try {
+            spec = new PBEKeySpec(pin.toCharArray(), salt, iter, KEY_BITS);
+            return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+                    .generateSecret(spec).getEncoded();
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (spec != null) spec.clearPassword();
+        }
+    }
+
+    private static String hex(byte[] b) {
+        StringBuilder sb = new StringBuilder();
+        for (byte x : b) sb.append(String.format(Locale.US, "%02x", x & 0xff));
+        return sb.toString();
+    }
+
+    private static byte[] unhex(String s) {
+        if (s == null || s.length() % 2 != 0) return null;
+        byte[] out = new byte[s.length() / 2];
+        for (int i = 0; i < out.length; i++) {
+            int hi = Character.digit(s.charAt(i * 2), 16);
+            int lo = Character.digit(s.charAt(i * 2 + 1), 16);
+            if (hi < 0 || lo < 0) return null;
+            out[i] = (byte) ((hi << 4) | lo);
+        }
+        return out;
+    }
+
+    public static String sha256Hex(String s) {
+        try {
+            byte[] d = MessageDigest.getInstance("SHA-256").digest(s.getBytes("UTF-8"));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : d) sb.append(String.format(Locale.US, "%02x", b & 0xff));
+            return sb.toString();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+}

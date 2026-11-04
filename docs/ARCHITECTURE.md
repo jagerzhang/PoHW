@@ -1,0 +1,111 @@
+# 架构与关键决策
+
+## 组件职责
+
+| 类 | 职责 |
+| --- | --- |
+| `MainActivity` | 控制台：授权入口、守护开关、就地验证浮层、运行状态与题库统计 |
+| `SettingsActivity` | 家长设置：PIN 门禁 + 年级/教材/频率/配比/出题范围/在线源 |
+| `QuizOverlayService` | 前台服务：1 秒计时、WindowManager 全屏遮罩、答题判定、可选在线同步 |
+| `BootReceiver` | 开机恢复守护（校验 action + 守护开关 + 悬浮窗授权） |
+| `QuizDb` | 内置 SQLite：版本化原子复制、只读、本地随机抽题、全学科 fallback |
+| `QuizEngine` | 三层出题链：DB -> 在线缓存题 -> 参数化生成器；学科权重 |
+| `BankRepository` | 可选在线题库：版本比对、分块下载、SHA-256、原子缓存 |
+| `PinGate` | 纯 Java PIN 状态机（首次设置 / 验证 / 修改），可 JVM 单测 |
+| `PinVerifyView` | 首页就地验证浮层（不跳 Activity、不 finish 宿主） |
+| `GuardPolicy` / `GuardState` | 关闭守护的授权规则 / 按钮颜色文字规则，单一规则源 |
+| `OverlayQuizView` / `QuizTextSizer` | 题目 UI 与自适应字号 |
+| `SettingsStore` | SharedPreferences 封装 + PIN 哈希 |
+
+## 主流程
+
+```
+开启守护
+  -> MainActivity.send(ACTION_START)
+  -> QuizOverlayService.startGuard()
+       校验 Settings.canDrawOverlays
+       startForeground(NOTIF_ID, buildNotification())
+       reload(): QuizDb.open(this) -> engine.setDb/setBank/setAllSubjects
+  -> Handler 每 1 秒 tick，倒计时归零 -> showQuiz()
+       wm.addView(quizView, TYPE_APPLICATION_OVERLAY 全屏参数)
+  -> 答对 -> correct() -> 「继续」-> finishQuiz() -> removeViewImmediate()
+       remainSec = interval（续租）
+```
+
+为什么用 `WindowManager.addView` 而不是 `startActivity`：Android 10+ 有后台启动
+Activity（BAL）限制，从前台服务弹 Activity 会被系统拦截；加窗口是服务自己的 View，
+不受该限制，也不需要 `HIDE_OVERLAY_WINDOWS` 对抗 —— 它是正常可聚焦的顶层窗口。
+
+## 关闭守护的双重门禁
+
+```
+MainActivity: GuardPolicy.requiresPinToStop(hasPin)
+  -> true : PinVerifyView 就地验证（界面不退出，仅叠加半透明层）
+  -> false: 直接 doStop()
+doStop() -> QuizOverlayService.requestStop(c, verified=true)
+  -> Service.onStartCommand(ACTION_STOP)
+     GuardPolicy.allowStop(hasPin, EXTRA_STOP_VERIFIED)  // 服务侧二次校验
+     -> 拒绝则 Toast 并返回 START_STICKY
+     -> 放行则 stopAll()
+MainActivity.paintToggleButtons() 只用 GuardState 改文字/颜色，绝不 finish()
+```
+
+`ACTION_STOP` 被拒绝且服务尚未运行时，会先 `startForeground()` 满足
+Android 8+ 的「5 秒内前台化」契约，再立即 `stopForeground()` + `stopSelf()`，
+避免一次「未验证的停止请求」把服务拉起成空转前台服务或触发系统异常。
+
+边界：服务 `exported=false`，普通第三方应用无法直接发该 Intent；但 `adb shell am`、
+系统「强制停止」、卸载、清除数据属系统级能力，第三方无法防御，本项目也不尝试防御
+（静态守卫明确禁止 DeviceAdmin / `startLockTask` / `DELETE_PACKAGES`）。
+
+## PIN 存储
+
+- `SettingsStore` 实现 `PinGate.Store`：`hasPin` / `checkPin` / `setPin`。
+- 每个密码生成 16 字节 `SecureRandom` salt，用 `PBKDF2WithHmacSHA1`
+  60,000 次迭代派生 256 位密钥（API 21+ 与标准 JVM 均可用；
+  `PBKDF2WithHmacSHA256` 需要 API 26+）；
+  比较使用 `MessageDigest.isEqual`（常量时间）。
+- `setPin()` 用 `commit()` 同步落盘并回读校验，避免「提示成功但没保存」。
+- 兼容 v4.x 的旧 `SHA-256(salt:pin)` 格式（`pinIter=0` 走旧逻辑），重设密码即迁移。
+- 年级、出题范围、守护开关等关键设置同样用 `commit()`。
+- `android:allowBackup=false`，避免哈希随备份导出。
+- 4-8 位数字没有速率限制，KDF 只提高离线爆破成本；拿到 root / adb 的设备
+  可以直接改 SharedPreferences，这属于物理接触设备的边界，不在防护范围内。
+
+## 悬浮窗与生命周期
+
+- `Build.VERSION.SDK_INT >= 26` 用 `TYPE_APPLICATION_OVERLAY`，旧平台回退 `TYPE_PHONE`。
+- 参数：`MATCH_PARENT × MATCH_PARENT`、`FLAG_LAYOUT_IN_SCREEN | LAYOUT_NO_LIMITS |
+  KEEP_SCREEN_ON | DIM_BEHIND`、`dimAmount=0.88`。
+- `hideQuiz()` 无条件尝试 `removeViewImmediate()`，`showQuiz()` 的异常分支也会清理，
+  避免「addView 成功但标志位没置上」留下永久僵尸窗口盖住卸载确认框。
+- `onDestroy()` 移除 Handler 回调、摘掉窗口；`startGuard()` 前先 `removeCallbacks(tick)` 保证幂等。
+- 通知渠道 `tvquiz_guard` 在 Android 8+ 创建，使用专用白色剪影小图标
+  `R.drawable.ic_stat_quiz`（不再借用系统图标）；Android 13+ 的 `POST_NOTIFICATIONS`
+  在 `MainActivity` 运行时申请，拒绝时 Toast 提示但守护仍可运行。
+
+## 题库与在线源
+
+- 默认链路完全离线：`assets/quiz.db` -> `databases/quiz.db` -> 只读随机抽题。
+- 首启需要复制约 4.5 MB 数据库，因此 `MainActivity` 与 `QuizOverlayService`
+  都在后台线程调用 `QuizDb.open()`；就绪前控制台显示「正在加载」、出题引擎
+  走参数化生成器兜底。UI 线程只用 `QuizDb.peek()` 读已就绪实例。
+- `app/assets/quiz.db.version` 与库内 `meta.version` 比对，不一致时写 `.tmp`、
+  `fsync`、校验可读、再 `renameTo` 原子替换。
+- `QuizDb.random(grade, subject, allSubjects)`：三科优先，指定组合无题时
+  回退该年级全学科，再回退全库；`QuizEngine` 最后还有参数化生成器兜底。
+- 在线源为**可选项**：`bankUrl` 为空时不发请求；非空时 `BankRepository` 在单线程池
+  下载、`index.json` 版本比对、逐包 SHA-256 校验、原子落盘，回调切回主线程。
+- 默认禁止明文 HTTP（`res/xml/network_security_config.xml` 仅放行本机调试地址）。
+
+## 已知技术债（欢迎 PR）
+
+- UI 全部由 Java 代码构建，仍有一部分文案硬编码；`strings.xml` 目前只抽了
+  应用名、通知渠道与通知文案，完整资源化 / 多语言是后续工作。
+- 未启用 R8 / 混淆（命令行 d8 链路不带 R8）；发布前可接入 `r8.jar`。
+- `targetSdk=33`。升到 34 需补 `foregroundServiceType`、`FOREGROUND_SERVICE_*`
+  权限与更严格的后台启动校验。
+- 控制台每秒 `Handler` 轮询刷新，可改成状态变化事件驱动。
+- 随机抽题已改为 `LIMIT 1 OFFSET (ABS(RANDOM()) % COUNT(*))`，避免整表排序；
+  十万行以上可改为主键区间采样。
+- 纲目题偏「知识点辨识」，不是教材同步真题，题型丰富度有提升空间。

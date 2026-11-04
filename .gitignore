@@ -1,0 +1,33 @@
+# Build outputs (never commit binaries / intermediate dirs)
+/.build/
+/dist/
+*.apk
+*.ap_
+*.dex
+*.class
+gen/
+classes/
+dexout/
+out/
+*.old.*
+sources.txt
+classes.txt
+
+# Debug signing key is generated locally by app/build.sh
+*.keystore
+*.jks
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Local data sources (upstream catalog is not redistributable)
+/data/
+/third_party/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.iml

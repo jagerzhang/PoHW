@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.jager.tvquiz"
-    android:versionCode="10"
-    android:versionName="6.0.0">
+    android:versionCode="11"
+    android:versionName="6.0.1">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="33" />
 
@@ -72,12 +72,20 @@
             android:exported="false"
             android:enabled="true" />
 
+        <!-- 仅 BOOT_COMPLETED 受 RECEIVE_BOOT_COMPLETED 保护，且是 Android 12+
+             后台启动前台服务的豁免广播；QUICKBOOT 拆到单独 receiver。 -->
         <receiver
             android:name=".BootReceiver"
             android:exported="true"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".QuickBootReceiver"
+            android:exported="true">
+            <intent-filter>
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>

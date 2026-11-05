@@ -23,7 +23,7 @@
 | 答题暂停视频 | 弹题时申请短暂音频焦点并派发媒体暂停键，答对解锁后归还焦点并尝试恢复（best-effort） |
 | 开机自启 | 「开机自动启动」+「开机自动开启守护」两个独立开关，并提供厂商自启动权限设置入口 |
 | 错题库 | 同一题答错 2 次自动换题；错题按题面去重记入本地 SQLite，控制台可翻页查看/删除/清空 |
-| 遥控器答题 | 全屏遮罩自主路由方向键/确定键/数字键 1-4，不依赖窗口 View 焦点，反复弹题不会失灵 |
+| 遥控器答题 | 全屏遮罩自主路由方向键/确定键/数字键 1-4，不依赖窗口 View 焦点；服务侧还有窗口焦点重抢状态机，反复弹题/失焦后可恢复 |
 | 可选在线源 | 预留 `index.json + packs/*.json` 同步协议，需家长自己填地址才启用 |
 
 ## 它不能做什么
@@ -34,6 +34,7 @@
 - 题目是**由知识点纲目参数化生成**的，不是教材同步真题，也不是教辅题库。
 - **暂停视频是 best-effort**：Android 没有「强制暂停第三方播放器」的公开 API，只能请求音频焦点 + 派发媒体暂停键；不保证所有视频 App 响应。
 - 内置离线题库按课标纲目组织、**不含出版社版本字段**，分学科教材版本用于在线题包筛选、题面标注与错题标记，不会改变离线抽题结果。
+- **窗口焦点重抢也是 best-effort**：Android 没有强制夺取 focused window 的公开 API。通知栏/系统对话框抢走焦点时，服务会有限次重下发窗口参数并重建一次窗口；极端情况下遥控器可能仍无法作答，此时遮罩保留（不自动放行），触摸/鼠标点击仍可答题。
 
 ---
 
@@ -41,7 +42,7 @@
 
 ```bash
 # 1) 装 APK（自己构建产物在 dist/，或到本仓库 Releases 页面下载）
-adb install -r dist/PoHW-v6.0.0.apk
+adb install -r dist/PoHW-v6.0.1.apk
 
 # 2) 打开 APP：点「授权悬浮窗」打开系统开关并允许
 # 3) 进「家长设置」：首次进入会要求初始化 4-8 位数字密码
@@ -121,9 +122,9 @@ GET <base>/packs/<file>      { schema, id, grade, edition, subject, questions:[{
 ```bash
 export JAVA_HOME=/path/to/jdk-17
 export ANDROID_HOME=/path/to/android-sdk
-bash tests/run.sh          # 123 个 JVM 单测
+bash tests/run.sh          # 174 个 JVM 单测（7 组，含 v6.0.1 行为级回归）
 python3 tools/quizbank/verify.py app/assets/quiz.db
-bash app/build.sh          # -> dist/PoHW-v6.0.0.apk + dist/PoHW-src.zip
+bash app/build.sh          # -> dist/PoHW-v6.0.1.apk + dist/PoHW-src.zip
 ```
 
 `app/build.sh` 会做静态守卫（禁止写死版本号、防卸载 API、第三方题包残留）、
@@ -177,18 +178,54 @@ PoHW/
 ├── app/
 │   ├── AndroidManifest.xml
 │   ├── build.sh                 # 零 Gradle 构建链
-│   ├── src/com/jager/tvquiz/    # 24 个 Java 源文件
+│   ├── src/com/jager/tvquiz/    # 27 个 Java 源文件
 │   ├── res/                     # 图标 / TV banner / strings / network_security_config
 │   └── assets/quiz.db(.version) # 内置离线题库
 ├── tests/
 │   ├── run.sh                   # JVM 单测入口
-│   └── src/                     # 6 组测试 + Android 轻量 stub
+│   └── src/                     # 7 组测试 + Android 轻量 stub
 ├── tools/quizbank/
 │   ├── build_bank.py            # 全量纲目 -> SQLite
 │   └── verify.py                # 独立校验
 └── docs/
     ├── BUILD.md · ARCHITECTURE.md · QUESTION_BANK.md · BANK_STATS.md
 ```
+
+---
+
+## v6.0.1：两轮独立审查后的加固
+
+v6.0.0 发布后做了两轮独立复审（功能验收 + Android/AOSP 规范审查），结论都是
+「不建议按 5 项全部完成直接交付」。本版针对其中的 P0/P1 集中修复，
+并补上此前缺失的行为级单测。
+
+| 问题 | 修复 |
+| --- | --- |
+| **P0 窗口焦点** | 遮罩 `onWindowFocusChanged(false)` 回调服务；服务有限次 `updateViewLayout` 重抢 + 一次 `remove/add` 重建窗口。明确说明 `FLAG_NOT_FOCUSABLE` 清零不等于 WMS 一定给焦点；重抢失败时保留遮罩，不自动放行。 |
+| **P0 前台服务契约** | `startForeground()` 移到 `onStartCommand` 入口，覆盖 STOP / 拒绝 / 权限不足 / 通知构造失败等全部分支，消除 Android 8-11 ANR 与 12+ `ForegroundServiceDidNotStartInTimeException`。 |
+| **发现更严重的状态机断线** | 重写后的遮罩虽引入 `QuizFlow` 却从未调用 `submit()`，导致「继续观看」永远不可点、答错禁用项不生效。现在判题由 `QuizOverlayService.answer()` 统一通过 `flow.submit()` 推进，`bind()` 换题时 `reset()`。 |
+| **答对确认时序** | 「继续观看」不在 KeyEvent / click 分发栈里同步摘窗口，改为 `root.post()` 到下一帧，避免 detach 当前 `ViewRootImpl`。 |
+| **P1 STOP 授权** | 不再信任客户端 `EXTRA_STOP_VERIFIED` 布尔值；密码验证成功后由本进程签发一次性令牌（`commit()` 落盘、60 秒 TTL、消费即删、常量时间比较），服务侧 `consumeStopToken()` 后才交给 `GuardPolicy`。 |
+| **P1 开机广播** | `BOOT_COMPLETED` 与厂商 QUICKBOOT 拆成两个 receiver：后者不受 `RECEIVE_BOOT_COMPLETED` 保护、也不在 Android 12+ 后台启动 FGS 豁免白名单里，单独接收后可显式降级。 |
+| **P1 按键时序** | 抽出纯 Java `KeyRouter`：音量键 DOWN/UP 成对放行；确认键/数字键/方向键长按 repeat 全部过滤；BACK 与媒体键一律吞掉。 |
+| **P1 音频焦点** | `MediaPauseController` 改用 API 26+ `AudioFocusRequest` + 非空 listener；拿到过焦点时不再额外派发 `MEDIA_PLAY`，避免误唤醒其他 MediaSession 或二次翻转播放状态。 |
+| **P1 在线题包空转** | `QuizEngine.next()` 改为内置 DB 与在线题包按概率混合，分学科教材版本筛出的在线题包不再被 `db.random()` 抢先返回架空；未知学科归入 `Subjects.OTHER`。 |
+| **P1 网络与设置** | 禁用自动重定向并手动校验 `Location` 同主机；设置页未保存的在线源 URL 不再被刷新清空；明文示例地址改为本机调试域；三栏显式跨栏焦点链路。 |
+| **P1 错题库** | 去重键纳入学科与正确答案下标；`record()` 读写进事务、写失败不推进摘要；`onUpgrade()` 不再 DROP 用户数据；首次打开走后台 `refreshAsync()`；标题恒用真实 `COUNT(*)`，列表 500 条上限并提示截断；清空二次确认 5 秒复位。 |
+| **P2 性能与门禁** | 控制台按「题库实例 + 年级」缓存聚合行、悬浮窗权限只在 `onResume` 重查、`setText` 前比较、Runnable 字段化并在 `onDestroy` 统一撤销；PIN 浮层隔离底层焦点；构建静态守卫改为语义符号检查。 |
+
+**验证**：`tests/run.sh` 共 7 组 **174** 项断言全部通过（其中 `BehaviorV601Test`
+51 项覆盖按键时序、答题状态机、一次性令牌）；`tools/quizbank/verify.py` 通过；
+全量 `aapt2 -> javac -> d8 -> zipalign -> apksigner` 构建与 v1/v2/v3 签名校验通过。
+`dist/PoHW-v6.0.1.apk` 由定版源码重新出包（v6.0.0 旧包不含本轮修复），dex 中可检出
+`refreshAsync` / `wireColumns` / `consumeStopToken` / `rebuildOverlay`；签名证书
+SHA-256 `76eb6063…6172` 与 v5 / v6.0.0 一致。版本 `6.0.1` / versionCode `11`，
+支持 `adb install -r` 覆盖安装。
+
+> 仍属 best-effort、需真机验证：第三方视频 App 是否响应暂停；连续弹题时
+> 通知栏/系统对话框抢焦点后能否重抢；Android 12+ `HIDE_OVERLAY_WINDOWS` 行为。
+> 审查结论里「5 项全部完成」不成立的部分（离线题库无出版社版本字段、
+> 暂停与窗口焦点均非强制能力）已在此明确写成边界，不再表述为「已修复」。
 
 ---
 

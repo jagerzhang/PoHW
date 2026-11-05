@@ -18,6 +18,8 @@ public final class QuizEngine {
 
     public static final int MATH = 0, CHINESE = 1, ENGLISH = 2;
 
+    private static final int BANK_RATIO = 60;
+
     public static final class Question {
         public int subject;
         public String topic, text, explain, source;
@@ -73,47 +75,55 @@ public final class QuizEngine {
             return q;
         }
 
-        /** 题目稳定去重键：题干 + 四个选项，用于错题库去重与换题去重。 */
+        /** 稳定去重键：长度前缀编码全部语义字段，抗碰撞且答案感知。 */
         public String key() {
-            StringBuilder sb = new StringBuilder(text == null ? "" : text);
+            StringBuilder sb = new StringBuilder();
+            appendPart(sb, Integer.toString(subject));
+            appendPart(sb, Integer.toString(answerIndex));
+            appendPart(sb, text);
             if (options != null) {
-                for (String o : options) sb.append('').append(o == null ? "" : o);
+                for (String o : options) appendPart(sb, o);
             }
             return Hashes.sha256Hex(sb.toString());
+        }
+
+        private static void appendPart(StringBuilder sb, String v) {
+            String s = v == null ? "" : v;
+            sb.append(s.length()).append(':').append(s).append('|');
         }
     }
 
     private final Random r = new Random();
     private final int grade;
-    private final String edition;
     private final int[] weights = new int[3];
     private final List<Question> bankMath = new ArrayList<Question>();
     private final List<Question> bankChinese = new ArrayList<Question>();
     private final List<Question> bankEnglish = new ArrayList<Question>();
+    private final List<Question> bankOther = new ArrayList<Question>();
     private int lastMathType = -1;
     private QuizDb db;
     private boolean allSubjects = false;
 
     public QuizEngine(int grade, String edition, int mathW, int chineseW, int englishW) {
         this.grade = grade < 1 ? 1 : (grade > 9 ? 9 : grade);
-        this.edition = edition == null ? "通用(课标)" : edition;
         weights[MATH] = Math.max(0, mathW);
         weights[CHINESE] = Math.max(0, chineseW);
         weights[ENGLISH] = Math.max(0, englishW);
     }
 
     public void setBank(List<Question> qs) {
-        bankMath.clear(); bankChinese.clear(); bankEnglish.clear();
+        bankMath.clear(); bankChinese.clear(); bankEnglish.clear(); bankOther.clear();
         if (qs == null) return;
         for (Question q : qs) {
             if (q == null) continue;
             if (q.subject == MATH) bankMath.add(q);
             else if (q.subject == CHINESE) bankChinese.add(q);
             else if (q.subject == ENGLISH) bankEnglish.add(q);
+            else if (q.subject == Subjects.OTHER) bankOther.add(q);
         }
     }
 
-    public int bankSize() { return bankMath.size() + bankChinese.size() + bankEnglish.size(); }
+    public int bankSize() { return bankMath.size() + bankChinese.size() + bankEnglish.size() + bankOther.size(); }
 
     /** 注入内置 SQLite 题库；为空时完全走原有生成器链路。 */
     public void setDb(QuizDb db) { this.db = db; }
@@ -124,22 +134,34 @@ public final class QuizEngine {
     public void setAllSubjects(boolean v) { this.allSubjects = v; }
     public boolean isAllSubjects() { return allSubjects; }
 
+    private List<Question> bankFor(int s) {
+        if (s == MATH) return bankMath;
+        if (s == CHINESE) return bankChinese;
+        if (s == ENGLISH) return bankEnglish;
+        if (s == Subjects.OTHER) return bankOther;
+        return bankMath;
+    }
+
     public Question next() {
         int s = pickSubject();
-        // 内置 SQLite 题库优先：本地随机挑题，零网络、零解析 JSON。
-        if (db != null) {
+        List<Question> list = bankFor(s);
+        boolean hasDb = db != null;
+        boolean hasBank = list != null && !list.isEmpty();
+        if (hasBank && (!hasDb || r.nextInt(100) < BANK_RATIO)) {
+            return list.get(r.nextInt(list.size()));
+        }
+        if (s == Subjects.OTHER) s = MATH; // no offline generator for OTHER
+        if (hasDb) {
             Question q = db.random(grade, s, allSubjects);
             if (q != null) return q;
         }
-        List<Question> list = s == MATH ? bankMath : (s == CHINESE ? bankChinese : bankEnglish);
-        if (!list.isEmpty() && r.nextInt(100) < 60) {
-            return list.get(r.nextInt(list.size()));
-        }
+        if (hasBank) return list.get(r.nextInt(list.size()));
         if (s == CHINESE || s == ENGLISH) return wordQuestion(s);
         return mathByGrade();
     }
 
     private int pickSubject() {
+        if (allSubjects && !bankOther.isEmpty() && r.nextInt(100) < 15) return Subjects.OTHER;
         int total = weights[MATH] + weights[CHINESE] + weights[ENGLISH];
         if (total <= 0) return MATH;
         int n = r.nextInt(total);

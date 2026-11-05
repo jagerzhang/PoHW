@@ -1,7 +1,10 @@
 package com.jager.tvquiz;
 
 import android.content.Context;
+import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
 import android.media.AudioManager;
+import android.os.Build;
 import android.util.Log;
 import android.view.KeyEvent;
 
@@ -22,6 +25,14 @@ public final class MediaPauseController {
     private static final String TAG = "PoHW.MediaPause";
 
     private final AudioManager am;
+    /** 音频焦点监听必须非 null：旧平台 abandonAudioFocus 与新平台 AudioFocusRequest 都要求。 */
+    private final AudioManager.OnAudioFocusChangeListener focusListener =
+            new AudioManager.OnAudioFocusChangeListener() {
+                @Override public void onAudioFocusChange(int focusChange) {
+                    Log.d(TAG, "onAudioFocusChange=" + focusChange);
+                }
+            };
+    private AudioFocusRequest focusRequest;
     private boolean focusHeld = false;
     private boolean pauseRequested = false;
 
@@ -31,14 +42,28 @@ public final class MediaPauseController {
     }
 
     /** 答题窗口弹出后调用。 */
+    @SuppressWarnings("deprecation")
     public void quizShown(SettingsStore st) {
         if (am == null || !st.pauseOnQuiz()) return;
         pauseRequested = true;
         dispatch(KeyEvent.KEYCODE_MEDIA_PAUSE);
         try {
-            @SuppressWarnings("deprecation")
-            int r = am.requestAudioFocus(null, AudioManager.STREAM_MUSIC,
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+            int r;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                focusRequest = new AudioFocusRequest.Builder(
+                        AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                        .setAudioAttributes(new AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_MEDIA)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
+                                .build())
+                        .setOnAudioFocusChangeListener(focusListener)
+                        .build();
+                r = am.requestAudioFocus(focusRequest);
+            } else {
+                r = am.requestAudioFocus(focusListener,
+                        AudioManager.STREAM_MUSIC,
+                        AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+            }
             focusHeld = (r == AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
         } catch (Exception e) {
             Log.w(TAG, "requestAudioFocus failed", e);
@@ -59,21 +84,33 @@ public final class MediaPauseController {
         releaseInternal(true);
     }
 
+    @SuppressWarnings("deprecation")
     private void releaseInternal(boolean tryResume) {
-        // 只要本次派发过暂停键就尝试恢复；音频焦点可能申请失败，
-        // 但底层播放器仍可能已经响应了 MEDIA_PAUSE。
-        boolean shouldResume = pauseRequested && tryResume;
+        // 只有「本次暂停过、家长允许恢复、且当初没拿到音频焦点」才补发 MEDIA_PLAY：
+        // 若焦点曾被授予，规范播放器在 abandon 后收到 AUDIOFOCUS_GAIN 会自行恢复，
+        // 再补发 MEDIA_PLAY 可能造成二次切换，甚至唤醒无关的 MediaSession；
+        // 若焦点从未被授予，MEDIA_PAUSE 是唯一的暂停信号，必须补发 MEDIA_PLAY 才能恢复。
+        // 注意：这里的 focusHeld 必须在下方清零之前求值。
+        boolean shouldResume = pauseRequested && tryResume && !focusHeld;
+        // 无论 tryResume 与否，都必须归还 TRANSIENT 音频焦点，绝不把别人的焦点扣在手里。
         if (am != null && focusHeld) {
             try {
-                @SuppressWarnings("deprecation")
-                int ignored = am.abandonAudioFocus(null);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    if (focusRequest != null) am.abandonAudioFocusRequest(focusRequest);
+                } else {
+                    am.abandonAudioFocus(focusListener);
+                }
             } catch (Exception e) {
                 Log.w(TAG, "abandonAudioFocus failed", e);
             }
         }
+        focusRequest = null;
         focusHeld = false;
         pauseRequested = false;
         if (shouldResume) dispatch(KeyEvent.KEYCODE_MEDIA_PLAY);
+        // 诚实说明：resumePlayback=false 也只是 best-effort。一旦 abandon 音频焦点，
+        // 合规播放器可能随 AUDIOFOCUS_GAIN 自行恢复播放；想彻底阻止只能永久持有
+        // 音频焦点，那既不可接受也不礼貌，因此无法保证「绝不恢复」。
     }
 
     private void dispatch(int keycode) {

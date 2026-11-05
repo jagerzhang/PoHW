@@ -7,8 +7,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
-VERSION_NAME="6.0.0"
-VERSION_CODE="10"
+VERSION_NAME="6.0.1"
+VERSION_CODE="11"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -33,19 +33,46 @@ grep -q "versionName=\"$VERSION_NAME\"" "$APP/AndroidManifest.xml"
 grep -q 'getPackageInfo' "$APP/src/com/jager/tvquiz/MainActivity.java"
 grep -q 'GuardPolicy.allowStop' "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
 grep -q 'setAllSubjects' "$APP/src/com/jager/tvquiz/QuizEngine.java"
-# v6 regression guards
-grep -q 'AnswerPolicy.shouldSwap' "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
-grep -q 'WrongBook.recordAsync' "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
-grep -q 'MediaPauseController' "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
+# v6.0.1 semantic gates: assert behaviour symbols, not exact line spellings.
+# (Old gates assumed clearing FLAG_NOT_FOCUSABLE guarantees the WMS focused
+#  window; it does not. The focus state machine below is the real safeguard.)
+SVC="$APP/src/com/jager/tvquiz/QuizOverlayService.java"
+VIEW="$APP/src/com/jager/tvquiz/OverlayQuizView.java"
+grep -q 'QuizFlow' "$SVC"                       # 判题状态机由服务推进
+grep -q 'flow.submit' "$SVC"
+grep -q 'KeyRouter.decide' "$VIEW"              # 遥控器按键自主路由
+grep -q 'WrongBook.recordAsync' "$SVC"
+grep -q 'MediaPauseController' "$SVC"
 grep -q 'BootPolicy.shouldStartGuard' "$APP/src/com/jager/tvquiz/BootReceiver.java"
-grep -q 'final OverlayQuizView view = new OverlayQuizView' "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
-grep -q 'setFocusable(false)' "$APP/src/com/jager/tvquiz/OverlayQuizView.java"
-grep -q 'lp.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE' \
-  "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
+grep -q 'new OverlayQuizView' "$SVC"             # 每次弹题不复用 View
+grep -q 'setFocusable(false)' "$VIEW"            # 子按钮不参与焦点树
 grep -q 'WrongBookActivity' "$APP/AndroidManifest.xml"
-for f in Hashes Subjects AnswerPolicy BootPolicy BootSettings MediaPauseController \
-         WrongBook WrongBookActivity OverlayQuizView; do
-  [ -f "$APP/src/com/jager/tvquiz/$f.java" ] || { echo "MISSING v6 source: $f.java"; exit 1; }
+# P0: FGS 契约覆盖所有分支（startForeground 必须在 onStartCommand 入口）
+grep -q 'fgReady = enterForeground()' "$SVC"
+grep -q 'startForeground(NOTIF_ID' "$SVC"
+# P0: 窗口焦点状态机（失焦重抢 + 有限重试 + 一次窗口重建）
+grep -q 'onQuizWindowFocus' "$SVC"
+grep -q 'updateViewLayout' "$SVC"
+grep -q 'rebuildOverlay' "$SVC"
+grep -q 'onWindowFocusChanged' "$VIEW"
+grep -q 'requestContinue' "$VIEW"               # 不在按键分发栈内同步摘窗口
+# P1: 一次性 STOP 令牌，客户端 boolean 不再是授权依据
+grep -q 'issueStopToken' "$SVC"
+grep -q 'consumeStopToken' "$SVC"
+grep -q 'EXTRA_STOP_TOKEN' "$SVC"
+if grep -q 'EXTRA_STOP_VERIFIED' "$SVC" "$VIEW"; then
+  echo 'FORBIDDEN: STOP verified boolean must not be trusted'; exit 1
+fi
+# P1: QUICKBOOT 与 BOOT_COMPLETED 拆成两个 receiver
+grep -q 'QuickBootReceiver' "$APP/AndroidManifest.xml"
+[ -f "$APP/src/com/jager/tvquiz/QuickBootReceiver.java" ] || {
+  echo 'MISSING QuickBootReceiver.java'; exit 1; }
+# 行为级回归必须真的被编译、真的被执行
+grep -q 'BehaviorV601Test' tests/run.sh
+grep -q 'KeyRouter.java' tests/run.sh
+grep -q 'QuizFlow.java' tests/run.sh
+for f in Hashes Subjects AnswerPolicy BootPolicy BootSettings MediaPauseController          WrongBook WrongBookActivity OverlayQuizView KeyRouter QuizFlow; do
+  [ -f "$APP/src/com/jager/tvquiz/$f.java" ] || { echo "MISSING source: $f.java"; exit 1; }
 done
 if grep -rq -E 'v4[.]1 控制台|DeviceAdmin|startLockTask|DELETE_PACKAGES|pack_hh_|huohua|HH_API_KEY' "$APP/src"; then
   echo 'FORBIDDEN legacy / third-party content in sources'; exit 1
@@ -63,7 +90,7 @@ fi
 echo "[1/9] verify built-in question bank"
 python3 tools/quizbank/verify.py "$APP/assets/quiz.db"
 
-echo "[2/9] JVM unit tests"
+echo "[2/9] JVM unit tests (174 assertions incl. v6.0.1 behaviour regressions)"
 bash tests/run.sh
 
 STAMP="$(date +%s)"
@@ -108,8 +135,12 @@ cp "$BUILD/dexout/classes.dex" "$BUILD/out/classes.dex"
 zipalign -f 4 "$BUILD/out/base.apk" "$BUILD/out/aligned.apk"
 
 echo "[8/9] sign + verify"
-# Never ship a fixed debug key: generate a random local signing key (gitignored).
-# For a release, point POHW_KEYSTORE / POHW_KEYSTORE_PASS at your own key.
+# Dev builds generate a random local signing key (gitignored), so a fresh clone
+# never ships a hardcoded private key. IMPORTANT for side-load upgrades: point
+# POHW_KEYSTORE + POHW_KEYSTORE_PASS at the SAME keystore as the previous
+# release, otherwise Android refuses to install over the old APK. Release
+# artifacts keep a stable certificate only because that keystore is passed
+# explicitly; the default (no env vars) intentionally does NOT guarantee it.
 KS="${POHW_KEYSTORE:-$BUILD/release.keystore}"
 PASS_FILE="$BUILD/keystore.pass"
 if [ -n "${POHW_KEYSTORE_PASS:-}" ]; then

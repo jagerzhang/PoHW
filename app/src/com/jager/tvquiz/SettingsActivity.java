@@ -26,12 +26,16 @@ import java.util.Locale;
 public class SettingsActivity extends Activity {
 
     private static final String NL = "\n";
-    private static final String[] PRESETS = {"", "http://10.0.2.2:8000/", "http://192.168.1.100:8000/"};
+    private static final String[] PRESETS = {"", "http://10.0.2.2:8000/", "http://127.0.0.1:8000/"};
 
     private SettingsStore st;
     private PinGate gate;
     private int presetIdx = 0;
     private boolean inSettings = false;
+    /** 用户手输过在线源地址后，refreshRows() 不得再用持久化值覆盖掉未保存的输入。 */
+    private boolean urlDirty = false;
+    /** 程序自身 setText 期间置位，避免 TextWatcher 把回显误判成用户编辑。 */
+    private boolean urlProgrammatic = false;
 
     private View gateView, settingsView;
     private TextView gateTitle, gateMask, gateMsg, gateState, bankStatus, pinState;
@@ -193,12 +197,16 @@ public class SettingsActivity extends Activity {
         TextView t = Ui.tv(this, label, 15, 0xFFC7D2E2, Gravity.LEFT);
         row.addView(t, new LinearLayout.LayoutParams(
                 Ui.dp(this, 96), ViewGroup.LayoutParams.WRAP_CONTENT));
-        Button b = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 15);
+        Button b = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 13);
+        b.setSingleLine(false);
+        b.setMaxLines(2);
+        b.setEllipsize(null);
+        b.setPadding(Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2));
         b.setOnClickListener(l);
         Ui.focus(b, this, Ui.BTN_BG, 0xFFF5F7FA);
-        row.addView(b, new LinearLayout.LayoutParams(Ui.dp(this, 178), Ui.dp(this, 40)));
+        row.addView(b, new LinearLayout.LayoutParams(Ui.dp(this, 178), Ui.dp(this, 46)));
         parent.addView(row, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 44)));
+                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 50)));
         return b;
     }
 
@@ -316,13 +324,20 @@ public class SettingsActivity extends Activity {
         urlEdit.setBackground(Ui.round(0xFF1B2432, 8, this));
         urlEdit.setPadding(Ui.dp(this, 10), Ui.dp(this, 6), Ui.dp(this, 10), Ui.dp(this, 6));
         urlEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        urlEdit.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+            @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
+            @Override public void afterTextChanged(android.text.Editable s) {
+                if (!urlProgrammatic) urlDirty = true;
+            }
+        });
         right.addView(urlEdit, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 42)));
 
         addButton(right, "填入示例地址", 0xFF243044, new View.OnClickListener() {
             @Override public void onClick(View v) {
                 presetIdx = (presetIdx + 1) % PRESETS.length;
-                urlEdit.setText(PRESETS[presetIdx]);
+                setUrlText(PRESETS[presetIdx], true);
             }
         });
 
@@ -334,7 +349,8 @@ public class SettingsActivity extends Activity {
 
         addButton(right, "立即检查更新", 0xFF6C4F9E, new View.OnClickListener() {
             @Override public void onClick(View v) {
-                st.bankUrl(urlEdit.getText().toString());
+                st.bankUrl(urlEdit.getText().toString().trim());
+                urlDirty = false;
                 bankStatus.setText("正在同步题库…");
                 BankRepository.sync(getApplicationContext(), st, st.bankUrl(), true,
                         new BankRepository.Callback() {
@@ -357,6 +373,9 @@ public class SettingsActivity extends Activity {
         });
         note(right, "默认完全离线：内置全量 K12 题库，不联网；只有填写在线源地址后才会按周期联网。");
 
+        // 三个独立 ScrollView 里的按钮默认不会被系统自动横向串起来，
+        // 显式连左右邻居，保证 TV 遥控器在任意一行都能跨栏移动焦点。
+        wireColumns(left, mid, right);
         root.addView(content, Ui.fill(1));
         return root;
     }
@@ -367,6 +386,67 @@ public class SettingsActivity extends Activity {
             if (SettingsStore.INTERVALS[i] == sec) return SettingsStore.INTERVAL_LABELS[i];
         }
         return sec + " 秒";
+    }
+
+    /** 统一写入 URL 输入框：程序回显不算用户编辑，示例地址算用户编辑。 */
+    private void setUrlText(String text, boolean userEdited) {
+        if (urlEdit == null) return;
+        urlProgrammatic = true;
+        try {
+            urlEdit.setText(text == null ? "" : text);
+            urlEdit.setSelection(urlEdit.getText().length());
+        } finally {
+            urlProgrammatic = false;
+        }
+        if (userEdited) urlDirty = true;
+    }
+
+    /**
+     * TV DPAD 跨栏焦点链：给每栏所有可聚焦按钮生成 id，并把左右焦点指向相邻栏的代表按钮。
+     * ScrollView 是独立可滚动容器，Android 默认只在同栏内找邻居，不显式连就会卡在单栏里。
+     */
+    private void wireColumns(LinearLayout... cols) {
+        java.util.List<java.util.List<Button>> perCol = new java.util.ArrayList<java.util.List<Button>>();
+        for (LinearLayout col : cols) {
+            java.util.List<Button> bs = new java.util.ArrayList<Button>();
+            for (int i = 0; i < col.getChildCount(); i++) {
+                View v = col.getChildAt(i);
+                if (v instanceof Button) { ensureId(v); bs.add((Button) v); }
+                else if (v instanceof ViewGroup) {
+                    ViewGroup g = (ViewGroup) v;
+                    for (int j = 0; j < g.getChildCount(); j++) {
+                        View inner = g.getChildAt(j);
+                        if (inner instanceof Button) { ensureId(inner); bs.add((Button) inner); }
+                    }
+                }
+            }
+            perCol.add(bs);
+        }
+        if (perCol.size() < 2) return;
+        for (int i = 0; i < perCol.size(); i++) {
+            java.util.List<Button> cur = perCol.get(i);
+            if (cur.isEmpty()) continue;
+            java.util.List<Button> lCol = perCol.get((i - 1 + perCol.size()) % perCol.size());
+            java.util.List<Button> rCol = perCol.get((i + 1) % perCol.size());
+            int lid = lCol.isEmpty() ? View.NO_ID : ensureId(lCol.get(0));
+            int rid = rCol.isEmpty() ? View.NO_ID : ensureId(rCol.get(0));
+            for (Button b : cur) {
+                if (lid != View.NO_ID) b.setNextFocusLeftId(lid);
+                if (rid != View.NO_ID) b.setNextFocusRightId(rid);
+            }
+        }
+        // URL 输入框不是 Button，单独接上中栏，避免按左键时焦点掉出表单。
+        java.util.List<Button> middle = perCol.get(1);
+        if (urlEdit != null && !middle.isEmpty()) {
+            int mid = ensureId(middle.get(0));
+            urlEdit.setNextFocusLeftId(mid);
+            urlEdit.setNextFocusUpId(mid);
+        }
+    }
+
+    private static int ensureId(View v) {
+        if (v.getId() == View.NO_ID) v.setId(View.generateViewId());
+        return v.getId();
     }
 
     private void refreshRows() {
@@ -384,7 +464,7 @@ public class SettingsActivity extends Activity {
         rowAutoGuard.setText(st.autoGuardOnBoot() ? "开启（开机即守护）" : "关闭（仅恢复上次）");
         rowPause.setText(st.pauseOnQuiz() ? "开启（音频焦点+媒体键）" : "关闭");
         rowResume.setText(st.resumePlayback() ? "开启（尝试恢复）" : "关闭");
-        urlEdit.setText(st.bankUrl());
+        if (!urlDirty) setUrlText(st.bankUrl(), false);
         pinState.setText(st.hasPin() ? "家长密码：已设置 ✓" : "家长密码：未设置 ✗");
         updateBankStatus();
     }
@@ -405,7 +485,8 @@ public class SettingsActivity extends Activity {
     }
 
     private void save() {
-        st.bankUrl(urlEdit.getText().toString());
+        st.bankUrl(urlEdit.getText().toString().trim());
+        urlDirty = false;
         sendReload();
         Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show();
         finish();

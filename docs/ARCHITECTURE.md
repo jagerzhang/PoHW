@@ -43,16 +43,23 @@ MainActivity: GuardPolicy.requiresPinToStop(hasPin)
   -> true : PinVerifyView 就地验证（界面不退出，仅叠加半透明层）
   -> false: 直接 doStop()
 doStop() -> QuizOverlayService.requestStop(c, verified=true)
-  -> Service.onStartCommand(ACTION_STOP)
-     GuardPolicy.allowStop(hasPin, EXTRA_STOP_VERIFIED)  // 服务侧二次校验
-     -> 拒绝则 Toast 并返回 START_STICKY
+  -> SettingsStore.issueStopToken()：随机 24 字节、commit 落盘、60 秒 TTL
+  -> startForegroundService(ACTION_STOP + EXTRA_STOP_TOKEN)
+  -> Service.onStartCommand() 开头无条件 startForeground()（满足 5 秒契约）
+     consumeStopToken(token)：消费即删、常量时间比较、过期/重放一律 false
+     GuardPolicy.allowStop(hasPin, verified)  // 服务侧二次校验
+     -> 拒绝则 Toast 并返回 START_STICKY（服务未运行则立即 stopForeground + stopSelf）
      -> 放行则 stopAll()
 MainActivity.paintToggleButtons() 只用 GuardState 改文字/颜色，绝不 finish()
 ```
 
-`ACTION_STOP` 被拒绝且服务尚未运行时，会先 `startForeground()` 满足
-Android 8+ 的「5 秒内前台化」契约，再立即 `stopForeground()` + `stopSelf()`，
-避免一次「未验证的停止请求」把服务拉起成空转前台服务或触发系统异常。
+**FGS 契约（P0）**：`startForeground()` 位于 `onStartCommand` 最开头，因此
+STOP、被拒绝的 STOP、悬浮窗权限不足、通知构造失败等**所有分支**都满足
+Android 8+ 的「5 秒内前台化」要求；`onDestroy()` 还会显式 `stopForeground(true)`。
+
+**为什么不信任布尔值**：`startService` 的 Intent extras 由调用方提供，
+`EXTRA_STOP_VERIFIED=true` 可被伪造。v6.0.1 起授权依据是只有本进程能签发的
+一次性令牌；服务读完立即删除，重放与过期都失败。
 
 边界：服务 `exported=false`，普通第三方应用无法直接发该 Intent；但 `adb shell am`、
 系统「强制停止」、卸载、清除数据属系统级能力，第三方无法防御，本项目也不尝试防御
@@ -113,22 +120,35 @@ Android 8+ 的「5 秒内前台化」契约，再立即 `stopForeground()` + `st
 ## v6 架构增补
 
 - **遮罩输入层**：`OverlayQuizView` 不再依赖 Android View 焦点树。根 `FrameLayout`
-  覆写 `dispatchKeyEvent`，消费 BACK、媒体键与全部答题按键；2x2 选项矩阵用
-  `NEXT` 邻接表移动 `selected`，`paint()` 手动绘制高亮。子按钮 `setFocusable(false)`，
-  只保留触屏点击。`QuizOverlayService.showQuiz()` 每次新建视图并 `addView`，
-  `hideQuiz()` 无条件 `removeViewImmediate`；换题走 `bind()` 原地刷新，不重新挂窗口。
+  覆写 `dispatchKeyEvent`，按键语义翻译后交给纯 Java `KeyRouter.decide()`
+  （音量键成对放行、长按 repeat 过滤、BACK/媒体键吞掉）；2x2 选项矩阵用
+  `NEXT` 邻接表移动高亮，`paint()` 手动绘制。子按钮 `setFocusable(false)`，
+  只保留触屏点击。`showQuiz()` 每次新建视图并 `addView`；换题走 `bind()` 原地刷新。
+- **答题状态机**：`QuizFlow`（纯 Java）是 `wrongAttempts` / `disabled[]` /
+  `selected` / `answered` 的**唯一**来源，由 `QuizOverlayService.answer()` 调用
+  `flow.submit(idx, answerIndex)` 推进，`bind()` 换题时 `reset()`。
+  答对后的「继续」通过 `root.post()` 延后，不在 KeyEvent 分发栈里同步摘窗口。
+- **窗口焦点状态机（P0）**：View 树 `requestFocus()` 与 WMS 的 focused window
+  是两回事；清掉 `FLAG_NOT_FOCUSABLE` 也不保证焦点。根视图
+  `onWindowFocusChanged(false)` 通知服务，服务有限次 `updateViewLayout` 重新
+  下发参数、必要时 `remove` + `add` 同一个 View 重建窗口（保留 `QuizFlow` 状态），
+  用 `focusRecovering` 过滤嵌套回调防止自旋。重抢失败则保留遮罩、不自动放行。
 - **播放暂停**：`MediaPauseController` 只使用 `AudioManager` 的公开能力
   （短暂音频焦点 + `dispatchMediaKeyEvent`），不创建 MediaSession、不申请通知使用权、
   不注入按键。服务 `onDestroy` / `stopAll` 都会 `release()` 归还焦点。
 - **错题库**：独立 `SQLiteOpenHelper`（`pohw_wrong.db`），与只读 `quiz.db` 完全隔离；
   单线程 `ExecutorService` 异步写入，主线程读走 `cachedCount()` 避免每秒轮询 SQLite。
-  题目去重键为 `Hashes.sha256Hex(题干 + 选项)`。
+  题目去重键为长度前缀编码的 `subject + answerIndex + 题干 + 四个选项`
+  的 SHA-256；纳入答案下标后，题面相同但正确答案不同的题不会被合并。
 - **分学科版本**：`Subjects.editionKey(s)` 生成 `edition_s0..3`；
   `BankRepository.load(grade, String[])` 按学科匹配在线题包；
   `SettingsStore.edition()` 保留为数学版本，兼容 v5 调用点。
-- **开机自启**：`BootPolicy` 是零依赖策略源；`BootReceiver` 在 BOOT_COMPLETED /
-  QUICKBOOT / HTC QUICKBOOT 白名单内判定两个开关与悬浮窗授权，再 `startForegroundService`。
-  厂商「自启动」权限必须由家长在系统设置里手动允许，App 只提供跳转入口。
+- **开机自启**：`BootPolicy` 是零依赖策略源；`BootReceiver` 只接收受保护的
+  `BOOT_COMPLETED`，厂商 QUICKBOOT / HTC QUICKBOOT 拆到 `QuickBootReceiver`
+  （不声明 `RECEIVE_BOOT_COMPLETED` sender permission，否则厂商广播会被过滤）。
+  两者共用 `BootReceiver.tryStartGuard()` 判定两个开关与悬浮窗授权再拉服务。
+  Android 12+ 上 QUICKBOOT 不在后台启动 FGS 豁免白名单，拉起失败会被显式捕获记录，
+  `BOOT_COMPLETED` 是可靠路径。厂商「自启动」权限仍需家长在系统设置里手动允许。
 
 ### v6 待验证 / 已知边界
 

@@ -181,6 +181,42 @@ public final class SettingsStore implements PinGate.Store {
         return setPin(newPin);
     }
 
+    // ---------- 一次性 STOP 令牌 ----------
+
+    private static final String KEY_STOP_TOKEN = "stop_token";
+    private static final String KEY_STOP_TOKEN_AT = "stop_token_at";
+    private static final long STOP_TOKEN_TTL_MS = 60000L;
+
+    /**
+     * 家长密码验证成功后由本进程签发；用 commit() 同步落盘，
+     * 避免 apply() 异步写入在服务消费令牌前被进程回收而丢失。
+     */
+    public String issueStopToken() {
+        byte[] b = new byte[24];
+        new SecureRandom().nextBytes(b);
+        String token = hex(b);
+        boolean ok = sp.edit().putString(KEY_STOP_TOKEN, token)
+                .putLong(KEY_STOP_TOKEN_AT, System.currentTimeMillis()).commit();
+        return ok ? token : "";
+    }
+
+    /**
+     * 校验并立即作废令牌：无论成功与否都删除，杜绝重放；
+     * 令牌带 60 秒 TTL，签发后服务未消费也不会长期残留可用凭证。
+     * 使用 MessageDigest.isEqual 做常量时间比较。
+     */
+    public boolean consumeStopToken(String token) {
+        String saved = sp.getString(KEY_STOP_TOKEN, "");
+        long at = sp.getLong(KEY_STOP_TOKEN_AT, 0L);
+        sp.edit().remove(KEY_STOP_TOKEN).remove(KEY_STOP_TOKEN_AT).commit();
+        if (token == null || token.isEmpty() || saved == null || saved.isEmpty()) return false;
+        long now = System.currentTimeMillis();
+        if (at <= 0L || now - at < 0L || now - at > STOP_TOKEN_TTL_MS) return false;
+        return MessageDigest.isEqual(
+                saved.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                token.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
     public String bankSource() { return sp.getString("bank_source", "未初始化"); }
     public String bankVersion() { return sp.getString("bank_version", "-"); }
     public String bankUpdated() { return sp.getString("bank_updated", "-"); }

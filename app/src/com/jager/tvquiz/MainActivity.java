@@ -37,15 +37,32 @@ public class MainActivity extends Activity {
     private Boolean paintedRunning = null;
     private String appVersion = "?";
     private String appVersionCode = "?";
+    private boolean alive = false;
+    /** 悬浮窗授权只在 onResume / 权限回调刷新，render() 不再每秒查系统服务。 */
+    private boolean canDrawCached = false;
+    /** 题库聚合行按 QuizDb 实例 + 年级缓存，避免每秒重复取 5 个统计量。 */
+    private QuizDb cachedDbRef = null;
+    private int cachedBankGrade = -1;
+    private String cachedBankLine = "";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
+    /** 一次性刷新全部复用同一实例，onDestroy 可统一撤销，不再泄漏匿名 Runnable。 */
+    private final Runnable renderOnce = new Runnable() {
+        @Override public void run() { if (alive) render(); }
+    };
     private final Runnable refresh = new Runnable() {
-        @Override public void run() { render(); handler.postDelayed(this, 1000); }
+        @Override public void run() {
+            if (!alive) return;
+            render();
+            handler.postDelayed(this, 1000);
+        }
     };
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
+        alive = true;
         st = new SettingsStore(this);
+        canDrawCached = canDraw();
         preloadBank();
         if (Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
@@ -59,6 +76,8 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        alive = true;
+        canDrawCached = canDraw();
         refreshWrongBook();
         handler.removeCallbacks(refresh);
         handler.post(refresh);
@@ -67,6 +86,13 @@ public class MainActivity extends Activity {
     @Override protected void onPause() {
         super.onPause();
         handler.removeCallbacks(refresh);
+    }
+
+    @Override protected void onDestroy() {
+        alive = false;
+        handler.removeCallbacksAndMessages(null);
+        verifyView = null;
+        super.onDestroy();
     }
 
     /** 就地验证层显示时，数字键/退格/返回键由本 Activity 统一转发。 */
@@ -106,27 +132,20 @@ public class MainActivity extends Activity {
         new Thread(new Runnable() {
             @Override public void run() {
                 QuizDb.open(app);
-                WrongBook.open(app);
                 BankRepository.installBuiltin(app, st);
-                handler.post(new Runnable() {
-                    @Override public void run() { render(); }
-                });
+                WrongBook.refreshAsync(app);
+                handler.post(renderOnce);
             }
         }, "pohw-db-preload").start();
     }
 
-    /** 从错题库页面返回后刷新缓存计数。 */
+    /** 从错题库页面返回后，后台刷新缓存计数与最近错题摘要，完成后回主线程渲染一次。 */
     private void refreshWrongBook() {
-        final Context app = getApplicationContext();
-        new Thread(new Runnable() {
-            @Override public void run() {
-                WrongBook w = WrongBook.open(app);
-                if (w != null) w.count();
-                handler.post(new Runnable() {
-                    @Override public void run() { render(); }
-                });
+        WrongBook.refreshAsync(getApplicationContext(), new WrongBook.RefreshCallback() {
+            @Override public void onLoaded(java.util.List<WrongBook.Entry> entries, int total) {
+                if (alive) render();
             }
-        }, "pohw-wrong-refresh").start();
+        });
     }
 
     @Override public void onRequestPermissionsResult(int req, String[] permissions,
@@ -137,6 +156,7 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "未授予通知权限：守护仍会运行，但状态栏通知不可见",
                     Toast.LENGTH_LONG).show();
         }
+        canDrawCached = canDraw();
     }
 
     private boolean canDraw() {
@@ -193,9 +213,7 @@ public class MainActivity extends Activity {
                     @Override public void onClick(View v) {
                         if (!canDraw()) { openOverlaySettings(); return; }
                         send(QuizOverlayService.ACTION_START);
-                        handler.postDelayed(new Runnable() {
-                            @Override public void run() { render(); }
-                        }, 300);
+                        handler.postDelayed(renderOnce, 300);
                     }
                 });
         btnStop = actionButton(row1, "关闭守护", GuardState.stopColor(true),
@@ -281,12 +299,24 @@ public class MainActivity extends Activity {
                 Toast.makeText(MainActivity.this, "已取消关闭守护", Toast.LENGTH_SHORT).show();
             }
         });
+        // 浮层与控制台在同一 View 树里：显式 block 底层后代焦点，
+        // DPAD/确认键才不会穿透到被遮住的「开启守护 / 立即出题」等按钮。
+        View base = rootView.getChildAt(0);
+        if (base instanceof ViewGroup) {
+            ((ViewGroup) base).setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+        }
         rootView.addView(verifyView.view(), new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         verifyView.requestFocusFirst();
     }
 
     private void hideVerify() {
+        if (rootView != null) {
+            View base = rootView.getChildAt(0);
+            if (base instanceof ViewGroup) {
+                ((ViewGroup) base).setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
+            }
+        }
         if (verifyView != null) {
             try { rootView.removeView(verifyView.view()); } catch (Exception ignored) { }
             verifyView = null;
@@ -298,14 +328,16 @@ public class MainActivity extends Activity {
         hideVerify();
         QuizOverlayService.requestStop(this, true);
         render();
-        handler.postDelayed(new Runnable() {
-            @Override public void run() { render(); }
-        }, 350);
+        handler.postDelayed(renderOnce, 350);
     }
 
     private void paintToggleButtons(boolean running) {
         paintButton(btnStart, GuardState.startColor(running), GuardState.startLabel(running));
         paintButton(btnStop, GuardState.stopColor(running), GuardState.stopLabel(running));
+    }
+
+    private static void setButtonText(Button b, String label) {
+        if (b != null && !label.equals(b.getText().toString())) b.setText(label);
     }
 
     private void paintButton(Button b, int bg, String label) {
@@ -320,11 +352,27 @@ public class MainActivity extends Activity {
         return new SimpleDateFormat("MM-dd HH:mm", Locale.CHINA).format(new Date(ms));
     }
 
+    /** 题库聚合行：按 QuizDb 实例与年级缓存，年级变化时才重新计算。 */
+    private String bankLine() {
+        QuizDb qd = QuizDb.peek();
+        if (qd == null) return "正在加载…（首次启动需复制题库）";
+        int grade = st.grade();
+        if (qd != cachedDbRef || grade != cachedBankGrade) {
+            cachedDbRef = qd;
+            cachedBankGrade = grade;
+            cachedBankLine = qd.count() + " 题 / " + qd.knowledgeCount() + " 知识点 · "
+                    + qd.subjectCount() + " 学科 · 本年级 " + qd.countForGrade(grade)
+                    + " 题 · " + qd.version();
+        }
+        return cachedBankLine;
+    }
+
     private void render() {
+        if (!alive || status == null) return;
         StringBuilder s = new StringBuilder();
         s.append("应用版本：").append(appVersion).append("（build ").append(appVersionCode)
                 .append("）  ·  悬浮窗权限：")
-                .append(canDraw() ? "已授权 ✓" : "未授权 ✗（点「授权悬浮窗」）").append(NL);
+                .append(canDrawCached ? "已授权 ✓" : "未授权 ✗（点「授权悬浮窗」）").append(NL);
         boolean running = QuizOverlayService.isRunning();
         s.append("守护服务：").append(running ? "运行中" : "未运行");
         if (running) {
@@ -343,11 +391,7 @@ public class MainActivity extends Activity {
             s.append(Subjects.name(i)).append(" ").append(st.editionFor(i));
         }
         s.append(NL);
-        QuizDb qd = QuizDb.peek();
-        s.append("内置题库：").append(qd == null ? "正在加载…（首次启动需复制题库）"
-                : (qd.count() + " 题 / " + qd.knowledgeCount() + " 知识点 · "
-                   + qd.subjectCount() + " 学科 · 本年级 " + qd.countForGrade(st.grade())
-                   + " 题 · " + qd.version())).append(NL);
+        s.append("内置题库：").append(bankLine()).append(NL);
         s.append("错题库：").append(WrongBook.cachedCount()).append(" 题");
         String latest = WrongBook.latestSummary();
         if (!latest.isEmpty()) s.append(" · 最近：").append(latest);
@@ -360,12 +404,12 @@ public class MainActivity extends Activity {
         s.append("题库源：").append(st.bankSource()).append(" · 版本 ").append(st.bankVersion())
                 .append(" · 上次检查 ").append(ts(st.bankChecked())).append(NL);
         s.append("同步状态：").append(st.bankMessage());
-        status.setText(s.toString());
+        // 每秒轮询只在文本真的变化时才触碰 TextView / Button，避免无意义的重绘。
+        String text = s.toString();
+        if (!text.equals(status.getText().toString())) status.setText(text);
 
-        if (btnWrong != null) btnWrong.setText("错题库 · " + WrongBook.cachedCount() + " 题");
-        if (btnBoot != null) {
-            btnBoot.setText(st.bootAutostart() ? "厂商自启设置" : "自启已关闭");
-        }
+        setButtonText(btnWrong, "错题库 · " + WrongBook.cachedCount() + " 题");
+        setButtonText(btnBoot, st.bootAutostart() ? "厂商自启设置" : "自启已关闭");
 
         if (paintedRunning == null || paintedRunning.booleanValue() != running) {
             paintedRunning = Boolean.valueOf(running);

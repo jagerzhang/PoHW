@@ -12,6 +12,7 @@ public interface SharedPreferences {
         Editor putInt(String k, int v);
         Editor putBoolean(String k, boolean v);
         Editor putLong(String k, long v);
+        Editor remove(String k);
         void apply();
         boolean commit();
     }

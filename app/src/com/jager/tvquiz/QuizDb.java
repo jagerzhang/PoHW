@@ -33,11 +33,30 @@ public final class QuizDb {
 
     private static QuizDb instance;
     private final SQLiteDatabase db;
+    // 这些聚合值是内置静态题库的元数据，打开后就不会变；在 open() 里一次性算好，
+    // 避免 MainActivity 每秒在 UI 线程上重复查 SQLite。
+    private final int cachedCount;
+    private final int cachedKnowledge;
+    private final int cachedSubjects;
+    private final int cachedBands;
+    private final String cachedVersion;
+    private final String cachedNote;
+    private final java.util.HashMap<String, Integer> countCache =
+            new java.util.HashMap<String, Integer>();
 
     /** Ready instance only; never triggers blocking open/copy. */
     public static synchronized QuizDb peek() { return instance; }
 
-    private QuizDb(SQLiteDatabase db) { this.db = db; }
+    private QuizDb(SQLiteDatabase db, int count, int knowledge, int subjects,
+                   int bands, String version, String note) {
+        this.db = db;
+        this.cachedCount = count;
+        this.cachedKnowledge = knowledge;
+        this.cachedSubjects = subjects;
+        this.cachedBands = bands;
+        this.cachedVersion = version;
+        this.cachedNote = note;
+    }
 
     /** 打开内置题库；失败返回 null，调用方必须能优雅回退到生成器。 */
     public static synchronized QuizDb open(Context c) {
@@ -55,11 +74,18 @@ public final class QuizDb {
             }
             SQLiteDatabase d = SQLiteDatabase.openDatabase(
                     dest.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
-            if (scalar(d, "SELECT COUNT(*) FROM questions") <= 0) {
+            int qCount = scalar(d, "SELECT COUNT(*) FROM questions");
+            if (qCount <= 0) {
                 d.close();
                 return null;
             }
-            instance = new QuizDb(d);
+            // 聚合元数据只在此处查询一次，之后 getter 直接返回缓存值。
+            instance = new QuizDb(d, qCount,
+                    scalar(d, "SELECT COUNT(*) FROM knowledge"),
+                    scalar(d, "SELECT COUNT(*) FROM (SELECT DISTINCT subject FROM knowledge)"),
+                    scalar(d, "SELECT COUNT(*) FROM (SELECT DISTINCT grade_label FROM knowledge)"),
+                    readString(d, "SELECT v FROM meta WHERE k='version'"),
+                    readString(d, "SELECT v FROM meta WHERE k='licenseNote'"));
             return instance;
         } catch (Exception e) {
             Log.e(TAG, "内置题库打开失败，回退生成器", e);
@@ -174,50 +200,56 @@ public final class QuizDb {
         if (x != null) { try { x.close(); } catch (Exception ignored) { } }
     }
 
-    public int count() { return scalar(db, "SELECT COUNT(*) FROM questions"); }
-    public int knowledgeCount() { return scalar(db, "SELECT COUNT(*) FROM knowledge"); }
-    public int subjectCount() {
-        return scalar(db, "SELECT COUNT(*) FROM (SELECT DISTINCT subject FROM knowledge)");
-    }
-    public int gradeBandCount() {
-        return scalar(db, "SELECT COUNT(*) FROM (SELECT DISTINCT grade_label FROM knowledge)");
-    }
+    public int count() { return cachedCount; }
+    public int knowledgeCount() { return cachedKnowledge; }
+    public int subjectCount() { return cachedSubjects; }
+    public int gradeBandCount() { return cachedBands; }
+    public String version() { return cachedVersion; }
+    public String note() { return cachedNote; }
 
-    public String version() {
-        try (Cursor c = db.rawQuery("SELECT v FROM meta WHERE k='version'", null)) {
+    private static String readString(SQLiteDatabase d, String sql) {
+        try (Cursor c = d.rawQuery(sql, null)) {
             return c.moveToFirst() ? c.getString(0) : "";
         } catch (Exception e) {
             return "";
         }
     }
 
-    public String note() {
-        try (Cursor c = db.rawQuery("SELECT v FROM meta WHERE k='licenseNote'", null)) {
-            return c.moveToFirst() ? c.getString(0) : "";
-        } catch (Exception e) {
-            return "";
-        }
-    }
-
-    /** 指定年级 + 指定学科的题目数。 */
+    /** 指定年级 + 指定学科的题目数；结果是内置静态数据，按 grade+subject 缓存。 */
     public int countFor(int grade, int subject) {
+        String key = grade + ":" + subject;
+        synchronized (countCache) {
+            Integer v = countCache.get(key);
+            if (v != null) return v.intValue();
+        }
+        int result;
         try (Cursor c = db.rawQuery(
                 "SELECT COUNT(*) FROM questions WHERE grade=? AND subject=?",
                 new String[]{Integer.toString(grade), subjectName(subject)})) {
-            return c.moveToFirst() ? c.getInt(0) : 0;
+            result = c.moveToFirst() ? c.getInt(0) : 0;
         } catch (Exception e) {
-            return 0;
+            result = 0;
         }
+        synchronized (countCache) { countCache.put(key, Integer.valueOf(result)); }
+        return result;
     }
 
-    /** 指定年级的全部学科题目数（「全学科」模式用）。 */
+    /** 指定年级的全部学科题目数（「全学科」模式用）；同样缓存。 */
     public int countForGrade(int grade) {
+        String key = grade + ":*";
+        synchronized (countCache) {
+            Integer v = countCache.get(key);
+            if (v != null) return v.intValue();
+        }
+        int result;
         try (Cursor c = db.rawQuery("SELECT COUNT(*) FROM questions WHERE grade=?",
                 new String[]{Integer.toString(grade)})) {
-            return c.moveToFirst() ? c.getInt(0) : 0;
+            result = c.moveToFirst() ? c.getInt(0) : 0;
         } catch (Exception e) {
-            return 0;
+            result = 0;
         }
+        synchronized (countCache) { countCache.put(key, Integer.valueOf(result)); }
+        return result;
     }
 
     /** 兼容旧调用：仅在三科内抽题。 */
@@ -232,10 +264,12 @@ public final class QuizDb {
      * 用 OFFSET 采样避免整表排序；COUNT 子查询走 grade/subject 索引。
      */
     public QuizEngine.Question random(int grade, int subject, boolean allSubjects) {
-        String where = allSubjects ? "WHERE grade=?" : "WHERE grade=? AND subject=?";
-        String[] args = allSubjects
+        String name = subjectName(subject);
+        boolean gradeWide = allSubjects || name == null;
+        String where = gradeWide ? "WHERE grade=?" : "WHERE grade=? AND subject=?";
+        String[] args = gradeWide
                 ? new String[]{Integer.toString(grade)}
-                : new String[]{Integer.toString(grade), subjectName(subject)};
+                : new String[]{Integer.toString(grade), name};
         QuizEngine.Question q = pick(where, args, subject);
         if (q == null) q = pick("", null, subject);
         return q;
@@ -280,6 +314,7 @@ public final class QuizDb {
     private static String subjectName(int subject) {
         if (subject == QuizEngine.CHINESE) return "语文";
         if (subject == QuizEngine.ENGLISH) return "英语";
-        return "数学";
+        if (subject == QuizEngine.MATH) return "数学";
+        return null; // Subjects.OTHER 及其他未知值：没有对应的内置离线学科名
     }
 }

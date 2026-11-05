@@ -79,18 +79,25 @@ python3 tools/quizbank/verify.py app/assets/quiz.db
 
 ## 6. 为什么不用 Gradle
 
-这个工程只有一个模块、24 个 Java 文件、零第三方依赖，用 Gradle 需要 AGP、
+这个工程只有一个模块、27 个 Java 文件、零第三方依赖，用 Gradle 需要 AGP、
 Gradle Wrapper、联网拉依赖和一套额外的构建缓存。命令行链路把每一步都显式暴露出来，
 便于审查、便于在离线环境复现，也让「APK 里到底装了什么」一目了然。
 
-## 7. v6 构建门禁
+## 7. v6.0.1 构建门禁
 
-`app/build.sh` 的 `[0/9] static guards` 追加了 v6 回归检查：
-`AnswerPolicy.shouldSwap`、`WrongBook.recordAsync`、`MediaPauseController`、
-`BootPolicy.shouldStartGuard`、每次弹题 `new OverlayQuizView`、
-`FLAG_NOT_FOCUSABLE` 显式清除、`WrongBookActivity` 已注册，以及 8 个新增源文件存在。
-`[2/9]` 现在跑 6 组共 **123** 个 JVM 单测（新增 `FeatureV6Test` 45 项）；
-`[6/9]` 会检查 dex 中确实含有「错题库」字符串。
+`app/build.sh` 的 `[0/9] static guards` 改为**语义符号检查**，不再依赖精确行文本
+（旧版把 `FLAG_NOT_FOCUSABLE` 清零当成「窗口焦点已保证」是错误理解）。当前检查：
+`QuizFlow` / `flow.submit`（判题状态机确实被推进）、`KeyRouter.decide`（按键自主路由）、
+`new OverlayQuizView`（每次弹题不复用 View）、`requestContinue` + `onWindowFocusChanged`
+（不在按键栈内摘窗口、失焦有回调）、`fgReady = enterForeground()`（FGS 契约在入口覆盖全分支）、
+`updateViewLayout` / `rebuildOverlay`（焦点重抢状态机）、`issueStopToken` /
+`consumeStopToken` / `EXTRA_STOP_TOKEN`（一次性 STOP 令牌），并**禁止**残留
+`EXTRA_STOP_VERIFIED`。另外确认 `QuickBootReceiver` 已注册、
+`KeyRouter` / `QuizFlow` / `BehaviorV601Test` 真的被编译与执行。
+
+`[2/9]` 现在跑 7 组共 **174** 个 JVM 单测（新增 `BehaviorV601Test` 51 项，
+覆盖按键 ACTION_DOWN/UP 与 repeat、2x2 高亮邻接、答题状态机、令牌 TTL/重放/进程重启）；
+`[6/9]` 仍检查 dex 中含「错题库」字符串。
 
 覆盖安装保持签名一致：
 

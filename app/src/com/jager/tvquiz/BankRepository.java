@@ -15,7 +15,6 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -131,8 +130,8 @@ public final class BankRepository {
         if (fs == null) return out;
         for (File f : fs) {
             if (!isPack(f)) continue;
-            try {
-                JSONObject o = new JSONObject(new String(readAll(new java.io.FileInputStream(f)), UTF8));
+            try (java.io.FileInputStream fis = new java.io.FileInputStream(f)) {
+                JSONObject o = new JSONObject(new String(readAll(fis), UTF8));
                 if (o.optInt("grade", 0) != grade) continue;
                 String ed = o.optString("edition", "*");
                 int subject = subjectOf(o.optString("subject", "数学"));
@@ -166,7 +165,8 @@ public final class BankRepository {
     private static int subjectOf(String s) {
         if ("语文".equals(s)) return QuizEngine.CHINESE;
         if ("英语".equals(s)) return QuizEngine.ENGLISH;
-        return QuizEngine.MATH;
+        if ("数学".equals(s)) return QuizEngine.MATH;
+        return Subjects.OTHER;
     }
 
     private static String editionFor(String[] eds, int subject) {
@@ -239,7 +239,7 @@ public final class BankRepository {
                     byte[] data = httpGet(join(url, rel));
                     String expect = p.optString("sha256", "");
                     if (expect.length() != 64) throw new IOException("题目包缺少 sha256");
-                    if (!expect.equalsIgnoreCase(sha256(data))) {
+                    if (!expect.equalsIgnoreCase(Hashes.sha256Hex(data))) {
                         throw new IOException("SHA-256 校验不通过");
                     }
                     JSONObject pack = new JSONObject(new String(data, UTF8));
@@ -316,52 +316,71 @@ public final class BankRepository {
     private static byte[] httpGet(String url) throws IOException {
         if (!url.startsWith("http://") && !url.startsWith("https://"))
             throw new IOException("仅支持 http/https 题库源");
-        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
-        c.setConnectTimeout(8000);
-        c.setReadTimeout(15000);
-        c.setRequestMethod("GET");
-        c.setInstanceFollowRedirects(true);
-        c.setRequestProperty("Accept", "application/json");
-        int code = c.getResponseCode();
-        if (code != 200) { c.disconnect(); throw new IOException("HTTP " + code); }
-        InputStream in = c.getInputStream();
-        ByteArrayOutputStream bo = new ByteArrayOutputStream();
-        byte[] buf = new byte[8192];
-        int n, total = 0;
-        while ((n = in.read(buf)) > 0) {
-            total += n;
-            if (total > MAX_BYTES) { in.close(); c.disconnect(); throw new IOException("文件超过 4MB"); }
-            bo.write(buf, 0, n);
+        final String originalHost = hostOf(url);
+        // 不交给 HttpURLConnection 自动跳转：它可能跨到任意主机，绕过 join 的跨主机校验。
+        // 改为手动跟随，最多 3 跳，且每一跳都必须留在原始主机。
+        for (int redirects = 0; redirects <= 3; redirects++) {
+            HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+            InputStream in = null;
+            try {
+                c.setConnectTimeout(8000);
+                c.setReadTimeout(15000);
+                c.setRequestMethod("GET");
+                c.setInstanceFollowRedirects(false);
+                c.setRequestProperty("Accept", "application/json");
+                int code = c.getResponseCode();
+                if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+                    if (redirects == 3) throw new IOException("重定向次数超过 3 次");
+                    String loc = c.getHeaderField("Location");
+                    if (loc == null || loc.isEmpty()) throw new IOException("重定向缺少 Location");
+                    // join() 对绝对地址复用跨主机校验；相对地址保持在当前（=原始）主机。
+                    String next = join(url, loc);
+                    if (originalHost.isEmpty() || !originalHost.equals(hostOf(next)))
+                        throw new IOException("重定向跨主机地址被拒绝");
+                    url = next;
+                    continue;
+                }
+                if (code != 200) throw new IOException("HTTP " + code);
+                in = c.getInputStream();
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int n, total = 0;
+                while ((n = in.read(buf)) > 0) {
+                    total += n;
+                    if (total > MAX_BYTES) throw new IOException("文件超过 4MB");
+                    bo.write(buf, 0, n);
+                }
+                return bo.toByteArray();
+            } finally {
+                // 成功、>4MB 溢出、以及所有错误路径都要释放流与连接。
+                if (in != null) { try { in.close(); } catch (Exception ignored) { } }
+                c.disconnect();
+            }
         }
-        in.close();
-        c.disconnect();
-        return bo.toByteArray();
+        throw new IOException("重定向次数超过 3 次");
     }
 
     private static void writeAtomic(File dest, byte[] data) throws IOException {
         File tmp = new File(dest.getParentFile(), dest.getName() + ".tmp");
-        FileOutputStream fo = new FileOutputStream(tmp);
-        fo.write(data);
-        fo.flush();
-        fo.getFD().sync();
-        fo.close();
-        if (dest.exists() && !dest.delete()) throw new IOException("无法替换旧缓存");
-        if (!tmp.renameTo(dest)) {
-            FileOutputStream out = new FileOutputStream(dest);
-            out.write(data);
-            out.close();
-            tmp.delete();
+        boolean ok = false;
+        try {
+            try (FileOutputStream fo = new FileOutputStream(tmp)) {
+                fo.write(data);
+                fo.flush();
+                fo.getFD().sync();
+            }
+            if (dest.exists() && !dest.delete()) throw new IOException("无法替换旧缓存");
+            if (!tmp.renameTo(dest)) {
+                try (FileOutputStream out = new FileOutputStream(dest)) {
+                    out.write(data);
+                    out.flush();
+                }
+                tmp.delete();
+            }
+            ok = true;
+        } finally {
+            if (!ok) tmp.delete();
         }
     }
 
-    private static String sha256(byte[] data) {
-        try {
-            byte[] d = MessageDigest.getInstance("SHA-256").digest(data);
-            StringBuilder sb = new StringBuilder();
-            for (byte b : d) sb.append(String.format(Locale.US, "%02x", b & 0xff));
-            return sb.toString();
-        } catch (Exception e) {
-            return "";
-        }
-    }
 }

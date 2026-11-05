@@ -5,6 +5,8 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -20,8 +22,20 @@ public final class WrongBook extends SQLiteOpenHelper {
 
     private static final String TAG = "PoHW.WrongBook";
     private static final String DB = "pohw_wrong.db";
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
+    /** 列表只展示最近 500 条，标题里的总数必须另用 COUNT(*) 取真实值。 */
+    public static final int LIST_LIMIT = 500;
     private static final ExecutorService POOL = Executors.newSingleThreadExecutor();
+
+    /** onUpgrade 只补列、不删表：错题库是用户累积数据，DROP 属于不可逆破坏。 */
+    private static final String[][] COLUMNS = {
+            {"grade", "INTEGER"}, {"grade_label", "TEXT"}, {"subject", "TEXT"},
+            {"edition", "TEXT"}, {"topic", "TEXT"}, {"text", "TEXT"},
+            {"opt_a", "TEXT"}, {"opt_b", "TEXT"}, {"opt_c", "TEXT"}, {"opt_d", "TEXT"},
+            {"answer_index", "INTEGER"}, {"explain", "TEXT"}, {"source", "TEXT"},
+            {"wrong_count", "INTEGER NOT NULL DEFAULT 1"}, {"last_pick", "TEXT"},
+            {"last_wrong_at", "INTEGER"}, {"created_at", "INTEGER"}
+    };
 
     private static volatile WrongBook instance = null;
     private static volatile int countCache = -1;
@@ -40,18 +54,78 @@ public final class WrongBook extends SQLiteOpenHelper {
         super(c.getApplicationContext(), DB, null, VERSION);
     }
 
+    /** 只构造 Helper、不碰磁盘：count()/list() 一律走 refreshAsync() 后台线程。 */
     public static synchronized WrongBook open(Context c) {
         if (instance == null) {
             try {
-                WrongBook w = new WrongBook(c);
-                countCache = w.count();
-                w.list();   // 冷启动时也恢复「最近错题」摘要
-                instance = w;
+                instance = new WrongBook(c.getApplicationContext());
             } catch (Exception e) {
                 Log.e(TAG, "open wrong book failed", e);
             }
         }
         return instance;
+    }
+
+    /** 后台刷新缓存计数与最近错题摘要；回调在主线程执行，entries 为最近 LIST_LIMIT 条。 */
+    public interface RefreshCallback {
+        void onLoaded(List<Entry> entries, int total);
+    }
+
+    public static void refreshAsync(final Context c) {
+        refreshAsync(c, null);
+    }
+
+    public static void refreshAsync(final Context c, final RefreshCallback cb) {
+        POOL.execute(new Runnable() {
+            @Override public void run() {
+                WrongBook w = open(c);
+                List<Entry> snapshot;
+                int total;
+                if (w == null) {
+                    snapshot = new ArrayList<Entry>();
+                    total = 0;
+                } else {
+                    snapshot = w.list();   // 顺带刷新 latestSummary
+                    total = w.count();     // COUNT(*) 真实总数，不受 LIST_LIMIT 影响
+                }
+                if (cb != null) {
+                    final List<Entry> f = snapshot;
+                    final int t = total;
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override public void run() { cb.onLoaded(f, t); }
+                    });
+                }
+            }
+        });
+    }
+
+    private static void mutateAsync(final Runnable work, final Runnable onDone) {
+        POOL.execute(new Runnable() {
+            @Override public void run() {
+                try { work.run(); } catch (Exception e) { Log.e(TAG, "mutate failed", e); }
+                if (onDone != null) {
+                    new Handler(Looper.getMainLooper()).post(onDone);
+                }
+            }
+        });
+    }
+
+    public static void deleteAsync(final Context c, final long id, final Runnable onDone) {
+        mutateAsync(new Runnable() {
+            @Override public void run() {
+                WrongBook w = open(c);
+                if (w != null) w.delete(id);
+            }
+        }, onDone);
+    }
+
+    public static void clearAsync(final Context c, final Runnable onDone) {
+        mutateAsync(new Runnable() {
+            @Override public void run() {
+                WrongBook w = open(c);
+                if (w != null) w.clear();
+            }
+        }, onDone);
     }
 
     /** 控制台每秒刷新用缓存计数，避免轮询 SQLite。 */
@@ -120,8 +194,28 @@ public final class WrongBook extends SQLiteOpenHelper {
     }
 
     @Override public void onUpgrade(SQLiteDatabase d, int oldV, int newV) {
-        d.execSQL("DROP TABLE IF EXISTS wrong");
+        // 绝不删表：只幂等补表、补索引、补缺失列，用户累积的错题必须完整保留。
         onCreate(d);
+        ensureColumns(d);
+    }
+
+    private static void ensureColumns(SQLiteDatabase d) {
+        java.util.Set<String> names = new java.util.HashSet<String>();
+        Cursor c = d.rawQuery("PRAGMA table_info(wrong)", null);
+        try {
+            int idx = c.getColumnIndex("name");
+            while (c.moveToNext()) {
+                String n = c.getString(idx);
+                if (n != null) names.add(n.toLowerCase(java.util.Locale.US));
+            }
+        } finally {
+            c.close();
+        }
+        for (String[] col : COLUMNS) {
+            if (!names.contains(col[0].toLowerCase(java.util.Locale.US))) {
+                d.execSQL("ALTER TABLE wrong ADD COLUMN " + col[0] + " " + col[1]);
+            }
+        }
     }
 
     public synchronized int count() {
@@ -139,13 +233,9 @@ public final class WrongBook extends SQLiteOpenHelper {
 
     public synchronized void record(Entry e) {
         if (e == null || e.key == null || e.key.isEmpty()) return;
+        boolean ok = false;
         try {
             SQLiteDatabase d = getWritableDatabase();
-            Cursor c = d.rawQuery("SELECT wrong_count FROM wrong WHERE qkey=?",
-                    new String[]{e.key});
-            boolean exists;
-            try { exists = c.moveToFirst(); } finally { c.close(); }
-
             long now = System.currentTimeMillis();
             ContentValues v = new ContentValues();
             v.put("grade", e.grade);
@@ -166,23 +256,35 @@ public final class WrongBook extends SQLiteOpenHelper {
 
             d.beginTransaction();
             try {
+                // 读 + 写必须同事务，否则并发 record 会覆盖彼此的 wrong_count。
+                Cursor c = d.rawQuery("SELECT wrong_count FROM wrong WHERE qkey=?",
+                        new String[]{e.key});
+                boolean exists;
+                try { exists = c.moveToFirst(); } finally { c.close(); }
                 if (!exists) {
                     v.put("qkey", e.key);
                     v.put("wrong_count", 1);
                     v.put("created_at", now);
-                    d.insert("wrong", null, v);
+                    if (d.insert("wrong", null, v) < 0) {
+                        throw new IllegalStateException("insert wrong returned -1");
+                    }
                 } else {
-                    d.update("wrong", v, "qkey=?", new String[]{e.key});
+                    if (d.update("wrong", v, "qkey=?", new String[]{e.key}) < 1) {
+                        throw new IllegalStateException("update wrong affected 0 rows");
+                    }
                     d.execSQL("UPDATE wrong SET wrong_count = wrong_count + 1 WHERE qkey=?",
                             new Object[]{e.key});
                 }
                 d.setTransactionSuccessful();
+                ok = true;
             } finally {
                 d.endTransaction();
             }
         } catch (Exception ex) {
             Log.e(TAG, "record failed", ex);
         }
+        // 写失败绝不推进摘要/计数，否则控制台会显示一条并不存在的错题。
+        if (!ok) return;
         latestSummary = summarize(e);
         countCache = count();
     }
@@ -191,7 +293,7 @@ public final class WrongBook extends SQLiteOpenHelper {
         List<Entry> out = new ArrayList<Entry>();
         try {
             Cursor c = getReadableDatabase().rawQuery(
-                    "SELECT * FROM wrong ORDER BY last_wrong_at DESC LIMIT 500", null);
+                    "SELECT * FROM wrong ORDER BY last_wrong_at DESC LIMIT " + LIST_LIMIT, null);
             try {
                 while (c.moveToNext()) out.add(read(c));
             } finally {

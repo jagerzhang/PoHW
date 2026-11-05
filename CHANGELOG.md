@@ -1,5 +1,79 @@
 # Changelog
 
+## v6.0.1 (versionCode 11) — review-driven hardening
+
+Two independent reviews of v6.0.0 (feature acceptance + Android/AOSP compliance)
+both concluded "do not ship as 5/5 complete". This release fixes the P0/P1 items
+and adds the missing behaviour-level tests.
+
+- **P0: overlay window focus state machine.** The overlay now reports
+  `onWindowFocusChanged(false)` to the service; the service re-applies
+  `WindowManager.LayoutParams` up to 6 times and rebuilds the window once
+  (`remove` + `add` of the same View, preserving `QuizFlow` state). Documented
+  that clearing `FLAG_NOT_FOCUSABLE` does NOT guarantee the WMS focused window.
+  On exhaustion the quiz stays visible (never auto-unlocks) and touch/mouse
+  clicks still work.
+- **P0: foreground-service 5s contract on every branch.** `startForeground()`
+  moved to the top of `onStartCommand()`, covering STOP, rejected STOP, missing
+  overlay permission and notification-build failure. `onDestroy()` explicitly
+  calls `stopForeground(true)`.
+- **Critical: the new `QuizFlow` was wired but never advanced.** `flow.submit()`
+  was never called, so the "continue watching" button stayed unclickable and
+  disabled options never stuck. Judging now runs through
+  `QuizOverlayService.answer()` -> `flow.submit()`, and `bind()` calls `reset()`
+  on every question swap. The service no longer keeps its own `wrongAttempts`.
+- **Correct-answer confirmation timing.** `onContinue()` is posted via
+  `root.post()` instead of removing the window synchronously inside the key /
+  click dispatch stack.
+- **P1: one-shot STOP token.** The client-side `EXTRA_STOP_VERIFIED` boolean is
+  gone. After PIN verification the app issues a random 24-byte token stored with
+  `commit()` (60s TTL, deleted on every consume attempt, compared with
+  `MessageDigest.isEqual`); the service consumes it before `GuardPolicy`.
+  `Build.VERSION.SDK_INT >= 26` uses `startForegroundService` for STOP.
+- **P1: boot receivers split.** `BootReceiver` handles only protected
+  `BOOT_COMPLETED`; a new `QuickBootReceiver` handles vendor quickboot actions
+  without the `RECEIVE_BOOT_COMPLETED` sender permission. Android 12+ may refuse
+  to start an FGS from quickboot (not in the exemption list) - failures are
+  explicitly caught and logged; `BOOT_COMPLETED` remains the reliable path.
+- **P1: `KeyRouter` (pure Java).** Volume DOWN/UP pass through symmetrically;
+  long-press repeats are suppressed for confirm / number / DPAD keys; BACK and
+  media keys are swallowed. 2x2 highlight adjacency is unit-tested.
+- **P1: audio focus API.** `MediaPauseController` uses `AudioFocusRequest` +
+  a non-null listener on API 26+ (deprecated 3-arg API only on 21-25). When a
+  player was paused by focus loss, abandoning focus is enough - no extra
+  `MEDIA_PLAY` that could wake an unrelated MediaSession or double-toggle.
+  `resumePlayback=false` is documented as best-effort.
+- **P1: online packs were dead code.** `QuizEngine.next()` now mixes built-in
+  SQLite questions with edition-filtered online packs (`BANK_RATIO`), routes
+  `Subjects.OTHER` packs, and `Question.key()` is length-prefixed and includes
+  subject + answerIndex so different-answer questions do not merge in the
+  wrong-book.
+- **P1: network / settings.** Automatic redirects disabled, `Location` manually
+  validated to the same host (max 3 hops), streams always closed; the settings
+  URL field is no longer wiped by `refreshRows()`; cleartext preset changed to
+  `127.0.0.1` (allowed by network security config); explicit DPAD focus links
+  between the three columns.
+- **P1/P2: wrong-book & console.** `record()` wraps read+write in a transaction
+  and refreshes the summary only after success; `onUpgrade()` is non-destructive;
+  first open moved off the main thread; the header always uses the true
+  `COUNT(*)`, while the list is capped at `LIST_LIMIT=500` with an explicit
+  truncation hint; clear confirmation auto-disarms after 5s. Main console caches
+  bank stats / overlay permission instead of re-querying SQLite every second,
+  compares strings before `setText`, and reuses field Runnables that are all
+  removed in `onDestroy()`; the PIN overlay takes focus itself and blocks
+  descendant focus on the underlying console buttons.
+- **Tests & gates.** New `BehaviorV601Test` (51 assertions: key timing, quiz
+  state machine, one-shot token TTL/replay/process-restart). `tests/run.sh`
+  compiles `KeyRouter` + `QuizFlow` and runs 7 suites: **174/174 total**.
+  Build static gates now assert behaviour symbols rather than exact line text.
+- The final APK is rebuilt from the finished source (the old v6.0.0 dist APK
+  predated these fixes); `classes.dex` contains `refreshAsync`, `wireColumns`,
+  `setUrlText`, `consumeStopToken` and `rebuildOverlay`.
+- Version 6.0.1 / versionCode 11. Release artifacts are signed with the same
+  externally-supplied keystore as v4.x/v5/v6.0.0 so `adb install -r` works;
+  the default (no `POHW_KEYSTORE`) still generates a random dev key and does
+  NOT guarantee signature continuity.
+
 ## v6.0.0 (versionCode 10) — real-device feedback from a Xiaomi TV
 
 - **Fix: overlay lost remote-control input on the second quiz.** The service now

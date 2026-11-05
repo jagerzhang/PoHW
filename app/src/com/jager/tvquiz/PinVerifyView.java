@@ -2,6 +2,7 @@ package com.jager.tvquiz;
 
 import android.content.Context;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -33,10 +34,33 @@ public final class PinVerifyView {
         cb = callback;
         gate = new PinGate(store);
 
-        layer = new FrameLayout(ctx);
+        // 浮层必须能在自身 View 树内持有焦点，否则 DPAD 会落到控制台底层按钮上。
+        layer = new FrameLayout(ctx) {
+            @Override public boolean dispatchKeyEvent(KeyEvent event) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                    int code = event.getKeyCode();
+                    boolean nav = code == KeyEvent.KEYCODE_DPAD_UP
+                            || code == KeyEvent.KEYCODE_DPAD_DOWN
+                            || code == KeyEvent.KEYCODE_DPAD_LEFT
+                            || code == KeyEvent.KEYCODE_DPAD_RIGHT
+                            || code == KeyEvent.KEYCODE_DPAD_CENTER
+                            || code == KeyEvent.KEYCODE_ENTER;
+                    // 焦点若被系统抢走，先收回数字键盘，本次方向键不再向下穿透。
+                    if (nav && !hasFocus()) {
+                        requestFocus();
+                        if (first != null) first.requestFocus();
+                        return true;
+                    }
+                    if (code == KeyEvent.KEYCODE_BACK) return true; // 宿主 Activity 负责取消
+                }
+                return super.dispatchKeyEvent(event);
+            }
+        };
         layer.setBackgroundColor(0xE6050810);
         layer.setClickable(true);
         layer.setFocusable(true);
+        layer.setFocusableInTouchMode(true);
+        layer.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
 
         LinearLayout card = Ui.vbox(ctx);
         card.setBackground(Ui.round(0xFF1B2432, 14, ctx));
@@ -98,7 +122,13 @@ public final class PinVerifyView {
     public View view() { return layer; }
 
     public void requestFocusFirst() {
-        if (first != null) first.requestFocus();
+        // 必须等浮层 attach 完成后再抢焦点，构造期 requestFocus() 会被 ViewRoot 丢弃。
+        layer.post(new Runnable() {
+            @Override public void run() {
+                layer.requestFocus();
+                if (first != null) first.requestFocus();
+            }
+        });
     }
 
     public void key(String k) {

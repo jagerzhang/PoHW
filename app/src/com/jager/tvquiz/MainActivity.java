@@ -34,6 +34,9 @@ public class MainActivity extends Activity {
     private TextView status;
     private FrameLayout rootView;
     private Button btnGuard, btnWrong, btnBoot;
+    /** 首页 3 列 × 2 排网格：显式维护同列上下 / 同行左右的 TV 遥控器焦点链。 */
+    private static final int GRID_COLS = 3;
+    private final java.util.List<Button[]> gridRows = new java.util.ArrayList<Button[]>();
     private PinVerifyView verifyView;
     private Boolean paintedRunning = null;
     private String appVersion = "?";
@@ -187,20 +190,41 @@ public class MainActivity extends Activity {
         Button b = Ui.button(this, label, bg, 0xFFFFFFFF, 17);
         b.setOnClickListener(l);
         Ui.focus(b, this, bg, Ui.BLUE, 0xFFFFFFFF);
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(Ui.dp(this, 190), Ui.dp(this, 54));
-        p.setMargins(Ui.dp(this, 7), 0, Ui.dp(this, 7), 0);
+        // 三列等宽：不写死 190dp，任意屏宽都对齐成 3 列。
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, Ui.dp(this, 54), 1f);
+        p.setMargins(Ui.dp(this, 7), Ui.dp(this, 4), Ui.dp(this, 7), Ui.dp(this, 4));
         row.addView(b, p);
         return b;
+    }
+
+    /** 3×2 网格的 TV DPAD 焦点：上下落在同列，左右落在同行，边缘不绕回。 */
+    private void wireGrid() {
+        for (int r = 0; r < gridRows.size(); r++) {
+            Button[] row = gridRows.get(r);
+            for (int c = 0; c < row.length; c++) {
+                Button b = row[c];
+                if (b == null) continue;
+                if (c > 0) b.setNextFocusLeftId(ensureId(row[c - 1]));
+                if (c < row.length - 1) b.setNextFocusRightId(ensureId(row[c + 1]));
+                if (r > 0) b.setNextFocusUpId(ensureId(gridRows.get(r - 1)[c]));
+                if (r < gridRows.size() - 1) b.setNextFocusDownId(ensureId(gridRows.get(r + 1)[c]));
+            }
+        }
+    }
+
+    private static int ensureId(View v) {
+        if (v.getId() == View.NO_ID) v.setId(View.generateViewId());
+        return v.getId();
     }
 
     private View buildView() {
         rootView = new FrameLayout(this);
         LinearLayout l = Ui.vbox(this);
         l.setBackgroundColor(Ui.BG);
-        l.setPadding(Ui.dp(this, 40), Ui.dp(this, 16), Ui.dp(this, 40), Ui.dp(this, 12));
+        l.setPadding(Ui.dp(this, 40), Ui.dp(this, 18), Ui.dp(this, 40), Ui.dp(this, 12));
 
         l.addView(Ui.tv(this, "答题守护  ·  v" + appVersion + " 控制台",
-                28, 0xFFFFFFFF), Ui.fixed(this, 42));
+                26, 0xFFFFFFFF), Ui.fixed(this, 46));
 
         status = Ui.tv(this, "", 15, 0xFFC7D2E2, Gravity.LEFT);
         status.setPadding(Ui.dp(this, 16), Ui.dp(this, 8), Ui.dp(this, 16), Ui.dp(this, 8));
@@ -208,38 +232,41 @@ public class MainActivity extends Activity {
         status.setLineSpacing(0, 1.12f);
         l.addView(status, Ui.fill(1));
 
+        // 首页 3 列 × 2 排：上排高频操作，下排权限 / 数据 / 厂商入口。
+        // 单一守护开关的文案与底色仍由 GuardState.toggle* 给出；运行中点击先过
+        // 就地 PIN 验证层，界面不退出、不跳转。
         LinearLayout row1 = Ui.hbox(this);
-        // 单一守护开关：文案与底色都由 GuardState.toggle* 按当前状态给出，
-        // 运行中点击先过就地 PIN 验证层，界面不退出、不跳转。
-        btnGuard = actionButton(row1, GuardState.toggleLabel(false),
+        Button[] r1 = new Button[GRID_COLS];
+        r1[0] = btnGuard = actionButton(row1, GuardState.toggleLabel(false),
                 GuardState.toggleColor(false),
                 new View.OnClickListener() {
                     @Override public void onClick(View v) { toggleGuard(); }
                 });
-        actionButton(row1, "立即出题", 0xFFEF6C4D, new View.OnClickListener() {
+        r1[1] = actionButton(row1, "立即出题", 0xFFEF6C4D, new View.OnClickListener() {
             @Override public void onClick(View v) {
                 if (!canDraw()) { openOverlaySettings(); return; }
                 send(QuizOverlayService.ACTION_QUIZ_NOW);
             }
         });
+        r1[2] = actionButton(row1, "家长设置", 0xFF185FA5, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, SettingsActivity.class));
+            }
+        });
         l.addView(row1, Ui.fixed(this, 62));
+        gridRows.add(r1);
 
         LinearLayout row2 = Ui.hbox(this);
-        actionButton(row2, "家长设置", 0xFF185FA5, new View.OnClickListener() {
-            @Override public void onClick(View v) { startActivity(new Intent(MainActivity.this, SettingsActivity.class)); }
-        });
-        actionButton(row2, "授权悬浮窗", 0xFF243044, new View.OnClickListener() {
+        Button[] r2 = new Button[GRID_COLS];
+        r2[0] = actionButton(row2, "授权悬浮窗", 0xFF243044, new View.OnClickListener() {
             @Override public void onClick(View v) { openOverlaySettings(); }
         });
-        l.addView(row2, Ui.fixed(this, 62));
-
-        LinearLayout row3 = Ui.hbox(this);
-        btnWrong = actionButton(row3, "错题库 · 0 题", 0xFFB06A2C, new View.OnClickListener() {
+        r2[1] = btnWrong = actionButton(row2, "错题库 · 0 题", 0xFFB06A2C, new View.OnClickListener() {
             @Override public void onClick(View v) {
                 startActivity(new Intent(MainActivity.this, WrongBookActivity.class));
             }
         });
-        btnBoot = actionButton(row3, "厂商自启设置", 0xFF2C6E8F, new View.OnClickListener() {
+        r2[2] = btnBoot = actionButton(row2, "厂商自启设置", 0xFF2C6E8F, new View.OnClickListener() {
             @Override public void onClick(View v) {
                 BootSettings.open(MainActivity.this);
                 Toast.makeText(MainActivity.this,
@@ -247,7 +274,9 @@ public class MainActivity extends Activity {
                         Toast.LENGTH_LONG).show();
             }
         });
-        l.addView(row3, Ui.fixed(this, 58));
+        l.addView(row2, Ui.fixed(this, 62));
+        gridRows.add(r2);
+        wireGrid();
 
         l.addView(Ui.tv(this,
                 "开启守护后按 Home 切到任意应用，到点弹出全屏答题页；Home 键属系统级按键，第三方无法拦截。\n"

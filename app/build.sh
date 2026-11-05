@@ -8,7 +8,7 @@ APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
 VERSION_NAME="1.0.1"
-VERSION_CODE="13"
+VERSION_CODE="14"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -58,6 +58,21 @@ grep -q 'wireSubjectRows' "$SET"
 if grep -q '检查题库更新' "$MAIN"; then
   echo 'FORBIDDEN: bank-update entry must live in SettingsActivity only'; exit 1
 fi
+# v1.0.1 UI polish: 3x2 home grid + single-column card flow in settings.
+# Behaviour symbols (not Chinese copy) keep the gates stable across wording tweaks.
+grep -q 'GRID_COLS = 3' "$MAIN"
+grep -q 'wireGrid()' "$MAIN"
+[ "$(grep -cF 'new Button[GRID_COLS]' "$MAIN")" -eq 2 ] || {
+  echo 'FORBIDDEN: home grid must be exactly 2 rows'; exit 1; }
+grep -q 'wireVerticalFocus' "$SET"
+grep -q 'addCard' "$SET"
+grep -q 'new ScrollView(this)' "$SET"
+if grep -q -e 'wireColumns' -e 'addColumn' "$SET"; then
+  echo 'FORBIDDEN: settings must stay a single-column card flow'; exit 1
+fi
+# 布局契约（3x2 网格 / 单列卡片流 / DPAD 焦点链）由独立脚本逐条断言，
+# 纯 JVM 单测无法实例化 android.view.*，这里守住结构，javac 再守住编译。
+python3 tests/layout_contract.py
 # P0: FGS 契约覆盖所有分支（startForeground 必须在 onStartCommand 入口）
 grep -q 'fgReady = enterForeground()' "$SVC"
 grep -q 'startForeground(NOTIF_ID' "$SVC"

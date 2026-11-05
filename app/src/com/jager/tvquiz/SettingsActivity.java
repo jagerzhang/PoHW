@@ -20,14 +20,22 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * 家长设置：密码门禁 + 三栏（出题与学科设置 / 开机播放与错题库 / 在线源与账户）。
- * 教材版本与题目配比按学科合并为同一行的左右两个可选值，减少 TV 界面占用。
- * 每栏独立滚动，避免新增设置项在 540dp 高的电视屏上被裁掉。
+ * 家长设置：密码门禁 + 单列卡片流（瀑布式纵向滚动）。
+ * 参照电视端系统设置的信息层级：一个居中窄栏、分组卡片、每行「左标签 / 右取值」，
+ * 底部固定操作条常驻，避免长表单把「保存并返回」挤到屏幕外。
+ * 可聚焦控件按「行」显式串成上下链，学科复合行内部再串左右链；
+ * TV 遥控器不再需要跨栏跳转，也不会出现三栏并排时的文字挤压与底部裁切。
  */
 public class SettingsActivity extends Activity {
 
     private static final String NL = "\n";
     private static final String[] PRESETS = {"", "http://10.0.2.2:8000/", "http://127.0.0.1:8000/"};
+    private static final int CARD_BG = 0xFF161E2B;
+    /** 居中窄栏的左右留白：卡片与底部操作条共用，保证视觉对齐。 */
+    private static final int GUTTER_DP = 88;
+    /** 行标签宽度：普通行与学科行分别取不同值，避免右侧取值被压窄。 */
+    private static final int LABEL_DP = 150;
+    private static final int SUBJ_LABEL_DP = 100;
 
     private SettingsStore st;
     private PinGate gate;
@@ -48,6 +56,9 @@ public class SettingsActivity extends Activity {
     private Button[] rowWt = new Button[Subjects.COUNT];
     private final java.util.List<Button[]> subjectPairs = new java.util.ArrayList<Button[]>();
     private Button rowBoot, rowAutoGuard, rowPause, rowResume;
+    /** 单列焦点链：每行一个数组，纵向按加入顺序连接。 */
+    private final java.util.List<View[]> focusRows = new java.util.ArrayList<View[]>();
+    private Button btnChangePin, btnSave;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -170,47 +181,67 @@ public class SettingsActivity extends Activity {
         if (rowGrade != null) rowGrade.requestFocus();
     }
 
-    // ---------- 设置表单 ----------
+    // ---------- 单列卡片流布局 ----------
 
-    private LinearLayout addColumn(LinearLayout parent, int rightPadDp) {
-        ScrollView sv = new ScrollView(this);
-        sv.setFillViewport(true);
-        LinearLayout col = Ui.vbox(this);
-        col.setPadding(0, 0, Ui.dp(this, rightPadDp), 0);
-        sv.addView(col);
-        parent.addView(sv, new LinearLayout.LayoutParams(0,
-                ViewGroup.LayoutParams.MATCH_PARENT, 1));
-        return col;
-    }
+    /** 分组卡片：顶部「色条 + 序号标题」，内部逐行堆叠，卡片之间留呼吸间距。 */
+    private LinearLayout addCard(LinearLayout parent, String title) {
+        LinearLayout card = Ui.vbox(this);
+        card.setBackground(Ui.round(CARD_BG, 14, this));
+        card.setPadding(Ui.dp(this, 18), Ui.dp(this, 8), Ui.dp(this, 18), Ui.dp(this, 12));
+        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        cp.setMargins(0, Ui.dp(this, 4), 0, Ui.dp(this, 10));
+        parent.addView(card, cp);
 
-    private void section(LinearLayout parent, String text) {
-        parent.addView(Ui.tv(this, text, 15, Ui.AMBER, Gravity.LEFT),
-                new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                        Ui.dp(this, 26)));
+        LinearLayout head = Ui.hbox(this);
+        head.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+        View bar = new View(this);
+        bar.setBackground(Ui.round(Ui.AMBER, 2, this));
+        head.addView(bar, new LinearLayout.LayoutParams(Ui.dp(this, 4), Ui.dp(this, 18)));
+        TextView tv = Ui.tv(this, title, 16, 0xFFF5F7FA, Gravity.LEFT);
+        tv.setPadding(Ui.dp(this, 10), 0, 0, 0);
+        head.addView(tv, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        card.addView(head, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 28)));
+        return card;
     }
 
     private void note(LinearLayout parent, String text) {
-        parent.addView(Ui.tv(this, text, 12, Ui.MUTED, Gravity.LEFT),
-                new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT));
+        TextView t = Ui.tv(this, text, 12, Ui.MUTED, Gravity.LEFT);
+        t.setLineSpacing(0, 1.15f);
+        t.setPadding(0, Ui.dp(this, 3), 0, Ui.dp(this, 2));
+        parent.addView(t, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     }
 
+    /** 把本行可聚焦控件登记进纵向焦点链；说明文字与禁用占位不登记。 */
+    private void track(View... views) {
+        java.util.List<View> usable = new java.util.ArrayList<View>();
+        for (View v : views) {
+            if (v != null && v.isEnabled() && v.isFocusable()) usable.add(v);
+        }
+        if (!usable.isEmpty()) focusRows.add(usable.toArray(new View[0]));
+    }
+
+    /** 统一行：左侧固定标签，右侧取值按钮按 weight 填满窄栏，不再写死 178dp。 */
     private Button addRow(LinearLayout parent, String label, View.OnClickListener l) {
         LinearLayout row = Ui.hbox(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        TextView t = Ui.tv(this, label, 15, 0xFFC7D2E2, Gravity.LEFT);
-        row.addView(t, new LinearLayout.LayoutParams(
-                Ui.dp(this, 96), ViewGroup.LayoutParams.WRAP_CONTENT));
-        Button b = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 13);
+        row.addView(Ui.tv(this, label, 15, 0xFFC7D2E2, Gravity.LEFT),
+                new LinearLayout.LayoutParams(Ui.dp(this, LABEL_DP),
+                        ViewGroup.LayoutParams.WRAP_CONTENT));
+        Button b = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 14);
         b.setSingleLine(false);
         b.setMaxLines(2);
         b.setEllipsize(null);
-        b.setPadding(Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2));
+        b.setPadding(Ui.dp(this, 10), Ui.dp(this, 2), Ui.dp(this, 10), Ui.dp(this, 2));
         b.setOnClickListener(l);
         Ui.focus(b, this, Ui.BTN_BG, 0xFFF5F7FA);
-        row.addView(b, new LinearLayout.LayoutParams(Ui.dp(this, 178), Ui.dp(this, 46)));
+        row.addView(b, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
         parent.addView(row, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 50)));
+        track(b);
         return b;
     }
 
@@ -222,67 +253,77 @@ public class SettingsActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 44));
         p.setMargins(0, Ui.dp(this, 3), 0, Ui.dp(this, 3));
         parent.addView(b, p);
+        track(b);
     }
 
     private View buildSettings() {
         LinearLayout root = Ui.vbox(this);
         root.setBackgroundColor(Ui.BG);
         root.setPadding(Ui.dp(this, 36), Ui.dp(this, 10), Ui.dp(this, 36), Ui.dp(this, 8));
-        root.addView(Ui.tv(this, "家长设置", 24, 0xFFFFFFFF), Ui.fixed(this, 34));
+
+        root.addView(Ui.tv(this, "家长设置", 24, 0xFFFFFFFF), Ui.fixed(this, 36));
         pinState = Ui.tv(this, "", 13, Ui.MUTED, Gravity.LEFT);
+        pinState.setPadding(Ui.dp(this, GUTTER_DP), 0, 0, 0);
         root.addView(pinState, Ui.fixed(this, 22));
 
-        LinearLayout content = Ui.hbox(this);
-        content.setGravity(Gravity.TOP);
-        LinearLayout left = addColumn(content, 16);
-        LinearLayout mid = addColumn(content, 16);
-        LinearLayout right = addColumn(content, 0);
+        ScrollView sv = new ScrollView(this);
+        sv.setFillViewport(true);
+        sv.setVerticalScrollBarEnabled(true);
+        LinearLayout shell = Ui.vbox(this);
+        shell.setPadding(Ui.dp(this, GUTTER_DP), Ui.dp(this, 4),
+                Ui.dp(this, GUTTER_DP), Ui.dp(this, 16));
+        LinearLayout col = Ui.vbox(this);
+        shell.addView(col, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        sv.addView(shell, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        // ---- 栏 1：出题基础 + 学科设置 ----
-        section(left, "出题");
-        rowGrade = addRow(left, "所在年级", new View.OnClickListener() {
+        // ---- 01 出题基础 ----
+        LinearLayout quiz = addCard(col, "01  出题基础");
+        rowGrade = addRow(quiz, "所在年级", new View.OnClickListener() {
             @Override public void onClick(View v) {
                 st.grade(st.grade() % SettingsStore.MAX_GRADE + 1); refreshRows();
             }
         });
-        rowInterval = addRow(left, "出题频率", new View.OnClickListener() {
+        rowInterval = addRow(quiz, "出题频率", new View.OnClickListener() {
             @Override public void onClick(View v) {
                 int i = (st.intervalIndex() + 1) % SettingsStore.INTERVALS.length;
                 st.intervalSec(SettingsStore.INTERVALS[i]);
                 refreshRows();
             }
         });
-        rowScope = addRow(left, "出题范围", new View.OnClickListener() {
+        rowScope = addRow(quiz, "出题范围", new View.OnClickListener() {
             @Override public void onClick(View v) { st.allSubjects(!st.allSubjects()); refreshRows(); }
         });
-        rowSync = addRow(left, "自动更新", new View.OnClickListener() {
+        rowSync = addRow(quiz, "自动更新", new View.OnClickListener() {
             @Override public void onClick(View v) {
                 st.syncIndex((st.syncIndex() + 1) % SettingsStore.SYNC_HOURS.length);
                 refreshRows();
             }
         });
-        note(left, "点击每一行的值即可循环切换。");
+        note(quiz, "点击右侧取值即可循环切换，离开设置页时统一保存。");
 
-        section(left, "学科设置 · 左：教材版本 / 右：题目配比");
-        for (int s = 0; s < Subjects.COUNT; s++) addSubjectRow(left, s);
-        note(left, "配比 0 表示该科不出题；「其他学科」由全学科开关控制，不单独配比。"
+        // ---- 02 学科设置 ----
+        LinearLayout subjects = addCard(col, "02  学科设置 · 教材版本 / 题目配比");
+        for (int s = 0; s < Subjects.COUNT; s++) addSubjectRow(subjects, s);
+        note(subjects, "配比 0 表示该科不出题；「其他学科」由全学科开关控制，不单独配比。"
                 + "内置离线题库按课标纲目组织，不含出版社版本，本设置用于在线题包筛选、题面标注与错题标记。");
 
-        // ---- 栏 2：开机与播放 + 错题库 ----
-        section(mid, "开机与播放");
-        rowBoot = addRow(mid, "开机自启", new View.OnClickListener() {
+        // ---- 03 开机与播放 ----
+        LinearLayout boot = addCard(col, "03  开机与播放");
+        rowBoot = addRow(boot, "开机自启", new View.OnClickListener() {
             @Override public void onClick(View v) { st.bootAutostart(!st.bootAutostart()); refreshRows(); }
         });
-        rowAutoGuard = addRow(mid, "自动守护", new View.OnClickListener() {
+        rowAutoGuard = addRow(boot, "自动守护", new View.OnClickListener() {
             @Override public void onClick(View v) { st.autoGuardOnBoot(!st.autoGuardOnBoot()); refreshRows(); }
         });
-        rowPause = addRow(mid, "暂停视频", new View.OnClickListener() {
+        rowPause = addRow(boot, "暂停视频", new View.OnClickListener() {
             @Override public void onClick(View v) { st.pauseOnQuiz(!st.pauseOnQuiz()); refreshRows(); }
         });
-        rowResume = addRow(mid, "恢复播放", new View.OnClickListener() {
+        rowResume = addRow(boot, "恢复播放", new View.OnClickListener() {
             @Override public void onClick(View v) { st.resumePlayback(!st.resumePlayback()); refreshRows(); }
         });
-        addButton(mid, "开启厂商自启动设置", 0xFF2C6E8F, new View.OnClickListener() {
+        addButton(boot, "开启厂商自启动设置", 0xFF2C6E8F, new View.OnClickListener() {
             @Override public void onClick(View v) {
                 BootSettings.open(SettingsActivity.this);
                 Toast.makeText(SettingsActivity.this,
@@ -290,18 +331,19 @@ public class SettingsActivity extends Activity {
                         Toast.LENGTH_LONG).show();
             }
         });
-        note(mid, "暂停视频是 best-effort：靠音频焦点 + 媒体键请求播放器暂停，不保证所有视频 App 响应。");
+        note(boot, "暂停视频是 best-effort：靠音频焦点 + 媒体键请求播放器暂停，不保证所有视频 App 响应。");
 
-        section(mid, "错题库");
-        addButton(mid, "查看错题库", 0xFFB06A2C, new View.OnClickListener() {
+        // ---- 04 错题库 ----
+        LinearLayout wrong = addCard(col, "04  错题库");
+        addButton(wrong, "查看错题库", 0xFFB06A2C, new View.OnClickListener() {
             @Override public void onClick(View v) {
                 startActivity(new Intent(SettingsActivity.this, WrongBookActivity.class));
             }
         });
-        note(mid, "同一题答错 " + AnswerPolicy.WRONG_LIMIT + " 次自动换题并记录。");
+        note(wrong, "同一题答错 " + AnswerPolicy.WRONG_LIMIT + " 次自动换题并记录。");
 
-        // ---- 栏 3：在线题库源 + 账户 ----
-        section(right, "在线题库源（可选 · 需自行配置）");
+        // ---- 05 在线题库源 ----
+        LinearLayout online = addCard(col, "05  在线题库源（可选 · 需自行配置）");
         urlEdit = new EditText(this);
         urlEdit.setSingleLine(true);
         urlEdit.setHint("https://your-server/  (index.json 所在目录)");
@@ -318,10 +360,11 @@ public class SettingsActivity extends Activity {
                 if (!urlProgrammatic) urlDirty = true;
             }
         });
-        right.addView(urlEdit, new LinearLayout.LayoutParams(
+        online.addView(urlEdit, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 42)));
+        track(urlEdit);
 
-        addButton(right, "填入示例地址", 0xFF243044, new View.OnClickListener() {
+        addButton(online, "填入示例地址", 0xFF243044, new View.OnClickListener() {
             @Override public void onClick(View v) {
                 presetIdx = (presetIdx + 1) % PRESETS.length;
                 setUrlText(PRESETS[presetIdx], true);
@@ -329,12 +372,13 @@ public class SettingsActivity extends Activity {
         });
 
         bankStatus = Ui.tv(this, "", 13, Ui.MUTED, Gravity.LEFT);
-        bankStatus.setPadding(Ui.dp(this, 10), Ui.dp(this, 5), Ui.dp(this, 10), Ui.dp(this, 5));
+        bankStatus.setPadding(Ui.dp(this, 10), Ui.dp(this, 6), Ui.dp(this, 10), Ui.dp(this, 6));
+        bankStatus.setMinHeight(Ui.dp(this, 72));
         bankStatus.setBackground(Ui.round(0xFF1B2432, 10, this));
-        right.addView(bankStatus, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 88)));
+        online.addView(bankStatus, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        addButton(right, "检查题库更新", 0xFF6C4F9E, new View.OnClickListener() {
+        addButton(online, "检查题库更新", 0xFF6C4F9E, new View.OnClickListener() {
             @Override public void onClick(View v) {
                 String url = urlEdit.getText().toString().trim();
                 if (url.isEmpty()) {
@@ -356,23 +400,35 @@ public class SettingsActivity extends Activity {
                         });
             }
         });
-        addButton(right, "修改家长密码", 0xFFA32D2D, new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                gate.startChange();
-                enterGate(false);
-            }
+        note(online, "默认完全离线：内置全量 K12 题库，不联网；只有填写在线源地址后才会按周期联网。");
+
+        root.addView(sv, Ui.fill(1));
+
+        // ---- 底部固定操作条：长表单滚动时仍可随时保存 ----
+        LinearLayout footer = Ui.hbox(this);
+        footer.setGravity(Gravity.CENTER_VERTICAL);
+        footer.setPadding(Ui.dp(this, GUTTER_DP), 0, Ui.dp(this, GUTTER_DP), 0);
+        btnChangePin = Ui.button(this, "修改家长密码", 0xFFA32D2D, 0xFFFFFFFF, 15);
+        btnChangePin.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { gate.startChange(); enterGate(false); }
         });
-        addButton(right, "保存并返回", 0xFF1D9E75, new View.OnClickListener() {
+        Ui.focus(btnChangePin, this, 0xFFA32D2D, 0xFFFFFFFF);
+        btnSave = Ui.button(this, "保存并返回", 0xFF1D9E75, 0xFFFFFFFF, 15);
+        btnSave.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { save(); }
         });
-        note(right, "默认完全离线：内置全量 K12 题库，不联网；只有填写在线源地址后才会按周期联网。");
+        Ui.focus(btnSave, this, 0xFF1D9E75, 0xFFFFFFFF);
+        LinearLayout.LayoutParams fp = new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f);
+        fp.setMargins(Ui.dp(this, 5), Ui.dp(this, 4), Ui.dp(this, 5), Ui.dp(this, 4));
+        footer.addView(btnChangePin, fp);
+        footer.addView(btnSave, fp);
+        root.addView(footer, Ui.fixed(this, 54));
+        track(btnChangePin, btnSave);
+        btnChangePin.setNextFocusRightId(ensureId(btnSave));
+        btnSave.setNextFocusLeftId(ensureId(btnChangePin));
 
-        // 三个独立 ScrollView 里的按钮默认不会被系统自动横向串起来，
-        // 显式连左右邻居，保证 TV 遥控器在任意一行都能跨栏移动焦点。
-        wireColumns(left, mid, right);
-        // 跨栏链建好后再覆盖同一行内部的左右关系，保证「教材 ↔ 配比」可切换。
+        wireVerticalFocus();
         wireSubjectRows();
-        root.addView(content, Ui.fill(1));
         return root;
     }
 
@@ -398,65 +454,46 @@ public class SettingsActivity extends Activity {
     }
 
     /**
-     * TV DPAD 跨栏焦点链：给每栏所有可聚焦按钮生成 id，并把左右焦点指向相邻栏的代表按钮。
-     * ScrollView 是独立可滚动容器，Android 默认只在同栏内找邻居，不显式连就会卡在单栏里。
+     * 单列纵向焦点链：把每一行的可聚焦控件连到上一行 / 下一行的首个可聚焦控件。
+     * ScrollView 内跨卡片嵌套 ViewGroup 时，系统默认找不到邻居，显式连接才不会卡住。
+     * 学科行有两个按钮，按「上」回到上一行首值、按「下」去下一行首值，符合遥控器直觉。
      */
-    private void wireColumns(LinearLayout... cols) {
-        java.util.List<java.util.List<Button>> perCol = new java.util.ArrayList<java.util.List<Button>>();
-        for (LinearLayout col : cols) {
-            java.util.List<Button> bs = new java.util.ArrayList<Button>();
-            for (int i = 0; i < col.getChildCount(); i++) {
-                View v = col.getChildAt(i);
-                if (v instanceof Button) { ensureId(v); bs.add((Button) v); }
-                else if (v instanceof ViewGroup) {
-                    ViewGroup g = (ViewGroup) v;
-                    for (int j = 0; j < g.getChildCount(); j++) {
-                        View inner = g.getChildAt(j);
-                        if (inner instanceof Button) { ensureId(inner); bs.add((Button) inner); }
-                    }
-                }
-            }
-            perCol.add(bs);
-        }
-        if (perCol.size() < 2) return;
-        for (int i = 0; i < perCol.size(); i++) {
-            java.util.List<Button> cur = perCol.get(i);
-            if (cur.isEmpty()) continue;
-            java.util.List<Button> lCol = perCol.get((i - 1 + perCol.size()) % perCol.size());
-            java.util.List<Button> rCol = perCol.get((i + 1) % perCol.size());
-            int lid = lCol.isEmpty() ? View.NO_ID : ensureId(lCol.get(0));
-            int rid = rCol.isEmpty() ? View.NO_ID : ensureId(rCol.get(0));
-            for (Button b : cur) {
-                if (lid != View.NO_ID) b.setNextFocusLeftId(lid);
-                if (rid != View.NO_ID) b.setNextFocusRightId(rid);
+    private void wireVerticalFocus() {
+        for (int i = 0; i < focusRows.size(); i++) {
+            View[] row = focusRows.get(i);
+            View up = i > 0 ? firstUsable(focusRows.get(i - 1)) : null;
+            View down = i < focusRows.size() - 1 ? firstUsable(focusRows.get(i + 1)) : null;
+            for (View v : row) {
+                if (v == null || !v.isEnabled() || !v.isFocusable()) continue;
+                if (up != null) v.setNextFocusUpId(ensureId(up));
+                if (down != null) v.setNextFocusDownId(ensureId(down));
             }
         }
-        // URL 输入框不是 Button，单独接上中栏，避免按左键时焦点掉出表单。
-        java.util.List<Button> middle = perCol.get(1);
-        if (urlEdit != null && !middle.isEmpty()) {
-            int mid = ensureId(middle.get(0));
-            urlEdit.setNextFocusLeftId(mid);
-            urlEdit.setNextFocusUpId(mid);
+    }
+
+    private static View firstUsable(View[] row) {
+        for (View v : row) {
+            if (v != null && v.isEnabled() && v.isFocusable()) return v;
         }
+        return null;
     }
 
     /**
      * 学科设置复合行：学科名 + 教材版本 + 题目配比共占一行。
-     * 原来分散在两栏的 7 行（3 配比 + 4 教材）压成 4 行。
-     * 「其他学科」没有独立配比，右位显示「—」并禁用焦点。
+     * 教材与配比按 2:1 分配窄栏宽度，「其他学科」右位显示「—」并禁用焦点。
      */
     private void addSubjectRow(LinearLayout parent, final int subj) {
         LinearLayout row = Ui.hbox(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.addView(Ui.tv(this, Subjects.name(subj), 14, 0xFFC7D2E2, Gravity.LEFT),
                 new LinearLayout.LayoutParams(
-                        Ui.dp(this, 62), ViewGroup.LayoutParams.WRAP_CONTENT));
+                        Ui.dp(this, SUBJ_LABEL_DP), ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        Button ed = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 13);
+        Button ed = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 14);
         ed.setSingleLine(false);
         ed.setMaxLines(2);
         ed.setEllipsize(null);
-        ed.setPadding(Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2));
+        ed.setPadding(Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2));
         ed.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 st.setEditionIndexFor(subj,
@@ -465,13 +502,13 @@ public class SettingsActivity extends Activity {
             }
         });
         Ui.focus(ed, this, Ui.BTN_BG, 0xFFF5F7FA);
-        row.addView(ed, new LinearLayout.LayoutParams(Ui.dp(this, 158), Ui.dp(this, 46)));
+        row.addView(ed, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 2f));
 
-        Button wt = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 13);
+        Button wt = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 14);
         wt.setSingleLine(false);
         wt.setMaxLines(2);
         wt.setEllipsize(null);
-        wt.setPadding(Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2));
+        wt.setPadding(Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2));
         if (subj < 3) {
             wt.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) {
@@ -480,14 +517,17 @@ public class SettingsActivity extends Activity {
                 }
             });
             Ui.focus(wt, this, Ui.BTN_BG, 0xFFF5F7FA);
+            row.addView(wt, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
+            track(ed, wt);
         } else {
             wt.setText("—");
             wt.setEnabled(false);
             wt.setFocusable(false);
             wt.setTextColor(0xFF7C8AA3);
             wt.setBackground(Ui.round(0xFF1B2432, 10, this));
+            row.addView(wt, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
+            track(ed);
         }
-        row.addView(wt, new LinearLayout.LayoutParams(Ui.dp(this, 78), Ui.dp(this, 46)));
 
         parent.addView(row, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 50)));
@@ -496,10 +536,7 @@ public class SettingsActivity extends Activity {
         subjectPairs.add(new Button[]{ed, wt});
     }
 
-    /**
-     * wireColumns 已把每行按钮的左右焦点连到相邻栏；这里再覆盖同一行内部的
-     * 左右关系，让 DPAD 在「教材 / 配比」两个值之间切换，行的两端仍能跨栏。
-     */
+    /** 学科行内部左右链：教材版本 ↔ 题目配比；其余行的左右键不再跨栏乱跳。 */
     private void wireSubjectRows() {
         for (Button[] pair : subjectPairs) {
             Button ed = pair[0], wt = pair[1];

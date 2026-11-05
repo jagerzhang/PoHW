@@ -8,6 +8,35 @@
 > 标识，同样不代表发布版本。Android `versionCode` 是单调技术计数，不随展示版本
 > 重置：v1.0.0 为 12（前值 11），因此可直接 `adb install -r` 覆盖安装。
 
+## v1.0.1 (versionCode 14) — home grid & single-column settings
+
+Display version stays **1.0.1** (no version-number churn); `versionCode` moves
+13 -> 14 so `adb install -r` still upgrades, signed with the same release
+keystore (SHA-256 `76eb6063b574…26172`).
+
+- **Home grid 3x2.** Six action buttons move from 2 columns x 3 rows to
+  3 columns x 2 rows. `actionButton()` now uses `weight=1` equal-width cells
+  instead of a hardcoded 190dp; the title row grows to 46dp to avoid clipping.
+  `wireGrid()` wires explicit `(row, col)` DPAD neighbours in all four directions.
+- **Settings single-column card flow.** The three side-by-side `ScrollView`s are
+  replaced by one centred gutter column with five numbered cards (quiz basics /
+  subjects / boot & playback / wrong-book / online source). Each row is a fixed
+  label plus a value button that fills the column by weight; notes wrap instead
+  of being clipped. Change-PIN and Save move into a fixed footer bar.
+- **Focus.** `wireVerticalFocus()` links focusable controls row-by-row across
+  nested cards; `wireSubjectRows()` still handles edition <-> weight, and the
+  URL field plus footer buttons join the chain. `wireColumns()` / `addColumn()`
+  are removed.
+- **Gates.** `tests/layout_contract.py` adds 27 source-level assertions wired
+  into `[0/9] static guards`; call-count assertions run on comment-stripped
+  code so commenting out a call cannot slip through. Three negative mutations
+  (2-column regression, legacy column helper, removed vertical chain) were all
+  rejected by both the contract and `build.sh`.
+- Verification: `LAYOUT_CONTRACT_OK total=27`, `JVM_TESTS_OK total=178`, bank
+  verifier PASS, full `aapt2 -> javac -> d8 -> zipalign -> apksigner` build,
+  v1/v2/v3 signatures valid, `versionCode='14' versionName='1.0.1'`.
+  TV DPAD behaviour on a real Mi TV still needs an on-device pass.
+
 ## v1.0.1 (versionCode 13) — console & settings UI consolidation
 
 - **Merged guard toggle.** `btnStart`/`btnStop` replaced by a single `btnGuard`.

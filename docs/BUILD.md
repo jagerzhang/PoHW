@@ -95,11 +95,18 @@ Gradle Wrapper、联网拉依赖和一套额外的构建缓存。命令行链路
 `EXTRA_STOP_VERIFIED`。另外确认 `QuickBootReceiver` 已注册、
 `KeyRouter` / `QuizFlow` / `BehaviorV601Test` 真的被编译与执行。
 
-`[2/9]` 现在跑 7 组共 **174** 个 JVM 单测（新增 `BehaviorV601Test` 51 项，
+`[0/9]` 还会执行 `python3 tests/layout_contract.py`：27 条源码级布局契约断言，
+覆盖首页 3×2 网格、设置页单列卡片流、等宽 weight 布局与四向 DPAD 焦点链。
+调用次数类断言基于去注释代码行，注释掉 `wireVerticalFocus()` 调用也会被拦下；
+负向门禁同时禁止 `wireColumns` / `addColumn` 三栏旧助手残留。
+
+`[2/9]` 现在跑 7 组共 **178** 个 JVM 单测（新增 `BehaviorV601Test` 51 项，
 覆盖按键 ACTION_DOWN/UP 与 repeat、2x2 高亮邻接、答题状态机、令牌 TTL/重放/进程重启）；
 `[6/9]` 仍检查 dex 中含「错题库」字符串。
 
-覆盖安装保持签名一致：
+覆盖安装保持签名一致（**必须**显式指定与已发布版本相同的 keystore，
+否则 `build.sh` 会在 `.build/` 用随机开发密钥重签，设备安装会因签名不匹配被拒绝；
+已发布 v1.0.0 / v1.0.1 的证书 SHA-256 为 `76eb6063b574…26172`）：
 
 ```bash
 JAVA_HOME=/opt/jdk17 ANDROID_HOME=/path/to/sdk POHW_KEYSTORE=/path/to/debug.keystore POHW_KEYSTORE_PASS=android bash app/build.sh

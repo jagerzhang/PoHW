@@ -4,8 +4,8 @@
 
 | 类 | 职责 |
 | --- | --- |
-| `MainActivity` | 控制台：授权入口、单一守护切换开关、就地验证浮层、运行状态与题库统计（题库更新入口不在此） |
-| `SettingsActivity` | 家长设置：PIN 门禁 + 三栏（出题+学科设置 / 开机播放+错题库 / 在线源+账户），学科行左教材右配比 |
+| `MainActivity` | 控制台：3 列 × 2 排网格、授权入口、单一守护切换开关、就地验证浮层、运行状态与题库统计（题库更新入口不在此） |
+| `SettingsActivity` | 家长设置：PIN 门禁 + 单列卡片流（居中窄栏 + 5 张分组卡片 + 底部固定操作条），学科行左教材右配比 |
 | `QuizOverlayService` | 前台服务：1 秒计时、WindowManager 全屏遮罩、答题判定、可选在线同步 |
 | `BootReceiver` | 开机恢复守护（校验 action + 守护开关 + 悬浮窗授权） |
 | `QuizDb` | 内置 SQLite：版本化原子复制、只读、本地随机抽题、全学科 fallback |
@@ -19,8 +19,11 @@
 
 v1.0.1 起控制台只有一个守护开关：`GuardState.toggleColor(running)` 给绿/红，
 `toggleLabel(running)` 给「开启守护 / 关闭守护」；运行中点击先过 `PinVerifyView`，
-界面不跳转。家长设置的学科行由 `addSubjectRow()` 生成，`wireSubjectRows()` 在
-跨栏焦点链之上覆盖行内左右关系，保证 TV 遥控器能在教材版本与题目配比之间移动。
+界面不跳转。首页 6 个按钮按 3 列 × 2 排排列，`wireGrid()` 显式连同列上下 / 同行左右。
+家长设置只有一个 `ScrollView`：5 张卡片按行登记进 `focusRows`，
+`wireVerticalFocus()` 串起跨卡片的上下链，`wireSubjectRows()` 再覆盖学科行内的
+左右关系，保证 TV 遥控器能在教材版本与题目配比之间移动，且不需要跨栏跳转。
+源码结构由 `tests/layout_contract.py` 的 27 条断言在构建门禁里守住。
 
 ## 主流程
 

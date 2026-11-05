@@ -72,6 +72,15 @@ public final class QuizEngine {
             q.answerIndex = ai;
             return q;
         }
+
+        /** 题目稳定去重键：题干 + 四个选项，用于错题库去重与换题去重。 */
+        public String key() {
+            StringBuilder sb = new StringBuilder(text == null ? "" : text);
+            if (options != null) {
+                for (String o : options) sb.append('').append(o == null ? "" : o);
+            }
+            return Hashes.sha256Hex(sb.toString());
+        }
     }
 
     private final Random r = new Random();

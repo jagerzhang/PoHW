@@ -20,8 +20,11 @@ import java.util.List;
 
 /**
  * 常驻前台服务：倒计时到点后直接由 WindowManager 添加 TYPE_APPLICATION_OVERLAY 全屏窗口。
- * 关键：加窗口不是 startActivity，因此不受 Android 10+ 后台启动 Activity(BAL) 限制；
- * 也不需要 HIDE_OVERLAY_WINDOWS 的对抗，因为这是正常可聚焦的顶层窗口而非浮层小窗。
+ * 关键：加窗口不是 startActivity，因此不受 Android 10+ 后台启动 Activity(BAL) 限制。
+ *
+ * v6：每次弹题新建 OverlayQuizView（不再复用同一 View 反复 add/remove），
+ * 按键由遮罩自己路由，修复第二次弹题遥控器选不中选项；叠加答题暂停视频、
+ * 答错 2 次换题与错题库、分学科教材版本。
  */
 public class QuizOverlayService extends Service {
 
@@ -56,12 +59,20 @@ public class QuizOverlayService extends Service {
 
     private WindowManager wm;
     private OverlayQuizView quizView;
+    private MediaPauseController media;
     private QuizEngine engine;
     private QuizEngine.Question current;
     private SettingsStore st;
     private int interval = 30;
+    private int wrongAttempts = 0;
+    private String lastKey = "";
     private long nextSyncAt = 0L;
     private final Handler handler = new Handler(Looper.getMainLooper());
+
+    private final OverlayQuizView.Listener listener = new OverlayQuizView.Listener() {
+        @Override public void onAnswer(int idx) { answer(idx); }
+        @Override public void onContinue() { finishQuiz(); }
+    };
 
     private final Runnable tick = new Runnable() {
         @Override public void run() {
@@ -83,10 +94,7 @@ public class QuizOverlayService extends Service {
         super.onCreate();
         st = new SettingsStore(this);
         wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-        quizView = new OverlayQuizView(this, new OverlayQuizView.Listener() {
-            @Override public void onAnswer(int idx) { answer(idx); }
-            @Override public void onContinue() { finishQuiz(); }
-        });
+        media = new MediaPauseController(this);
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
@@ -100,9 +108,8 @@ public class QuizOverlayService extends Service {
                 Toast.makeText(this, "已设置家长密码：请在 APP 内验证后才能关闭守护",
                         Toast.LENGTH_LONG).show();
                 if (!running) {
-                    // This call may have come from startForegroundService(). Android 8+
-                    // kills a service that does not call startForeground() within 5s, so
-                    // satisfy the contract and immediately stop instead of leaving a FGS.
+                    // startForegroundService() 拉起的服务必须在 5 秒内 startForeground，
+                    // 拒绝关闭时也要满足 FGS 契约再立即停止。
                     try {
                         startForeground(NOTIF_ID, buildNotification());
                         stopForeground(true);
@@ -134,6 +141,7 @@ public class QuizOverlayService extends Service {
     @Override public void onDestroy() {
         handler.removeCallbacks(tick);
         hideQuiz();
+        if (media != null) media.release();
         running = false;
         super.onDestroy();
     }
@@ -170,6 +178,7 @@ public class QuizOverlayService extends Service {
     private void stopAll() {
         handler.removeCallbacks(tick);
         hideQuiz();
+        if (media != null) media.release();
         running = false;
         st.guardEnabled(false);
         stopForeground(true);
@@ -195,22 +204,29 @@ public class QuizOverlayService extends Service {
         return b.build();
     }
 
+    private String[] editions() {
+        String[] out = new String[Subjects.COUNT];
+        for (int i = 0; i < out.length; i++) out[i] = st.editionFor(i);
+        return out;
+    }
+
     private void reload(boolean first) {
         if (first) BankRepository.installBuiltin(this, st);
         interval = st.intervalSec();
         engine = new QuizEngine(st.grade(), st.edition(),
-                st.weight(QuizEngine.MATH), st.weight(QuizEngine.CHINESE), st.weight(QuizEngine.ENGLISH));
+                st.weight(QuizEngine.MATH), st.weight(QuizEngine.CHINESE),
+                st.weight(QuizEngine.ENGLISH));
         engine.setAllSubjects(st.allSubjects());
         QuizDb cached = QuizDb.peek();
         if (cached != null) {
             engine.setDb(cached);
         } else {
-            // First launch copies a ~4.5 MB database: do it off the main thread.
-            // Until it is ready QuizEngine falls back to its parameter generator.
+            // 首启复制 ~4.5MB 题库、创建错题库，都放到后台线程。
             final Context app = getApplicationContext();
             new Thread(new Runnable() {
                 @Override public void run() {
                     final QuizDb opened = QuizDb.open(app);
+                    WrongBook.open(app);
                     handler.post(new Runnable() {
                         @Override public void run() {
                             if (running && engine != null) engine.setDb(opened);
@@ -219,7 +235,7 @@ public class QuizOverlayService extends Service {
                 }
             }, "pohw-db-open").start();
         }
-        List<QuizEngine.Question> qs = BankRepository.load(this, st.grade(), st.edition());
+        List<QuizEngine.Question> qs = BankRepository.load(this, st.grade(), editions());
         engine.setBank(qs);
         nextSyncAt = System.currentTimeMillis() + (first ? 5000L : st.syncIntervalMs());
     }
@@ -233,29 +249,63 @@ public class QuizOverlayService extends Service {
                 });
     }
 
+    /** 每次弹题都换一道与上一题不同的题。 */
+    private QuizEngine.Question drawFresh() {
+        QuizEngine.Question q = null;
+        for (int i = 0; i < 8; i++) {
+            if (engine == null) break;
+            q = engine.next();
+            if (q == null) break;
+            String k = q.key();
+            if (!k.equals(lastKey)) {
+                lastKey = k;
+                return q;
+            }
+        }
+        if (q != null) lastKey = q.key();
+        return q;
+    }
+
+    private String metaFor(QuizEngine.Question q) {
+        return st.gradeLabel() + " · " + Subjects.name(q.subject) + " "
+                + st.editionFor(q.subject) + " · 答对解锁 " + interval + " 秒";
+    }
+
     private void showQuiz() {
         if (quizShowing) return;
-        if (!canDraw()) {
-            stopAll();
+        if (!canDraw()) { stopAll(); return; }
+        if (engine == null) reload(false);
+        current = drawFresh();
+        if (current == null) {
+            remainSec = interval;
+            Toast.makeText(this, "题库暂不可用，稍后重试", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (engine == null) reload(false);
-        current = engine.next();
+        wrongAttempts = 0;
         st.bumpQuestioned();
-        String meta = st.gradeLabel() + " · " + st.edition()
-                + " · 答对解锁 " + interval + " 秒";
-        quizView.bind(current, meta);
+
+        // 不复用 View：反复 add/remove 会让窗口焦点状态不可预测。
+        final OverlayQuizView view = new OverlayQuizView(this, listener);
+        view.bind(current, metaFor(current));
+        quizView = view;
         try {
-            wm.addView(quizView.view(), buildParams());
+            wm.addView(view.view(), buildParams());
             quizShowing = true;
-            quizView.focusFirst();
+            view.view().post(new Runnable() {
+                @Override public void run() {
+                    if (quizShowing && quizView == view) view.focusFirst();
+                }
+            });
         } catch (Exception e) {
-            // addView 已成功但 focusFirst 抛异常时，旧代码只把 quizShowing 置回 false，
-            // 已添加的全屏窗口再也不会被 remove —— 会永久盖住系统界面（含卸载确认框）。
+            // addView 成功后若出异常，必须无条件移除，否则遮罩会永久盖住系统界面
             quizShowing = false;
             removeOverlayNow();
+            quizView = null;
+            remainSec = interval;
             Toast.makeText(this, "无法显示答题遮罩：" + e.getMessage(), Toast.LENGTH_LONG).show();
+            return;
         }
+        if (media != null) media.quizShown(st);
     }
 
     private WindowManager.LayoutParams buildParams() {
@@ -271,30 +321,57 @@ public class QuizOverlayService extends Service {
                         | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
                         | WindowManager.LayoutParams.FLAG_DIM_BEHIND,
                 PixelFormat.TRANSLUCENT);
+        // 明确要求窗口可聚焦；FLAG_NOT_FOCUSABLE 一旦被置上，遥控器按键就到不了遮罩。
+        lp.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
         lp.gravity = Gravity.TOP | Gravity.LEFT;
         lp.dimAmount = 0.88f;
         return lp;
     }
 
     private void answer(int idx) {
-        if (!quizShowing || current == null) return;
-        if (idx == current.answerIndex) {
+        if (!quizShowing || current == null || quizView == null) return;
+        if (AnswerPolicy.isCorrect(idx, current.answerIndex)) {
             st.bumpCorrect();
             quizView.correct("✓ 答对啦！继续观看 " + interval + " 秒", current.explain);
-        } else {
-            quizView.wrong(idx, "✗ 再想想，答对才能继续哦");
+            return;
         }
+
+        recordWrong(idx);
+        wrongAttempts++;
+        if (AnswerPolicy.shouldSwap(wrongAttempts)) {
+            QuizEngine.Question next = drawFresh();
+            if (next != null) {
+                current = next;
+                st.bumpQuestioned();
+                wrongAttempts = 0;
+                // 原地换题，窗口不 remove/add，避免再次触发窗口焦点问题
+                quizView.bind(current, metaFor(current));
+                quizView.hint(AnswerPolicy.wrongHint(AnswerPolicy.WRONG_LIMIT));
+                return;
+            }
+        }
+        quizView.wrong(idx, AnswerPolicy.wrongHint(wrongAttempts));
+    }
+
+    private void recordWrong(int picked) {
+        if (current == null) return;
+        WrongBook.Entry e = WrongBook.of(current, st.grade(), st.gradeLabel(),
+                st.editionFor(current.subject), picked);
+        WrongBook.recordAsync(getApplicationContext(), e);
     }
 
     private void finishQuiz() {
+        if (!quizShowing) return;
         hideQuiz();
+        if (media != null) media.quizFinished(st);
         remainSec = interval;
     }
 
     private void hideQuiz() {
-        // 不再只依赖 quizShowing 标志：标志异常时也兜底移除，避免残留窗口卡住卸载流程。
+        // 不依赖 quizShowing 标志：标志异常时也兜底移除，避免残留窗口卡住卸载流程。
         removeOverlayNow();
         quizShowing = false;
+        quizView = null;
     }
 
     /** 无条件尝试移除答题窗口；未 attach 时会抛异常，直接忽略即可。 */

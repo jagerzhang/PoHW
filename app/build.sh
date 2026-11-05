@@ -7,8 +7,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
-VERSION_NAME="5.0.0"
-VERSION_CODE="9"
+VERSION_NAME="6.0.0"
+VERSION_CODE="10"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -33,6 +33,20 @@ grep -q "versionName=\"$VERSION_NAME\"" "$APP/AndroidManifest.xml"
 grep -q 'getPackageInfo' "$APP/src/com/jager/tvquiz/MainActivity.java"
 grep -q 'GuardPolicy.allowStop' "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
 grep -q 'setAllSubjects' "$APP/src/com/jager/tvquiz/QuizEngine.java"
+# v6 regression guards
+grep -q 'AnswerPolicy.shouldSwap' "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
+grep -q 'WrongBook.recordAsync' "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
+grep -q 'MediaPauseController' "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
+grep -q 'BootPolicy.shouldStartGuard' "$APP/src/com/jager/tvquiz/BootReceiver.java"
+grep -q 'final OverlayQuizView view = new OverlayQuizView' "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
+grep -q 'setFocusable(false)' "$APP/src/com/jager/tvquiz/OverlayQuizView.java"
+grep -q 'lp.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE' \
+  "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
+grep -q 'WrongBookActivity' "$APP/AndroidManifest.xml"
+for f in Hashes Subjects AnswerPolicy BootPolicy BootSettings MediaPauseController \
+         WrongBook WrongBookActivity OverlayQuizView; do
+  [ -f "$APP/src/com/jager/tvquiz/$f.java" ] || { echo "MISSING v6 source: $f.java"; exit 1; }
+done
 if grep -rq -E 'v4[.]1 控制台|DeviceAdmin|startLockTask|DELETE_PACKAGES|pack_hh_|huohua|HH_API_KEY' "$APP/src"; then
   echo 'FORBIDDEN legacy / third-party content in sources'; exit 1
 fi
@@ -75,6 +89,7 @@ echo "[5/9] javac"
 find "$APP/src" "$BUILD/gen" -name '*.java' > "$BUILD/sources.txt"
 grep -q 'QuizDb.java' "$BUILD/sources.txt"
 grep -q 'PinVerifyView.java' "$BUILD/sources.txt"
+grep -q 'WrongBook.java' "$BUILD/sources.txt"
 javac -source 8 -target 8 -encoding UTF-8 -nowarn \
   -classpath "$ANDROID_JAR" -d "$BUILD/classes" @"$BUILD/sources.txt"
 
@@ -85,6 +100,7 @@ if grep -aq 'v4.1 控制台' "$BUILD/dexout/classes.dex"; then
   echo 'OLD HARDCODED TITLE IN DEX'; exit 1
 fi
 grep -aq '应用版本' "$BUILD/dexout/classes.dex"
+grep -aq '错题库' "$BUILD/dexout/classes.dex"
 
 echo "[7/9] package + zipalign"
 cp "$BUILD/dexout/classes.dex" "$BUILD/out/classes.dex"

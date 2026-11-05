@@ -8,29 +8,29 @@ import android.provider.Settings;
 import android.util.Log;
 
 /**
- * 开机自启：仅在家长已开启守护且悬浮窗已授权时拉起前台服务。
- * 显式校验 action，避免第三方应用伪造 QUICKBOOT_POWERON 拉起服务。
+ * 开机自启：由 BootPolicy 统一判定。
+ * 「开机自动启动」关闭时完全不响应；「开机自动开启守护」开启时
+ * 无论上次守护是否开启都拉起服务，否则只恢复上次已开启的守护。
+ * 厂商（尤其小米）还需要在系统「自启动」设置里允许本应用接收开机广播，
+ * 入口见 BootSettings.open()。
  */
 public class BootReceiver extends BroadcastReceiver {
 
     private static final String TAG = "PoHW.BootReceiver";
-    private static final String QUICKBOOT = "android.intent.action.QUICKBOOT_POWERON";
-    private static final String HTC_QUICKBOOT = "com.htc.intent.action.QUICKBOOT_POWERON";
 
     @Override public void onReceive(Context c, Intent i) {
         String action = i == null ? null : i.getAction();
-        if (!Intent.ACTION_BOOT_COMPLETED.equals(action)
-                && !QUICKBOOT.equals(action)
-                && !HTC_QUICKBOOT.equals(action)) {
+        SettingsStore st = new SettingsStore(c);
+        boolean canDraw = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(c);
+        if (!BootPolicy.shouldStartGuard(st.bootAutostart(), st.autoGuardOnBoot(),
+                st.guardEnabled(), canDraw, action)) {
             return;
         }
-        SettingsStore st = new SettingsStore(c);
-        if (!st.guardEnabled()) return;
-        if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(c)) return;
 
         Intent s = new Intent(c, QuizOverlayService.class);
         s.setAction(QuizOverlayService.ACTION_START);
         try {
+            // BOOT_COMPLETED 属于后台启动 FGS 的豁免广播，Android 8+ 允许直接拉起。
             if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(s);
             else c.startService(s);
         } catch (Exception e) {

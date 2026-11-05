@@ -262,8 +262,12 @@ public final class QuizDb {
             }
             String[] opts = new String[]{
                     c.getString(2), c.getString(3), c.getString(4), c.getString(5)};
-            return QuizEngine.Question.fromBank(subject, topic, c.getString(1),
-                    opts, c.getInt(6), c.getString(7));
+            QuizEngine.Question q = QuizEngine.Question.fromBank(subject, topic,
+                    c.getString(1), opts, c.getInt(6), c.getString(7));
+            if (q != null && bankSubject != null && !isCoreSubject(bankSubject)) {
+                q.subject = Subjects.OTHER;
+            }
+            return q;
         } catch (Exception e) {
             return null;
         }

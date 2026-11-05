@@ -13,6 +13,7 @@ import javax.crypto.spec.PBEKeySpec;
 public final class SettingsStore implements PinGate.Store {
 
     public static final String PREF = "tvquiz_v2";
+    /** 教材版本：数学/语文/英语/其他学科各自独立选择。 */
     public static final String[] EDITIONS = {"通用(课标)", "人教版", "部编版", "北师大版", "苏教版", "外研版", "译林版", "沪教版"};
     public static final int MIN_GRADE = 1;
     public static final int MAX_GRADE = 9;
@@ -48,12 +49,62 @@ public final class SettingsStore implements PinGate.Store {
         sp.edit().putBoolean("allSubjects", v).commit();
     }
 
-    public int editionIndex() { return clamp(sp.getInt("edition", 0), 0, EDITIONS.length - 1); }
-    public void editionIndex(int v) { sp.edit().putInt("edition", clamp(v, 0, EDITIONS.length - 1)).apply(); }
-    public String edition() { return EDITIONS[editionIndex()]; }
+    // ---------- 分学科教材版本 ----------
+
+    /**
+     * 兼容 v5 的单一 edition 键：把它当作四个学科的默认值，
+     * 一旦家长单独改过某学科，就以该学科自己的键为准。
+     */
+    public int editionIndexFor(int subject) {
+        int s = Subjects.norm(subject);
+        int legacy = clamp(sp.getInt("edition", 0), 0, EDITIONS.length - 1);
+        return clamp(sp.getInt(Subjects.editionKey(s), legacy), 0, EDITIONS.length - 1);
+    }
+
+    public void setEditionIndexFor(int subject, int v) {
+        sp.edit().putInt(Subjects.editionKey(Subjects.norm(subject)),
+                clamp(v, 0, EDITIONS.length - 1)).commit();
+    }
+
+    public String editionFor(int subject) {
+        return EDITIONS[editionIndexFor(subject)];
+    }
+
+    /** v5 兼容：单一版本等价于数学学科的版本。 */
+    public int editionIndex() { return editionIndexFor(Subjects.MATH); }
+    public void editionIndex(int v) { setEditionIndexFor(Subjects.MATH, v); }
+    public String edition() { return editionFor(Subjects.MATH); }
+
+    // ---------- 开机自启 / 自动守护 ----------
+
+    /** 是否响应开机广播（v5 行为为 true，保持向后兼容）。 */
+    public boolean bootAutostart() { return sp.getBoolean("bootAutostart", true); }
+    public void bootAutostart(boolean v) {
+        sp.edit().putBoolean("bootAutostart", v).commit();
+    }
+
+    /** 开机时无论上次守护是否开启，都自动开启守护（默认关，需家长显式打开）。 */
+    public boolean autoGuardOnBoot() { return sp.getBoolean("autoGuardOnBoot", false); }
+    public void autoGuardOnBoot(boolean v) {
+        sp.edit().putBoolean("autoGuardOnBoot", v).commit();
+    }
+
+    // ---------- 答题时暂停播放 ----------
+
+    public boolean pauseOnQuiz() { return sp.getBoolean("pauseOnQuiz", true); }
+    public void pauseOnQuiz(boolean v) {
+        sp.edit().putBoolean("pauseOnQuiz", v).commit();
+    }
+
+    public boolean resumePlayback() { return sp.getBoolean("resumePlayback", true); }
+    public void resumePlayback(boolean v) {
+        sp.edit().putBoolean("resumePlayback", v).commit();
+    }
+
+    // ---------- 频率 / 配比 / 在线源 ----------
 
     public int intervalSec() { return sp.getInt("interval", 30); }
-    public void intervalSec(int v) { sp.edit().putInt("interval", v).apply(); }
+    public void intervalSec(int v) { sp.edit().putInt("interval", v).commit(); }
     public int intervalIndex() {
         for (int i = 0; i < INTERVALS.length; i++) if (INTERVALS[i] == intervalSec()) return i;
         return 1;
@@ -185,14 +236,8 @@ public final class SettingsStore implements PinGate.Store {
         return out;
     }
 
+    /** 兼容既有调用与单测；实现统一收敛到 Hashes。 */
     public static String sha256Hex(String s) {
-        try {
-            byte[] d = MessageDigest.getInstance("SHA-256").digest(s.getBytes("UTF-8"));
-            StringBuilder sb = new StringBuilder();
-            for (byte b : d) sb.append(String.format(Locale.US, "%02x", b & 0xff));
-            return sb.toString();
-        } catch (Exception e) {
-            return "";
-        }
+        return Hashes.sha256Hex(s);
     }
 }

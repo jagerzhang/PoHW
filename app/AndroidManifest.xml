@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.jager.tvquiz"
-    android:versionCode="9"
-    android:versionName="5.0.0">
+    android:versionCode="10"
+    android:versionName="6.0.0">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="33" />
 
@@ -20,6 +20,15 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.type.television" android:required="false" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
+
+    <!-- 厂商自启动设置页是显式 ComponentName 跳转，声明可见性以兼容 Android 11+ -->
+    <queries>
+        <package android:name="com.miui.securitycenter" />
+        <package android:name="com.coloros.safecenter" />
+        <package android:name="com.oppo.safe" />
+        <package android:name="com.huawei.systemmanager" />
+        <package android:name="com.vivo.permissionmanager" />
+    </queries>
 
     <application
         android:label="@string/app_name"
@@ -48,6 +57,12 @@
 
         <activity
             android:name=".SettingsActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize" />
+
+        <activity
+            android:name=".WrongBookActivity"
             android:exported="false"
             android:screenOrientation="landscape"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize" />

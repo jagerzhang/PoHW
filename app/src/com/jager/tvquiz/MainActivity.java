@@ -25,14 +25,14 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-/** 控制台：悬浮窗授权、守护开关、立即出题、家长设置入口、题库更新状态。 */
+/** 控制台：悬浮窗授权、守护开关、立即出题、错题库、开机自启设置与题库状态。 */
 public class MainActivity extends Activity {
 
     private static final String NL = "\n";
     private SettingsStore st;
     private TextView status;
     private FrameLayout rootView;
-    private Button btnStart, btnStop;
+    private Button btnStart, btnStop, btnWrong, btnBoot;
     private PinVerifyView verifyView;
     private Boolean paintedRunning = null;
     private String appVersion = "?";
@@ -59,6 +59,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        refreshWrongBook();
         handler.removeCallbacks(refresh);
         handler.post(refresh);
     }
@@ -86,7 +87,7 @@ public class MainActivity extends Activity {
         return super.dispatchKeyEvent(e);
     }
 
-    /** 版本一律从 PackageManager 读真实安装包信息，禁止再硬编码，避免 UI 版本与 APK 版本脱节。 */
+    /** 版本一律从 PackageManager 读真实安装包信息，禁止再硬编码。 */
     private void readVersion() {
         try {
             android.content.pm.PackageInfo pi =
@@ -99,18 +100,33 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** Open the built-in bank off the main thread, then refresh the console. */
+    /** 首次启动复制 ~4.5MB 题库并初始化错题库，都放到后台线程。 */
     private void preloadBank() {
         final Context app = getApplicationContext();
         new Thread(new Runnable() {
             @Override public void run() {
                 QuizDb.open(app);
+                WrongBook.open(app);
                 BankRepository.installBuiltin(app, st);
                 handler.post(new Runnable() {
                     @Override public void run() { render(); }
                 });
             }
         }, "pohw-db-preload").start();
+    }
+
+    /** 从错题库页面返回后刷新缓存计数。 */
+    private void refreshWrongBook() {
+        final Context app = getApplicationContext();
+        new Thread(new Runnable() {
+            @Override public void run() {
+                WrongBook w = WrongBook.open(app);
+                if (w != null) w.count();
+                handler.post(new Runnable() {
+                    @Override public void run() { render(); }
+                });
+            }
+        }, "pohw-wrong-refresh").start();
     }
 
     @Override public void onRequestPermissionsResult(int req, String[] permissions,
@@ -165,9 +181,10 @@ public class MainActivity extends Activity {
         l.addView(Ui.tv(this, "答题守护  ·  v" + appVersion + " 控制台",
                 28, 0xFFFFFFFF), Ui.fixed(this, 42));
 
-        status = Ui.tv(this, "", 16, 0xFFC7D2E2, Gravity.LEFT);
-        status.setPadding(Ui.dp(this, 16), Ui.dp(this, 10), Ui.dp(this, 16), Ui.dp(this, 10));
+        status = Ui.tv(this, "", 15, 0xFFC7D2E2, Gravity.LEFT);
+        status.setPadding(Ui.dp(this, 16), Ui.dp(this, 8), Ui.dp(this, 16), Ui.dp(this, 8));
         status.setBackground(Ui.round(0xFF1B2432, 12, this));
+        status.setLineSpacing(0, 1.12f);
         l.addView(status, Ui.fill(1));
 
         LinearLayout row1 = Ui.hbox(this);
@@ -227,10 +244,26 @@ public class MainActivity extends Activity {
         });
         l.addView(row2, Ui.fixed(this, 62));
 
+        LinearLayout row3 = Ui.hbox(this);
+        btnWrong = actionButton(row3, "错题库 · 0 题", 0xFFB06A2C, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, WrongBookActivity.class));
+            }
+        });
+        btnBoot = actionButton(row3, "厂商自启设置", 0xFF2C6E8F, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                BootSettings.open(MainActivity.this);
+                Toast.makeText(MainActivity.this,
+                        "请在厂商设置里允许本应用「自启动」，否则收不到开机广播",
+                        Toast.LENGTH_LONG).show();
+            }
+        });
+        l.addView(row3, Ui.fixed(this, 58));
+
         l.addView(Ui.tv(this,
                 "开启守护后按 Home 切到任意应用，到点弹出全屏答题页；Home 键属系统级按键，第三方无法拦截。\n"
                         + "卸载前请先关闭守护；遮罩卡住可在电脑执行 adb shell am force-stop com.jager.tvquiz",
-                14, Ui.MUTED), Ui.fixed(this, 50));
+                13, Ui.MUTED), Ui.fixed(this, 44));
 
         rootView.addView(l, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -270,7 +303,6 @@ public class MainActivity extends Activity {
         }, 350);
     }
 
-    /** 按钮颜色/文字随守护状态切换；重新注册焦点监听，避免失焦时被旧色覆盖。 */
     private void paintToggleButtons(boolean running) {
         paintButton(btnStart, GuardState.startColor(running), GuardState.startLabel(running));
         paintButton(btnStop, GuardState.stopColor(running), GuardState.stopLabel(running));
@@ -290,33 +322,50 @@ public class MainActivity extends Activity {
 
     private void render() {
         StringBuilder s = new StringBuilder();
-        s.append("应用版本：").append(appVersion).append("（build ")
-                .append(appVersionCode).append("）").append(NL);
-        s.append("悬浮窗权限：").append(canDraw() ? "已授权 ✓" : "未授权 ✗（点「授权悬浮窗」）").append(NL);
+        s.append("应用版本：").append(appVersion).append("（build ").append(appVersionCode)
+                .append("）  ·  悬浮窗权限：")
+                .append(canDraw() ? "已授权 ✓" : "未授权 ✗（点「授权悬浮窗」）").append(NL);
         boolean running = QuizOverlayService.isRunning();
         s.append("守护服务：").append(running ? "运行中" : "未运行");
         if (running) {
             s.append("  ·  ").append(QuizOverlayService.isQuizShowing()
                     ? "答题遮罩已弹出" : "距下次答题 " + QuizOverlayService.remainSec() + " 秒");
         }
-        s.append(NL);
-        s.append("家长密码：").append(st.hasPin() ? "已设置 ✓" : "未设置 ✗（进「家长设置」初始化）").append(NL);
-        s.append("当前配置：").append(st.gradeLabel()).append(" · ").append(st.edition())
-                .append(" · 每 ").append(st.intervalSec()).append(" 秒一题")
-                .append(" · ").append(st.allSubjects() ? "全学科"
+        s.append("  ·  家长密码：").append(st.hasPin() ? "已设置 ✓" : "未设置 ✗").append(NL);
+        s.append("当前配置：").append(st.gradeLabel()).append(" · 每 ").append(st.intervalSec())
+                .append(" 秒一题 · ")
+                .append(st.allSubjects() ? "全学科"
                         : ("数/语/英 " + st.weight(0) + "/" + st.weight(1) + "/" + st.weight(2)))
                 .append(NL);
+        s.append("教材版本：");
+        for (int i = 0; i < Subjects.COUNT; i++) {
+            if (i > 0) s.append(" / ");
+            s.append(Subjects.name(i)).append(" ").append(st.editionFor(i));
+        }
+        s.append(NL);
         QuizDb qd = QuizDb.peek();
         s.append("内置题库：").append(qd == null ? "正在加载…（首次启动需复制题库）"
                 : (qd.count() + " 题 / " + qd.knowledgeCount() + " 知识点 · "
                    + qd.subjectCount() + " 学科 · 本年级 " + qd.countForGrade(st.grade())
                    + " 题 · " + qd.version())).append(NL);
-        s.append("题库：").append(st.bankSource()).append(" · 版本 ").append(st.bankVersion())
-                .append(" · ").append(st.bankQuestions()).append(" 题 / ").append(st.bankPacks())
-                .append(" 包 · 上次检查 ").append(ts(st.bankChecked())).append(NL);
-        s.append("同步状态：").append(st.bankMessage()).append(NL);
-        s.append("统计：答对 ").append(st.correct()).append(" / ").append(st.questioned()).append(" 题");
+        s.append("错题库：").append(WrongBook.cachedCount()).append(" 题");
+        String latest = WrongBook.latestSummary();
+        if (!latest.isEmpty()) s.append(" · 最近：").append(latest);
+        s.append("  ·  统计：答对 ")
+                .append(st.correct()).append(" / ").append(st.questioned()).append(" 题").append(NL);
+        s.append("开机自启：").append(st.bootAutostart() ? "开" : "关")
+                .append("（自动开启守护：").append(st.autoGuardOnBoot() ? "开" : "关")
+                .append("）  ·  答题暂停视频：").append(st.pauseOnQuiz() ? "开" : "关")
+                .append(" / 自动恢复：").append(st.resumePlayback() ? "开" : "关").append(NL);
+        s.append("题库源：").append(st.bankSource()).append(" · 版本 ").append(st.bankVersion())
+                .append(" · 上次检查 ").append(ts(st.bankChecked())).append(NL);
+        s.append("同步状态：").append(st.bankMessage());
         status.setText(s.toString());
+
+        if (btnWrong != null) btnWrong.setText("错题库 · " + WrongBook.cachedCount() + " 题");
+        if (btnBoot != null) {
+            btnBoot.setText(st.bootAutostart() ? "厂商自启设置" : "自启已关闭");
+        }
 
         if (paintedRunning == null || paintedRunning.booleanValue() != running) {
             paintedRunning = Boolean.valueOf(running);

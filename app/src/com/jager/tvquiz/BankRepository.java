@@ -115,8 +115,17 @@ public final class BankRepository {
         return total;
     }
 
-    /** 按 年级 + 教材版本 筛选出可用题目；edition 为 "*" 的包视为通用包。 */
+    /** v5 兼容重载：四个学科共用一个教材版本。 */
     public static List<QuizEngine.Question> load(Context c, int grade, String edition) {
+        return load(c, grade, new String[]{edition, edition, edition, edition});
+    }
+
+    /**
+     * 按 年级 + 分学科教材版本 筛选在线缓存题包。
+     * editions 下标与 Subjects.MATH/CHINESE/ENGLISH/OTHER 对应；
+     * 题包的 edition 为 "*" 或 "通用(课标)" 时视为通用包，不受版本限制。
+     */
+    public static List<QuizEngine.Question> load(Context c, int grade, String[] editions) {
         List<QuizEngine.Question> out = new ArrayList<QuizEngine.Question>();
         File[] fs = dir(c).listFiles();
         if (fs == null) return out;
@@ -126,9 +135,10 @@ public final class BankRepository {
                 JSONObject o = new JSONObject(new String(readAll(new java.io.FileInputStream(f)), UTF8));
                 if (o.optInt("grade", 0) != grade) continue;
                 String ed = o.optString("edition", "*");
-                if (!"*".equals(ed) && !"通用(课标)".equals(ed)
-                        && !ed.equals(edition)) continue;
                 int subject = subjectOf(o.optString("subject", "数学"));
+                String want = editionFor(editions, subject);
+                if (!"*".equals(ed) && !"通用(课标)".equals(ed)
+                        && !ed.equals(want)) continue;
                 JSONArray qs = o.optJSONArray("questions");
                 if (qs == null) continue;
                 for (int i = 0; i < qs.length(); i++) {
@@ -157,6 +167,14 @@ public final class BankRepository {
         if ("语文".equals(s)) return QuizEngine.CHINESE;
         if ("英语".equals(s)) return QuizEngine.ENGLISH;
         return QuizEngine.MATH;
+    }
+
+    private static String editionFor(String[] eds, int subject) {
+        if (eds == null || eds.length == 0) return "通用(课标)";
+        int s = Subjects.norm(subject);
+        if (s >= eds.length) s = Subjects.MATH;
+        String v = eds[s];
+        return v == null ? "通用(课标)" : v;
     }
 
     // ---------- 在线同步 ----------

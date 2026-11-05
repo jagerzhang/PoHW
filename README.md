@@ -2,7 +2,7 @@
 
 > **答对一题，续租 30 分钟。**
 
-一个装在自己电视上的反沉迷小实验：开启守护后，前台服务会按设定周期在**任意应用之上**弹出全屏答题页，答对才能继续看电视，答错就一直挡着。
+一个装在自己电视上的反沉迷小实验：开启守护后，前台服务会按设定周期在**任意应用之上**弹出全屏答题页，答对才能继续看电视；同一题答错 2 次自动换题并记入错题库。
 
 **PoHW** 是 Proof of Work 的一个玩笑 —— 看电视的通行权不是靠算力，而是靠周期性交一次「作业量证明」来续租。租约到期，重新出题。
 
@@ -17,10 +17,13 @@
 | 跨应用全屏答题 | `TYPE_APPLICATION_OVERLAY` 全屏窗口，切到视频 App / 桌面后照样弹出 |
 | 完全离线题库 | 内置 SQLite，本地 `ORDER BY RANDOM()` 抽题，**默认一次网络请求都不发** |
 | 全量 K12 纲目 | 4,319 个知识点 / 19 个学科 / 21 个年级段，幼儿园到九年级全量导入 |
-| 年级与学科 | 1-9 年级、教材版本、出题频率、数/语/英配比，以及「全学科」出题开关 |
+| 年级与学科 | 1-9 年级、**分学科教材版本**（数学/语文/英语/其他各自可选）、出题频率、数/语/英配比，以及「全学科」出题开关 |
 | 家长密码 | PBKDF2 + 随机 salt，保护设置页；**关闭守护也必须先验证**，服务侧二次校验 |
 | 就地验证 | 点「关闭守护」不跳页、不退出，只叠加验证层并改变按钮颜色/文字 |
-| 开机自启 | 仅在家长已开启守护且悬浮窗已授权时拉起前台服务 |
+| 答题暂停视频 | 弹题时申请短暂音频焦点并派发媒体暂停键，答对解锁后归还焦点并尝试恢复（best-effort） |
+| 开机自启 | 「开机自动启动」+「开机自动开启守护」两个独立开关，并提供厂商自启动权限设置入口 |
+| 错题库 | 同一题答错 2 次自动换题；错题按题面去重记入本地 SQLite，控制台可翻页查看/删除/清空 |
+| 遥控器答题 | 全屏遮罩自主路由方向键/确定键/数字键 1-4，不依赖窗口 View 焦点，反复弹题不会失灵 |
 | 可选在线源 | 预留 `index.json + packs/*.json` 同步协议，需家长自己填地址才启用 |
 
 ## 它不能做什么
@@ -29,6 +32,8 @@
 - 没有 Device Admin / Device Owner / 锁屏任务 / 防卸载；本仓库明确禁止这类 API。
 - Android 12+ 视频 App 可用 `HIDE_OVERLAY_WINDOWS` 隐藏非系统浮层，各家 ROM 与小米电视的实际表现**需要上机实测**。
 - 题目是**由知识点纲目参数化生成**的，不是教材同步真题，也不是教辅题库。
+- **暂停视频是 best-effort**：Android 没有「强制暂停第三方播放器」的公开 API，只能请求音频焦点 + 派发媒体暂停键；不保证所有视频 App 响应。
+- 内置离线题库按课标纲目组织、**不含出版社版本字段**，分学科教材版本用于在线题包筛选、题面标注与错题标记，不会改变离线抽题结果。
 
 ---
 
@@ -36,7 +41,7 @@
 
 ```bash
 # 1) 装 APK（自己构建产物在 dist/，或到本仓库 Releases 页面下载）
-adb install -r dist/PoHW-v5.0.0.apk
+adb install -r dist/PoHW-v6.0.0.apk
 
 # 2) 打开 APP：点「授权悬浮窗」打开系统开关并允许
 # 3) 进「家长设置」：首次进入会要求初始化 4-8 位数字密码
@@ -96,7 +101,10 @@ GET <base>/packs/<file>      { schema, id, grade, edition, subject, questions:[{
 | 项 | 取值 |
 | --- | --- |
 | 所在年级 | 小学 1-6 / 初中 1-3（内部 1-9） |
-| 教材版本 | 通用(课标) / 人教版 / 部编版 / 北师大版 / 苏教版 / 外研版 / 译林版 / 沪教版 |
+| 分学科教材版本 | 数学 / 语文 / 英语 / 其他学科**各自**可选：通用(课标)、人教版、部编版、北师大版、苏教版、外研版、译林版、沪教版 |
+| 开机自启 | 开机自动启动（默认开，兼容旧版）、开机自动开启守护（默认关） + 厂商自启动设置入口 |
+| 答题播放控制 | 答题时暂停视频（默认开）、答对后尝试恢复播放（默认开） |
+| 答案策略 | 同一题累计答错 2 次自动换题，原题记入错题库 |
 | 出题频率 | 15 秒 / 30 秒（演示）、1 / 5 / 10 / 20 / 30 分钟 |
 | 学科配比 | 数学 / 语文 / 英语各 0-5，0 表示该科不出题 |
 | 出题范围 | 仅数/语/英（默认）或该年级**全学科**（含物理、化学、历史、地理等） |
@@ -113,9 +121,9 @@ GET <base>/packs/<file>      { schema, id, grade, edition, subject, questions:[{
 ```bash
 export JAVA_HOME=/path/to/jdk-17
 export ANDROID_HOME=/path/to/android-sdk
-bash tests/run.sh          # 78 个 JVM 单测
+bash tests/run.sh          # 123 个 JVM 单测
 python3 tools/quizbank/verify.py app/assets/quiz.db
-bash app/build.sh          # -> dist/PoHW-v5.0.0.apk + dist/PoHW-src.zip
+bash app/build.sh          # -> dist/PoHW-v6.0.0.apk + dist/PoHW-src.zip
 ```
 
 `app/build.sh` 会做静态守卫（禁止写死版本号、防卸载 API、第三方题包残留）、
@@ -169,18 +177,33 @@ PoHW/
 ├── app/
 │   ├── AndroidManifest.xml
 │   ├── build.sh                 # 零 Gradle 构建链
-│   ├── src/com/jager/tvquiz/    # 16 个 Java 源文件
+│   ├── src/com/jager/tvquiz/    # 24 个 Java 源文件
 │   ├── res/                     # 图标 / TV banner / strings / network_security_config
 │   └── assets/quiz.db(.version) # 内置离线题库
 ├── tests/
 │   ├── run.sh                   # JVM 单测入口
-│   └── src/                     # 4+1 组测试 + Android 轻量 stub
+│   └── src/                     # 6 组测试 + Android 轻量 stub
 ├── tools/quizbank/
 │   ├── build_bank.py            # 全量纲目 -> SQLite
 │   └── verify.py                # 独立校验
 └── docs/
     ├── BUILD.md · ARCHITECTURE.md · QUESTION_BANK.md · BANK_STATS.md
 ```
+
+---
+
+## v6.0.0：小米电视真机反馈的 5 项改进
+
+| 反馈 | 落地实现 |
+| --- | --- |
+| 弹题时视频还在播 | `MediaPauseController`：弹题后申请 `AUDIOFOCUS_GAIN_TRANSIENT` + 派发 `KEYCODE_MEDIA_PAUSE`；答对解锁后归还焦点、按设置派发 `MEDIA_PLAY`。答题期间遮罩吞掉媒体键，防止遥控器把后台视频重新播放。设置里可分别开关「暂停」「恢复」。 |
+| 按学科选教材版本 | `SettingsStore` 用 `edition_s0..3` 四个独立键（兼容旧 `edition` 单值作为默认值）；设置页四行分别循环切换；`BankRepository.load(grade, String[])` 按学科筛选在线题包；题面与错题记录带对应版本。 |
+| 开机自启 + 自动守护 | `bootAutostart`（默认开）/ `autoGuardOnBoot`（默认关）两个开关，`BootPolicy` 统一判定开机广播白名单与悬浮窗授权；`BootSettings` 逐项尝试小米/OPPO/华为/vivo 的自启动设置页，最后降级到应用详情页。 |
+| 答错 2 次换题 + 错题库 | `AnswerPolicy.WRONG_LIMIT=2`；第二次答错时**原地**换题（不 remove/add 窗口）、原题写入独立可写 `pohw_wrong.db`；`WrongBookActivity` 单题翻页，标出正确答案与选错项，支持删除与二次确认清空；控制台显示错题数并可进入。 |
+| 第二次弹题遥控选不中 | 根因是复用同一个 View 反复 `addView/removeView` 且答对后焦点残留在「继续观看」按钮上。现在每次弹题新建 `OverlayQuizView`，窗口参数显式清掉 `FLAG_NOT_FOCUSABLE`，子按钮不再参与焦点树，方向键/确定键/数字键全部由根视图 `dispatchKeyEvent` 自主路由并手动绘制高亮。 |
+
+> 说明：错题库是独立可写数据库，不改动只读的 `assets/quiz.db`；
+> 教材版本不会改变内置离线题库的抽题结果（上游纲目没有出版社字段）。
 
 ---
 

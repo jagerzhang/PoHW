@@ -109,3 +109,29 @@ Android 8+ 的「5 秒内前台化」契约，再立即 `stopForeground()` + `st
 - 随机抽题已改为 `LIMIT 1 OFFSET (ABS(RANDOM()) % COUNT(*))`，避免整表排序；
   十万行以上可改为主键区间采样。
 - 纲目题偏「知识点辨识」，不是教材同步真题，题型丰富度有提升空间。
+
+## v6 架构增补
+
+- **遮罩输入层**：`OverlayQuizView` 不再依赖 Android View 焦点树。根 `FrameLayout`
+  覆写 `dispatchKeyEvent`，消费 BACK、媒体键与全部答题按键；2x2 选项矩阵用
+  `NEXT` 邻接表移动 `selected`，`paint()` 手动绘制高亮。子按钮 `setFocusable(false)`，
+  只保留触屏点击。`QuizOverlayService.showQuiz()` 每次新建视图并 `addView`，
+  `hideQuiz()` 无条件 `removeViewImmediate`；换题走 `bind()` 原地刷新，不重新挂窗口。
+- **播放暂停**：`MediaPauseController` 只使用 `AudioManager` 的公开能力
+  （短暂音频焦点 + `dispatchMediaKeyEvent`），不创建 MediaSession、不申请通知使用权、
+  不注入按键。服务 `onDestroy` / `stopAll` 都会 `release()` 归还焦点。
+- **错题库**：独立 `SQLiteOpenHelper`（`pohw_wrong.db`），与只读 `quiz.db` 完全隔离；
+  单线程 `ExecutorService` 异步写入，主线程读走 `cachedCount()` 避免每秒轮询 SQLite。
+  题目去重键为 `Hashes.sha256Hex(题干 + 选项)`。
+- **分学科版本**：`Subjects.editionKey(s)` 生成 `edition_s0..3`；
+  `BankRepository.load(grade, String[])` 按学科匹配在线题包；
+  `SettingsStore.edition()` 保留为数学版本，兼容 v5 调用点。
+- **开机自启**：`BootPolicy` 是零依赖策略源；`BootReceiver` 在 BOOT_COMPLETED /
+  QUICKBOOT / HTC QUICKBOOT 白名单内判定两个开关与悬浮窗授权，再 `startForegroundService`。
+  厂商「自启动」权限必须由家长在系统设置里手动允许，App 只提供跳转入口。
+
+### v6 待验证 / 已知边界
+
+- 暂停视频是 best-effort，不同视频 App 对音频焦点与媒体键的响应不一致，需要在真机逐个验证。
+- 内置离线题库没有出版社版本字段，分学科版本不会改变离线抽题结果。
+- 错题库不做云同步、不跨设备；`adb shell pm clear` 会一并清空。

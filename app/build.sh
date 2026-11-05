@@ -7,8 +7,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
-VERSION_NAME="6.0.1"
-VERSION_CODE="11"
+VERSION_NAME="1.0.0"
+VERSION_CODE="12"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -33,7 +33,7 @@ grep -q "versionName=\"$VERSION_NAME\"" "$APP/AndroidManifest.xml"
 grep -q 'getPackageInfo' "$APP/src/com/jager/tvquiz/MainActivity.java"
 grep -q 'GuardPolicy.allowStop' "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
 grep -q 'setAllSubjects' "$APP/src/com/jager/tvquiz/QuizEngine.java"
-# v6.0.1 semantic gates: assert behaviour symbols, not exact line spellings.
+# v1.0.0 semantic gates: assert behaviour symbols, not exact line spellings.
 # (Old gates assumed clearing FLAG_NOT_FOCUSABLE guarantees the WMS focused
 #  window; it does not. The focus state machine below is the real safeguard.)
 SVC="$APP/src/com/jager/tvquiz/QuizOverlayService.java"
@@ -90,7 +90,7 @@ fi
 echo "[1/9] verify built-in question bank"
 python3 tools/quizbank/verify.py "$APP/assets/quiz.db"
 
-echo "[2/9] JVM unit tests (174 assertions incl. v6.0.1 behaviour regressions)"
+echo "[2/9] JVM unit tests (174 assertions incl. behaviour regressions)"
 bash tests/run.sh
 
 STAMP="$(date +%s)"

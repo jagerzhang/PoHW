@@ -58,7 +58,7 @@ STOP、被拒绝的 STOP、悬浮窗权限不足、通知构造失败等**所有
 Android 8+ 的「5 秒内前台化」要求；`onDestroy()` 还会显式 `stopForeground(true)`。
 
 **为什么不信任布尔值**：`startService` 的 Intent extras 由调用方提供，
-`EXTRA_STOP_VERIFIED=true` 可被伪造。v6.0.1 起授权依据是只有本进程能签发的
+`EXTRA_STOP_VERIFIED=true` 可被伪造。审查加固后（自 v1.0.0 起）授权依据是只有本进程能签发的
 一次性令牌；服务读完立即删除，重放与过期都失败。
 
 边界：服务 `exported=false`，普通第三方应用无法直接发该 Intent；但 `adb shell am`、

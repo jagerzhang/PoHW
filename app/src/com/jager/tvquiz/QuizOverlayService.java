@@ -24,7 +24,7 @@ import java.util.List;
  * 常驻前台服务：倒计时到点后直接由 WindowManager 添加 TYPE_APPLICATION_OVERLAY 全屏窗口。
  * 关键：加窗口不是 startActivity，因此不受 Android 10+ 后台启动 Activity(BAL) 限制。
  *
- * v6.0.1 审查加固：
+ * 审查加固（v1.0.0 首个正式版）：
  *  - FGS 契约：onStartCommand 开头无条件 startForeground()，覆盖 STOP/拒绝/权限不足/
  *    startForeground 抛异常等所有分支，避免 Android 8-11 ANR 与 12+ DidNotStartInTime。
  *  - STOP 授权：不再信任客户端传来的 verified boolean，改由本进程签发一次性令牌。

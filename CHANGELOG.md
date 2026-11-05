@@ -1,8 +1,16 @@
 # Changelog
 
-## v6.0.1 (versionCode 11) — review-driven hardening
+> **版本口径（2026-11-05 起）**：`v1`–`v6` 是开发期内部迭代序号，不是语义化版本，
+> 主版本号曾随功能迭代跳变。为纠正这一口径，已下架 `v5.0.0` / `v6.0.0` /
+> `v6.0.1` 三个历史 Release，自 **v1.0.0** 起统一采用 `MAJOR.MINOR.PATCH`
+> （仅不兼容变更才升 MAJOR）。下方历史条目保留原始编号以便追溯 commit，但不再
+> 对应任何可下载的 Release；部分内部测试类名（如 `BehaviorV601Test`）沿用开发期
+> 标识，同样不代表发布版本。Android `versionCode` 是单调技术计数，不随展示版本
+> 重置：v1.0.0 为 12（前值 11），因此可直接 `adb install -r` 覆盖安装。
 
-Two independent reviews of v6.0.0 (feature acceptance + Android/AOSP compliance)
+## v1.0.0 (versionCode 12) — first stable release
+
+Two independent reviews of the dev build labelled v6.0.0 (feature acceptance + Android/AOSP compliance)
 both concluded "do not ship as 5/5 complete". This release fixes the P0/P1 items
 and adds the missing behaviour-level tests.
 
@@ -69,12 +77,12 @@ and adds the missing behaviour-level tests.
 - The final APK is rebuilt from the finished source (the old v6.0.0 dist APK
   predated these fixes); `classes.dex` contains `refreshAsync`, `wireColumns`,
   `setUrlText`, `consumeStopToken` and `rebuildOverlay`.
-- Version 6.0.1 / versionCode 11. Release artifacts are signed with the same
-  externally-supplied keystore as v4.x/v5/v6.0.0 so `adb install -r` works;
+- Version 1.0.0 / versionCode 12. Release artifacts are signed with the same
+  externally-supplied keystore as all earlier dev builds so `adb install -r` works;
   the default (no `POHW_KEYSTORE`) still generates a random dev key and does
   NOT guarantee signature continuity.
 
-## v6.0.0 (versionCode 10) — real-device feedback from a Xiaomi TV
+## Dev build v6.0.0 (versionCode 10) — real-device feedback from a Xiaomi TV
 
 - **Fix: overlay lost remote-control input on the second quiz.** The service now
   creates a fresh `OverlayQuizView` per quiz instead of re-adding the same View,
@@ -112,7 +120,7 @@ and adds the missing behaviour-level tests.
   6.0.0 / versionCode 10. Signing certificate is unchanged from v4.x/v5 for
   in-place `adb install -r` upgrades.
 
-## v5.0.0 (versionCode 9) — PoHW / full offline catalog
+## Dev build v5.0.0 (versionCode 9) — PoHW / full offline catalog
 
 - Renamed the project to **PoHW (Proof of Homework)**; version label is now read
   from `PackageManager` at runtime instead of being hardcoded.

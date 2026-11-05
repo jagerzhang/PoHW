@@ -6,8 +6,9 @@ import com.jager.tvquiz.QuizFlow;
 import com.jager.tvquiz.SettingsStore;
 
 /**
- * v6.0.1 行为级回归：遥控器按键时序、答题状态机、一次性 STOP 令牌。
- * 这些类是 v6.0.0 审查指出的空白区（当时只测策略函数，不测行为序列）。
+ * 行为级回归：遥控器按键时序、答题状态机、一次性 STOP 令牌。
+ * 这些类是开发期 v6.0.0 审查指出的空白区（当时只测策略函数，不测行为序列）。
+ * 类名中的 V601 是历史标识，不代表对外发布版本。
  */
 public class BehaviorV601Test {
 

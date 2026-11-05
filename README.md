@@ -42,7 +42,7 @@
 
 ```bash
 # 1) 装 APK（自己构建产物在 dist/，或到本仓库 Releases 页面下载）
-adb install -r dist/PoHW-v6.0.1.apk
+adb install -r dist/PoHW-v1.0.0.apk
 
 # 2) 打开 APP：点「授权悬浮窗」打开系统开关并允许
 # 3) 进「家长设置」：首次进入会要求初始化 4-8 位数字密码
@@ -122,9 +122,9 @@ GET <base>/packs/<file>      { schema, id, grade, edition, subject, questions:[{
 ```bash
 export JAVA_HOME=/path/to/jdk-17
 export ANDROID_HOME=/path/to/android-sdk
-bash tests/run.sh          # 174 个 JVM 单测（7 组，含 v6.0.1 行为级回归）
+bash tests/run.sh          # 174 个 JVM 单测（7 组，含行为级回归）
 python3 tools/quizbank/verify.py app/assets/quiz.db
-bash app/build.sh          # -> dist/PoHW-v6.0.1.apk + dist/PoHW-src.zip
+bash app/build.sh          # -> dist/PoHW-v1.0.0.apk + dist/PoHW-src.zip
 ```
 
 `app/build.sh` 会做静态守卫（禁止写死版本号、防卸载 API、第三方题包残留）、
@@ -193,9 +193,16 @@ PoHW/
 
 ---
 
-## v6.0.1：两轮独立审查后的加固
+## v1.0.0：首个正式版
 
-v6.0.0 发布后做了两轮独立复审（功能验收 + Android/AOSP 规范审查），结论都是
+> **版本口径**：`v1`–`v6` 是开发期内部迭代编号，不是语义化版本，主版本号曾随功能
+> 跳变。为纠正口径，已下架 `v5.0.0` / `v6.0.0` / `v6.0.1` 三个历史 Release
+> （commit 历史保留）。自 v1.0.0 起按 `MAJOR.MINOR.PATCH` 递增，仅不兼容变更才升
+> MAJOR。Android `versionCode` 是单调技术计数、不随展示版本重置（本版 12 > 前值
+> 11），因此可直接覆盖安装。下文带 v4/v5/v6 编号的章节均为开发期迭代记录，
+> 不对应任何现存 Release。
+
+开发期 v6.0.0 发布后做了两轮独立复审（功能验收 + Android/AOSP 规范审查），结论都是
 「不建议按 5 项全部完成直接交付」。本版针对其中的 P0/P1 集中修复，
 并补上此前缺失的行为级单测。
 
@@ -217,10 +224,10 @@ v6.0.0 发布后做了两轮独立复审（功能验收 + Android/AOSP 规范审
 **验证**：`tests/run.sh` 共 7 组 **174** 项断言全部通过（其中 `BehaviorV601Test`
 51 项覆盖按键时序、答题状态机、一次性令牌）；`tools/quizbank/verify.py` 通过；
 全量 `aapt2 -> javac -> d8 -> zipalign -> apksigner` 构建与 v1/v2/v3 签名校验通过。
-`dist/PoHW-v6.0.1.apk` 由定版源码重新出包（v6.0.0 旧包不含本轮修复），dex 中可检出
-`refreshAsync` / `wireColumns` / `consumeStopToken` / `rebuildOverlay`；签名证书
-SHA-256 `76eb6063…6172` 与 v5 / v6.0.0 一致。版本 `6.0.1` / versionCode `11`，
-支持 `adb install -r` 覆盖安装。
+`dist/PoHW-v1.0.0.apk` 由定版源码重新出包（开发期 v6.0.0 旧包不含本轮修复），
+dex 中可检出 `refreshAsync` / `wireColumns` / `consumeStopToken` / `rebuildOverlay`；
+签名证书 SHA-256 `76eb6063…6172` 与各开发期版本一致。版本 `1.0.0` /
+versionCode `12`，支持 `adb install -r` 覆盖安装。
 
 > 仍属 best-effort、需真机验证：第三方视频 App 是否响应暂停；连续弹题时
 > 通知栏/系统对话框抢焦点后能否重抢；Android 12+ `HIDE_OVERLAY_WINDOWS` 行为。
@@ -229,7 +236,7 @@ SHA-256 `76eb6063…6172` 与 v5 / v6.0.0 一致。版本 `6.0.1` / versionCode 
 
 ---
 
-## v6.0.0：小米电视真机反馈的 5 项改进
+## 开发期 v6.0.0：小米电视真机反馈的 5 项改进
 
 | 反馈 | 落地实现 |
 | --- | --- |

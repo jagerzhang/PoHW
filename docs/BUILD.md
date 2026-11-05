@@ -20,9 +20,9 @@ command -v aapt2 javac d8 zipalign apksigner   # 应全部能找到
 ## 2. 完整构建
 
 ```bash
-bash tests/run.sh                                   # 78 个 JVM 单测
+bash tests/run.sh                                   # 174 个 JVM 单测（7 组）
 python3 tools/quizbank/verify.py app/assets/quiz.db  # 题库独立校验
-bash app/build.sh                                    # 产出 dist/PoHW-v5.0.0.apk
+bash app/build.sh                                    # 产出 dist/PoHW-v1.0.0.apk
 ```
 
 `app/build.sh` 的九个阶段：
@@ -83,7 +83,7 @@ python3 tools/quizbank/verify.py app/assets/quiz.db
 Gradle Wrapper、联网拉依赖和一套额外的构建缓存。命令行链路把每一步都显式暴露出来，
 便于审查、便于在离线环境复现，也让「APK 里到底装了什么」一目了然。
 
-## 7. v6.0.1 构建门禁
+## 7. v1.0.0 构建门禁
 
 `app/build.sh` 的 `[0/9] static guards` 改为**语义符号检查**，不再依赖精确行文本
 （旧版把 `FLAG_NOT_FOCUSABLE` 清零当成「窗口焦点已保证」是错误理解）。当前检查：

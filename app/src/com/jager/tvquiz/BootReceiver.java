@@ -10,7 +10,7 @@ import android.util.Log;
 /**
  * 开机自启：只接收受 RECEIVE_BOOT_COMPLETED 保护的 BOOT_COMPLETED。
  *
- * v6.0.1：厂商 QUICKBOOT 广播拆到 QuickBootReceiver。原因：
+ * 厂商 QUICKBOOT 广播拆到 QuickBootReceiver。原因：
  *  1) QUICKBOOT_POWERON 不是受 RECEIVE_BOOT_COMPLETED 保护的广播，
  *     在本 receiver 上声明该 permission 会把厂商广播直接过滤掉；
  *  2) 它不在 Android 12+ 后台启动前台服务的豁免白名单里，

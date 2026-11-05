@@ -5,7 +5,7 @@
 
 | | |
 | --- | --- |
-| 当前版本 | **v1.0.1**（`versionCode 18`，展示版本不再随构建滚动） |
+| 当前版本 | **v1.0.1**（`versionCode 19`，展示版本不再随构建滚动） |
 | 运行平台 | Android TV / 电视盒子，`minSdk 21`，遥控器操作 |
 | 分发方式 | 自行侧载 APK，**不在任何应用商店上架** |
 | 签名证书 | SHA-256 `76eb6063…6172`，历次构建连续，可 `adb install -r` 覆盖 |
@@ -126,13 +126,13 @@ bash app/build.sh
 
 | 检查 | 当前结果 | 守什么 |
 | --- | --- | --- |
-| `tests/layout_contract.py` | **140** 条 | 3×2 首页、单列设置、焦点链、证书门禁、方案 B 全链路符号与数据 |
+| `tests/layout_contract.py` | **144** 条 | 3×2 首页、单列设置、焦点链、证书门禁、方案 B 全链路符号与数据 |
 | `tests/bank_distribution_check.py` | `BANK_DISTRIBUTION_OK` | 用真实 SQL 复刻四槽配比、池隔离与池保持兜底 |
 | `tools/quizbank/build_syllabus.py --check` | `SYLLABUS_CHECK_OK books=12` | 进度表与题库同源、无遗漏别名 |
 | `tests/study_scope_check.py` | `STUDY_SCOPE_OK` | 学期/单元范围不外溢、空池逐层放宽顺序、默认行为兼容 |
 | `tests/run.sh` | **245** 项 JVM 单测（9 组） | PIN、按键时序、启动策略、权重、JSON / Syllabus、设置默认值 |
 
-发布前另跑 `python3 tests/mutation_suite.py`：故意回退 36 处实现，再加 1 次不带发布密钥构建（37/37），
+发布前另跑 `python3 tests/mutation_suite.py`：故意回退 37 处实现，再加 1 次不带发布密钥构建（38/38），
 确认门禁每一处都能拦下，最后校验源码哈希完全恢复并用发布密钥重建 `dist/`。
 
 ## 权限

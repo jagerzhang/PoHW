@@ -8,7 +8,7 @@ APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
 VERSION_NAME="1.0.1"
-VERSION_CODE="18"
+VERSION_CODE="19"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -30,6 +30,16 @@ cd "$ROOT"
 echo "[0/9] static guards"
 grep -q "versionCode=\"$VERSION_CODE\"" "$APP/AndroidManifest.xml"
 grep -q "versionName=\"$VERSION_NAME\"" "$APP/AndroidManifest.xml"
+# 品牌口号统一（code19）：官网与 TV 横幅生成脚本必须同口径，旧「续租 30 分钟」禁止回流。
+SITE="$ROOT/site/index.html"
+ICON_GEN="$ROOT/tools/branding/make_icons.py"
+[ -f "$SITE" ] || { echo "FORBIDDEN: missing site/index.html"; exit 1; }
+grep -qF '答对题目，无限续租！' "$SITE" || { echo "FORBIDDEN: site slogan missing"; exit 1; }
+grep -qF '答对题目，无限续租！' "$ICON_GEN" || { echo "FORBIDDEN: banner slogan missing"; exit 1; }
+if grep -qF '答对一题，续租 30 分钟' "$SITE" "$ICON_GEN" \
+   || grep -qF '答对一题 · 续租 30 分钟' "$SITE"; then
+  echo 'FORBIDDEN: legacy 30-minute slogan is still present'; exit 1
+fi
 grep -q 'getPackageInfo' "$APP/src/com/jager/tvquiz/MainActivity.java"
 grep -q 'GuardPolicy.allowStop' "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
 grep -q 'setAllSubjects' "$APP/src/com/jager/tvquiz/QuizEngine.java"

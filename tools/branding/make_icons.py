@@ -4,8 +4,8 @@
 
 设计语言「极客几何」：
   - 深蓝渐变圆角方底，呼应控制台深色主题；
-  - 琥珀色计时弧 = 「租约到期、续租 30 分钟」；
-  - 屏幕里一枚青绿对勾 = 「答对一题」；
+  - 琥珀色计时弧 = 「租约周期、答对即续」；
+  - 屏幕里一枚青绿对勾 = 「答对题目，无限续租！」；
   - 无任何文字，保证 TV 远景与小尺寸下仍可辨。
 
 用法：python3 tools/branding/make_icons.py
@@ -83,7 +83,7 @@ def master_icon():
 
     # 电视/屏幕：圆角描边 + 内填充
     d.rounded_rectangle([268, 326, 756, 666], radius=46, fill=SCREEN_BG, outline=AMBER, width=28)
-    # 一枚对勾：答对一题
+    # 一枚对勾：答对题目，无限续租！
     thick_line(d, [(344, 494), (452, 588), (686, 414)], MINT, 46)
     # 底座
     thick_line(d, [(512, 666), (512, 716)], AMBER, 20)
@@ -108,7 +108,7 @@ def master_banner(icon):
     # 右侧字标
     d.text((640, 196), "PoHW", font=font(LATIN_BOLD, 132), fill=WHITE)
     d.text((646, 356), "Proof of Homework", font=font(LATIN_BOLD, 44), fill=AMBER)
-    d.text((646, 444), "答对一题，续租 30 分钟",
+    d.text((646, 444), "答对题目，无限续租！",
            font=font(CJK_BOLD, 52, CJK_INDEX), fill=MUTED)
     return im
 

@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="18"' in _mf, "manifest versionCode advances to 18")
-check('VERSION_CODE="18"' in b, "build script versionCode advances to 18")
+check('android:versionCode="19"' in _mf, "manifest versionCode advances to 19")
+check('VERSION_CODE="19"' in b, "build script versionCode advances to 19")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -354,8 +354,22 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="18"' in _mf, "manifest versionCode advances to 18")
-check('VERSION_CODE="18"' in b, "build script versionCode advances to 18")
+check('android:versionCode="19"' in _mf, "manifest versionCode advances to 19")
+check('VERSION_CODE="19"' in b, "build script versionCode advances to 19")
+
+
+# ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
+_site = read(os.path.join(ROOT, "site/index.html"))
+_gen = read(os.path.join(ROOT, "tools/branding/make_icons.py"))
+_legacy = "答对一题，续租 30 分钟"
+_legacy_caption = "答对一题 · 续租 30 分钟"
+_slogan = "答对题目，无限续租！"
+check(_site.count(_slogan) >= 5,
+      "site carries the unified slogan in title/hero/caption/branding/footer")
+check(_slogan in _gen, "TV banner generator draws the unified slogan")
+check(_legacy not in _site and _legacy not in _gen,
+      "legacy 30-minute slogan is gone from site and banner generator")
+check(_legacy_caption not in _site, "legacy TV caption wording is gone")
 
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

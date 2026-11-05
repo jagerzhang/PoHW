@@ -8,6 +8,25 @@
 > 标识，同样不代表发布版本。Android `versionCode` 是单调技术计数，不随展示版本
 > 重置：v1.0.0 为 12（前值 11），因此可直接 `adb install -r` 覆盖安装。
 
+## v1.0.1 (versionCode 19) - unified slogan: 答对题目，无限续租！
+
+Display version stays **1.0.1**; `versionCode` moves 18 -> 19 with the same
+release keystore (SHA-256 `76eb6063b574...26172`).
+
+- Replaced the old `答对一题，续租 30 分钟` wording everywhere: site title,
+  hero tagline, TV illustration caption, branding explanation, footer, and the
+  text drawn into `tv_banner.png`. New wording: **答对题目，无限续租！**.
+- `tools/branding/make_icons.py` regenerated; `app/res/drawable-xhdpi/tv_banner.png`
+  and `site/assets/tv_banner.png` are byte-identical again. Launcher / status
+  icons are pixel-identical (only the banner text changed).
+- `无限续租` means there is no lifetime cap: each correct answer renews one
+  configured interval and the quiz returns when the lease expires. It does NOT
+  mean one answer removes the quiz forever (documented in the site release note).
+- New `[0/9]` build gates and 4 `layout_contract.py` assertions (140 -> 144)
+  forbid the legacy wording from returning; `mutation_suite.py` adds a negative
+  case (37 -> 38). `LAYOUT_CONTRACT_OK 144`, `JVM_TESTS_OK 245`,
+  `MUTATION_SUITE_OK 38/38`, `BUILD_OK version=1.0.1 code=19`.
+
 ## v1.0.1 (versionCode 18) - study scope: term + ordered textbook units (plan B)
 
 Display version stays **1.0.1**; `versionCode` moves 17 -> 18 with the same

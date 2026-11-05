@@ -31,7 +31,7 @@ v1.0.1 起控制台只有一个守护开关：`GuardState.toggleColor(running)` 
 左右关系，保证 TV 遥控器能在教材版本与题目配比之间移动，且不需要跨栏跳转。
 单列行两端未显式定义的左右目标指向自身（URL `EditText` 例外，左右键留给光标移动），
 避免系统按几何邻近把焦点甩到相邻行；行按钮 `WRAP_CONTENT` + 44dp 最小高度，兼容系统大字模式。
-源码结构由 `tests/layout_contract.py` 的 **140 条**断言在构建门禁里守住，
+源码结构由 `tests/layout_contract.py` 的 **144 条**断言在构建门禁里守住，
 `build.sh` 另在签名后强制比对发布证书指纹。
 
 **学科配比（versionCode 15）**：`SubjectWeights` 保存数 / 语 / 英 / 其他四槽权重（默认 5:3:2:2）。
@@ -45,7 +45,7 @@ v1.0.1 起控制台只有一个守护开关：`GuardState.toggleColor(running)` 
 提取真实 SQL 实跑内置题库，验证池隔离、配比分布与全学科关闭时 0 题，纳入 `[0/9]` 门禁。
 兜底是**池保持**的：默认作用域下先只放宽年级（`POOL_CORE_ALL` / `POOL_OTHER_ALL`），最后才全库；启用学习进度后按「单元 → 学期 → 年级 → 全库」逐级放宽，见下节；
 空池用 `MAX(1, (SELECT COUNT(*) ...))` 保证 `OFFSET` 不为 NULL，避免 SQL 异常被吞后静默串池。
-同一批 `POOL_*` 常量、双份参数绑定与池保持兜底都被 140 条契约、`tests/study_scope_check.py` 的运行时回归和 `tests/mutation_suite.py` 的 37 组回归（36 变异 + 1 构建门禁）钉死。
+同一批 `POOL_*` 常量、双份参数绑定与池保持兜底都被 144 条契约、`tests/study_scope_check.py` 的运行时回归和 `tests/mutation_suite.py` 的 38 组回归（37 变异 + 1 构建门禁）钉死。
 
 **学习进度（versionCode 18，方案 B）**：`SettingsStore` 新增 `termIdx`（0 全学年 / 1 上 / 2 下）
 与 `unitLimit`（0 不限 / 1..24 已学到第 N 单元），默认保持旧行为。`SyllabusAssets` 读

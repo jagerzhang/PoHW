@@ -32,9 +32,10 @@ LP = os.path.join(SRC, "LaunchPolicy.java")
 CHK = os.path.join(ROOT, "tests/bank_distribution_check.py")
 SYL = os.path.join(SRC, "Syllabus.java")
 SYLJ = os.path.join(ROOT, "app/assets/syllabus.json")
+SITE = os.path.join(ROOT, "site/index.html")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
-for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ):
+for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE):
     BK[p] = os.path.join(BK_DIR, os.path.basename(p) + ".bk")
     shutil.copyfile(p, BK[p])
 ORIG = {p: hashlib.sha256(open(p, "rb").read()).hexdigest() for p in BK}
@@ -134,7 +135,7 @@ MUTATIONS = [
     ("O", "service stops passing the fourth weight",
      lambda: replace(O, "st.weight(Subjects.OTHER)", "0"), False, True, False),
     ("P", "versionCode rolled back",
-     lambda: replace(B, 'VERSION_CODE="18"', 'VERSION_CODE="17"'), False, True, False),
+     lambda: replace(B, 'VERSION_CODE="19"', 'VERSION_CODE="18"'), False, True, False),
     ("Q", "OTHER routing disabled",
      lambda: replace(D, "boolean other = s == Subjects.OTHER && allSubjects;", "boolean other = false;"), True, True, False),
     ("R", "single WHERE binding",
@@ -183,6 +184,10 @@ MUTATIONS = [
      lambda: replace(O, "SyllabusAssets.get(this)", "Syllabus.empty()"), False, True, False),
     ("AK", "syllabus.json diverges from quiz.db",
      lambda: write(SYLJ, read(SYLJ).replace("时、分、秒", "错位单元")), True, False, False),
+    ("AL", "legacy 30-minute slogan restored",
+     lambda: replace(SITE, '<p class="hero-tagline">答对题目，无限续租！</p>',
+                     '<p class="hero-tagline">答对一题，续租 30 分钟。</p>'),
+     True, True, False),
 ]
 
 print("--- baseline ---")

@@ -8,7 +8,7 @@ APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
 VERSION_NAME="1.0.1"
-VERSION_CODE="17"
+VERSION_CODE="18"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -82,6 +82,10 @@ grep -q "LaunchPolicy.shouldAutoGuard" "$MAIN"
 python3 tests/layout_contract.py
 # 运行时回归：用与 App 相同的两条 SQL 实跑内置题库，验证配比与标签。
 python3 tests/bank_distribution_check.py
+# 学习进度（方案 B）：进度表必须与题库同源，且分层兜底真的有效。
+[ -f "$APP/assets/syllabus.json" ] || { echo "MISSING syllabus.json"; exit 1; }
+python3 tools/quizbank/build_syllabus.py --check
+python3 tests/study_scope_check.py
 # 方案 B：配比必须真的进入抽题链路，禁止退回 gradeWide / 15% / 旧标签路径。
 W="$APP/src/com/jager/tvquiz/SubjectWeights.java"
 DB="$APP/src/com/jager/tvquiz/QuizDb.java"
@@ -96,6 +100,21 @@ grep -qF 'boolean other = s == Subjects.OTHER && allSubjects;' "$DB"
 grep -qF 'new String[args.length * 2]' "$DB"
 grep -qF 'pick(poolWhere, poolArgs)' "$DB"
 grep -qF 'db.hasOtherQuestions()' "$ENG"
+# 学习进度（方案 B）：学期 / 单元必须真的接进抽题链、服务与家长设置。
+SYL="$APP/src/com/jager/tvquiz/Syllabus.java"
+STORE="$APP/src/com/jager/tvquiz/SettingsStore.java"
+grep -q 'termWhere' "$SYL"
+grep -q 'unitArgs' "$SYL"
+grep -qF 'String strict = where + termW + unitW' "$DB"
+grep -qF 'String termOnly = where + termW' "$DB"
+grep -qF 'concat(args, unitA)' "$DB"
+grep -q 'setStudyScope' "$ENG"
+grep -q 'SyllabusAssets.get' "$SVC"
+grep -qF 'getInt("termIdx", Syllabus.TERM_ALL)' "$STORE"
+grep -qF 'getInt("unitLimit", 0)' "$STORE"
+grep -q 'rowTerm' "$SET"
+grep -q 'rowUnit' "$SET"
+grep -q 'Syllabus.TERM_LABELS' "$MAIN"
 # 负向禁词只看代码行，注释里提到旧实现不应误拦构建。
 if grep -v -e '^[[:space:]]*//' -e '^[[:space:]]*\*' -e '^[[:space:]]*/\*' "$ENG" "$DB" \
     | grep -q -e 'gradeWide' -e 'nextInt(100) < 15' -e 'fromBank(subject,'; then
@@ -144,7 +163,7 @@ fi
 echo "[1/9] verify built-in question bank"
 python3 tools/quizbank/verify.py "$APP/assets/quiz.db"
 
-echo "[2/9] JVM unit tests (204 assertions incl. behaviour regressions)"
+echo "[2/9] JVM unit tests (245 assertions incl. behaviour regressions + study scope)"
 bash tests/run.sh
 
 STAMP="$(date +%s)"
@@ -234,12 +253,16 @@ aapt dump badging "$DIST/$APK_NAME" 2>/dev/null | grep -q "versionName='$VERSION
 aapt dump badging "$DIST/$APK_NAME" 2>/dev/null | grep -q "versionCode='$VERSION_CODE'"
 unzip -l "$DIST/$APK_NAME" | grep -q 'assets/quiz.db'
 unzip -l "$DIST/$APK_NAME" | grep -q 'assets/quiz.db.version'
+unzip -l "$DIST/$APK_NAME" | grep -q 'assets/syllabus.json'
 # zip -r 对已存在的归档只做增量更新，旧条目不会消失；先删旧包再重建。
 rm -f "$DIST/PoHW-src.zip"
+# 官网静态站随仓库发布；目录不存在时（例如只构建 APP 的 clone）安静跳过。
+ZIP_EXTRA=""
+if [ -d "$ROOT/site" ]; then ZIP_EXTRA="site"; fi
 (cd "$ROOT" && zip -q -r "$DIST/PoHW-src.zip" \
   README.md LICENSE .gitignore CHANGELOG.md \
   app/AndroidManifest.xml app/build.sh app/src app/res app/assets \
-  tests docs tools -x '*/__pycache__/*' '*.pyc')
+  tests docs tools $ZIP_EXTRA -x '*/__pycache__/*' '*.pyc')
 
 # 源码包只允许源码与文档：Python 字节码和缓存目录属于本机运行产物，不得外发。
 if unzip -l "$DIST/PoHW-src.zip" | grep -qE '__pycache__|\.pyc$'; then

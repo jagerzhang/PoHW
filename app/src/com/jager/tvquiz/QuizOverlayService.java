@@ -289,6 +289,7 @@ public class QuizOverlayService extends Service {
                 st.weight(Subjects.MATH), st.weight(Subjects.CHINESE),
                 st.weight(Subjects.ENGLISH), st.weight(Subjects.OTHER));
         engine.setAllSubjects(st.allSubjects());
+        engine.setStudyScope(SyllabusAssets.get(this), st.termIndex(), st.unitLimit());
         QuizDb cached = QuizDb.peek();
         if (cached != null) {
             engine.setDb(cached);

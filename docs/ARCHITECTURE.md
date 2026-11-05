@@ -10,7 +10,7 @@
 | `BootReceiver` | 开机恢复守护（校验 action + 守护开关 + 悬浮窗授权） |
 | `LaunchPolicy` | 「启动即守护」冷启动判定（纯 Java，可 JVM 单测） |
 | `DonateActivity` | 打赏页：微信 / 支付宝收款码 + 遥控器左右切渠道，纯静态资源、无支付 SDK |
-| `QuizDb` | 内置 SQLite：版本化原子复制、只读、按学科池本地随机抽题、池保持跨年级兜底 + 全库最后兜底；用题目真实 `subject` 反推标签 |
+| `QuizDb` | 内置 SQLite：版本化原子复制、只读、按学科池本地随机抽题、叠加学期 / 单元谓词、五层池保持兜底；用题目真实 `subject` 反推标签 |
 | `QuizEngine` | 三层出题链：DB -> 在线缓存题 -> 参数化生成器；委托 `SubjectWeights` 做四槽轮盘赌 |
 | `BankRepository` | 可选在线题库：版本比对、分块下载、SHA-256、原子缓存 |
 | `PinGate` | 纯 Java PIN 状态机（首次设置 / 验证 / 修改），可 JVM 单测 |
@@ -19,6 +19,9 @@
 | `OverlayQuizView` / `QuizTextSizer` | 题目 UI 与自适应字号 |
 | `SettingsStore` | SharedPreferences 封装 + PIN 哈希 + 四科配比（`w0..w3`） |
 | `SubjectWeights` | 纯 Java 四槽学科权重；全学科开关与题库可用性共同决定第 4 槽是否有效，可 JVM 单测 |
+| `Syllabus` | 纯 Java 有序单元进度表：学期 / 单元 SQL 谓词与别名展开，可 JVM 单测 |
+| `Json` | 零依赖严格 JSON 解析器，读 `assets/syllabus.json`，损坏即抛异常 |
+| `SyllabusAssets` | Android 资源层：读取并缓存进度表，缺失时降级为仅学期过滤 |
 
 v1.0.1 起控制台只有一个守护开关：`GuardState.toggleColor(running)` 给绿/红，
 `toggleLabel(running)` 给「开启守护 / 关闭守护」；运行中点击先过 `PinVerifyView`，
@@ -28,7 +31,7 @@ v1.0.1 起控制台只有一个守护开关：`GuardState.toggleColor(running)` 
 左右关系，保证 TV 遥控器能在教材版本与题目配比之间移动，且不需要跨栏跳转。
 单列行两端未显式定义的左右目标指向自身（URL `EditText` 例外，左右键留给光标移动），
 避免系统按几何邻近把焦点甩到相邻行；行按钮 `WRAP_CONTENT` + 44dp 最小高度，兼容系统大字模式。
-源码结构由 `tests/layout_contract.py` 的 **114 条**断言在构建门禁里守住，
+源码结构由 `tests/layout_contract.py` 的 **140 条**断言在构建门禁里守住，
 `build.sh` 另在签名后强制比对发布证书指纹。
 
 **学科配比（versionCode 15）**：`SubjectWeights` 保存数 / 语 / 英 / 其他四槽权重（默认 5:3:2:2）。
@@ -40,9 +43,18 @@ v1.0.1 起控制台只有一个守护开关：`GuardState.toggleColor(running)` 
 全年级跨科抽样与硬编码 15% 分支已删除。`QuizDb.pick()` 由题库里的真实 `subject` 反推 `q.subject`，
 因此错题库与统计的学科名与题目内容一致。`tests/bank_distribution_check.py` 从 `QuizDb.java`
 提取真实 SQL 实跑内置题库，验证池隔离、配比分布与全学科关闭时 0 题，纳入 `[0/9]` 门禁。
-兜底是**池保持**的：先只放宽年级（`POOL_CORE_ALL` / `POOL_OTHER_ALL`），最后才全库；
+兜底是**池保持**的：默认作用域下先只放宽年级（`POOL_CORE_ALL` / `POOL_OTHER_ALL`），最后才全库；启用学习进度后按「单元 → 学期 → 年级 → 全库」逐级放宽，见下节；
 空池用 `MAX(1, (SELECT COUNT(*) ...))` 保证 `OFFSET` 不为 NULL，避免 SQL 异常被吞后静默串池。
-同一批 `POOL_*` 常量、双份参数绑定与三层兜底都被 114 条契约和 `tests/mutation_suite.py` 的 29 组变异钉死。
+同一批 `POOL_*` 常量、双份参数绑定与池保持兜底都被 140 条契约、`tests/study_scope_check.py` 的运行时回归和 `tests/mutation_suite.py` 的 37 组回归（36 变异 + 1 构建门禁）钉死。
+
+**学习进度（versionCode 18，方案 B）**：`SettingsStore` 新增 `termIdx`（0 全学年 / 1 上 / 2 下）
+与 `unitLimit`（0 不限 / 1..24 已学到第 N 单元），默认保持旧行为。`SyllabusAssets` 读
+`assets/syllabus.json`（小学 1–6 年级数学 12 册、105 单元 / 134 别名），`QuizEngine.setStudyScope()`
+把它和两个设置传给 `QuizDb.random()`。学期用 `term IN ('上','全')` / `('下','全')` 过滤，顺带排除
+810 道无学期综合练习；单元按 `topic` 别名逐个参数化匹配。空池时依次放宽
+单元 → 学期 → 年级 → 全库，前四层始终保留学科约束。语文 / 英语 / 其他学科与 7–9 年级
+没有可靠单元顺序，只做学期过滤；全学年模式下单元选择自动禁用。
+`tests/study_scope_check.py` 用真实 SQL 复刻这条链并逐层断言。
 
 **默认开关与启动链路**：全新安装时「开机自启」关、「启动即守护」开、答题暂停与恢复播放均开。
 `MainActivity.onCreate()` 用 `LaunchPolicy.shouldAutoGuard()` 判定是否自动拉起守护，四个条件缺一不可：

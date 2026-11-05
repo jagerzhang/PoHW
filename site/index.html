@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoHW · Proof of Homework — 答对一题，续租 30 分钟</title>
+<meta name="description" content="PoHW（Proof of Homework）是装在 Android TV 上的反沉迷家长守护工具：跨应用全屏答题遮罩，答对才能继续观看，内置 5,129 题离线 K12 题库，完全离线、零联网。">
+<meta name="theme-color" content="#0F1725">
+<link rel="icon" type="image/png" href="assets/ic_launcher.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="#top">
+      <img src="assets/ic_launcher.png" alt="PoHW 应用图标" width="34" height="34">
+      <span class="brand-name">PoHW</span>
+      <span class="brand-sub">Proof of Homework</span>
+    </a>
+    <nav class="nav-links" aria-label="主导航">
+      <a href="#features">产品亮点</a>
+      <a href="#how">安装步骤</a>
+      <a href="#download">下载</a>
+      <a href="#releases">更新记录</a>
+      <a href="#faq">FAQ</a>
+      <a href="#docs">文档</a>
+    </nav>
+    <a class="btn btn-primary btn-sm" href="https://github.com/jagerzhang/PoHW/releases/latest">下载 APK</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ===== Hero ===== -->
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">Android TV · 家长守护 · 完全离线</p>
+        <h1 class="hero-title">PoHW<span class="hero-title-en">Proof of Homework</span></h1>
+        <p class="hero-tagline">答对一题，续租 30 分钟。</p>
+        <p class="hero-desc">装在电视上的反沉迷小实验：开启守护后，前台服务会按设定周期在<strong>任意应用之上</strong>弹出全屏答题页，答对才能继续看电视；同一题答错 2 次自动换题并记入错题库。这是一台 Android TV 上的「答题解锁继续观看」家长守护工具。</p>
+        <p class="hero-note">PoHW 是 Proof of Work 的一个玩笑 —— 看电视的通行权不靠算力，而是靠周期性交一次「作业量证明」来续租。租约到期，重新出题。本项目是个人非商业的 Android TV 实验，只发布 APK，不上架任何应用商店。</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="https://github.com/jagerzhang/PoHW/releases/latest">下载 APK</a>
+          <a class="btn btn-ghost" href="https://github.com/jagerzhang/PoHW">查看 GitHub 源码</a>
+        </div>
+        <div class="hero-facts">
+          <span>Android 5.0+ / minSdk 21</span>
+          <span>5,129 题离线题库</span>
+          <span>零联网 · 不收集数据</span>
+        </div>
+      </div>
+
+      <div class="hero-art">
+        <div class="tv-art" aria-hidden="true">
+          <div class="tv-screen">
+            <div class="tv-dial">
+              <div class="tv-arc"></div>
+              <div class="tv-check"></div>
+            </div>
+            <div class="tv-caption">答对一题 · 续租 30 分钟</div>
+          </div>
+          <div class="tv-neck"></div>
+          <div class="tv-base"></div>
+        </div>
+        <p class="art-caption">示意图：电视 + 琥珀计时弧 + 青绿对勾</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 品牌资源 ===== -->
+  <section class="brand-strip" aria-label="应用图标与 TV 横幅">
+    <div class="container brand-strip-inner">
+      <div class="brand-strip-copy">
+        <img src="assets/ic_launcher.png" alt="PoHW APP 图标" width="76" height="76">
+        <div>
+          <h2>为电视而生</h2>
+          <p>深蓝渐变圆角底 + 琥珀计时弧 + 屏幕里的青绿对勾 + 底座，呼应「答对一题，续租 30 分钟」。图标与 TV 横幅均由仓库脚本可复现生成。</p>
+        </div>
+      </div>
+      <div>
+        <img class="banner" src="assets/tv_banner.png" alt="PoHW Android TV 横幅（640×360）" loading="lazy">
+        <p class="banner-label">Android TV launcher banner · 640×360</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 产品亮点 ===== -->
+  <section id="features" class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Features</span>
+        <h2 class="section-title">产品亮点</h2>
+        <p class="section-lead">从全屏答题遮罩到离线题库与家长设置，全部围绕一件事：让孩子在继续观看前，先交一次「作业」。</p>
+      </div>
+
+      <div class="features-grid">
+        <article class="feature-card">
+          <span class="feature-no">01</span>
+          <h3>跨应用全屏答题遮罩</h3>
+          <p>基于 <code>TYPE_APPLICATION_OVERLAY</code> 的全屏窗口，切到视频 App 或桌面后照样弹出；遥控器方向键、确定键、数字键 1-4 由遮罩自主路由，不依赖窗口 View 焦点。</p>
+          <span class="tag">跨应用</span>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-no">02</span>
+          <h3>答对继续观看</h3>
+          <p>答对才能继续看电视，租约到期重新出题。守护开关合并为一个按钮，运行中显示「关闭守护」，关闭也必须先通过家长密码就地验证。</p>
+          <span class="tag">PoW 续租</span>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-no">03</span>
+          <h3>答错 2 次换题 + 错题库</h3>
+          <p>同一题累计答错 2 次自动原地换题，原题按题面去重记入本地错题库；控制台可翻页查看、删除、清空，并标出正确答案与选错项。</p>
+          <span class="tag">本地 SQLite</span>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-no">04</span>
+          <h3>5,129 题离线 K12 题库</h3>
+          <p>内置 SQLite，覆盖 4,319 个知识点、19 个学科、21 个年级段，本地随机抽题。完全离线、零联网，默认一次网络请求都不发；在线题库源默认关闭，需家长自行填地址才启用。</p>
+          <span class="tag warn">完全离线 · 零联网</span>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-no">05</span>
+          <h3>学科配比 5:3:2:2</h3>
+          <p>数学 / 语文 / 英语 / 其他学科四槽权重，默认 5:3:2:2（每槽 0-5 可调）。「全学科」模式下第 4 槽生效，其他学科池不可用时自动失效，避免串科抽题。</p>
+          <span class="tag">四槽权重</span>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-no">06</span>
+          <h3>家长密码 + 单列卡片设置</h3>
+          <p>4-8 位数字密码，PBKDF2（60,000 次迭代）+ 随机 salt，关闭守护也需要验证且服务侧二次校验。设置页为居中窄栏单列卡片流，遥控器上下按行移动，不再跨栏跳转。</p>
+          <span class="tag">PBKDF2 · 单列卡片</span>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-no">07</span>
+          <h3>答题时暂停 / 恢复视频</h3>
+          <p>弹题时申请短暂音频焦点并派发媒体暂停键，答对解锁后归还焦点并尝试恢复播放。这是 best-effort：Android 没有强制暂停第三方播放器的公开 API，不保证所有视频 App 响应。</p>
+          <span class="tag warn">best-effort</span>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-no">08</span>
+          <h3>启动即守护 / 开机自启</h3>
+          <p>「启动即守护」默认开：APP 冷启动且条件满足时自动拉起守护，从后台返回不会把家长手动关掉的守护又打开。「开机自启」默认关，需家长显式开启并手动放行厂商自启动权限。</p>
+          <span class="tag">LaunchPolicy</span>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-no">09</span>
+          <h3>微信 / 支付宝打赏</h3>
+          <p>全屏展示两张静态收款码，遥控器左右键切换渠道，返回键退出。纯静态收款码、无支付 SDK、无订单、无网络请求，APP 不接触金额与账号，扫码与付款都在家长手机上完成。</p>
+          <span class="tag warn">纯静态 · 不联网支付</span>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-no">10</span>
+          <h3>学习进度按学期与单元过滤</h3>
+          <p>方案 B：新增「学习学期」与「已学单元」，按内置 12 册数学有序单元表限制出题范围，贴合开学初只学 1-2 个单元的实际进度；选不到题时依次放宽单元 → 学期 → 年级，始终不换学科。语文 / 英语与初中暂无可靠单元顺序，仅按学期过滤。</p>
+          <span class="tag">学期 + 单元</span>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 工作原理 / 安装步骤 ===== -->
+  <section id="how" class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">How it works</span>
+        <h2 class="section-title">工作原理与安装步骤</h2>
+        <p class="section-lead">侧载到小米电视等 Android TV 设备，授权一次悬浮窗，配置好家长密码与出题参数，即可开启守护。</p>
+      </div>
+
+      <ol class="steps">
+        <li class="step">
+          <span class="step-no">1</span>
+          <div>
+            <h3>侧载 APK 到电视</h3>
+            <p>把 APK 装到 Android TV 设备（文件管理器安装，或 adb 覆盖安装）。本项目不上架任何应用商店、仅自行侧载，只发布 APK。</p>
+            <code>adb install -r &lt;你下载的 APK&gt;</code>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-no">2</span>
+          <div>
+            <h3>首次打开，授权「悬浮窗」</h3>
+            <p>点「授权悬浮窗」打开系统开关并允许。<code>SYSTEM_ALERT_WINDOW</code> 是必需权限，用于在其他应用上层弹出全屏答题页。</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-no">3</span>
+          <div>
+            <h3>进家长设置，初始化 4-8 位密码</h3>
+            <p>首次进入会要求初始化 4-8 位数字家长密码；密码以 PBKDF2 + 随机 salt 落盘，用于保护设置页与关闭守护。</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-no">4</span>
+          <div>
+            <h3>设年级 / 频率 / 学科配比</h3>
+            <p>可选小学 1-6 / 初中 1-3（内部 1-9 年级）、出题频率（15 秒至 30 分钟）、数 / 语 / 英配比与「全学科」开关，以及按学期与单元的进度范围。</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-no">5</span>
+          <div>
+            <h3>返回首页，开启守护</h3>
+            <p>点「开启守护」后按 Home 切到任意视频 App，到点会弹出全屏答题页。答对继续观看，租约到期重新出题。</p>
+          </div>
+        </li>
+      </ol>
+
+      <div class="callout">
+        <h3>安装前请先看这几条边界</h3>
+        <ul>
+          <li>不上架应用商店、仅自行侧载：这是个人非商业实验，只发布 APK，不在任何应用商店分发。</li>
+          <li>需要 Android 5.0+（<code>minSdk 21</code>，<code>targetSdk 33</code>）；电视、手机、平板均可安装，不强制 Leanback。</li>
+          <li>厂商自启动权限需家长手动放行：「开机自启」默认关闭，开启后还要在系统设置里允许该应用自启动。</li>
+          <li>忘记密码可用 <code>adb shell pm clear com.jager.tvquiz</code> 重置（会清空全部设置与统计）；遮罩卡住卸载流程可用 <code>adb shell am force-stop com.jager.tvquiz</code>。</li>
+          <li>拦不住 Home 键、系统「强制停止」、卸载与清除数据 —— 第三方应用没有这些能力，本仓库明确禁止 Device Admin / 防卸载类 API。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 下载 ===== -->
+  <section id="download" class="section download-section">
+    <div class="container">
+      <div class="download-box">
+        <span class="eyebrow">Download</span>
+        <h2 class="section-title">下载最新版本</h2>
+        <p>最新版本 <strong>v1.0.1</strong>（当前构建 <code>versionCode 18</code>）；签名证书连续（<code>76eb6063…6172</code>），可直接 <code>adb install -r</code> 覆盖安装。APK 附件以 Releases 页面实际发布为准，本页不写死任何直链资产文件名。</p>
+        <div class="download-actions">
+          <a class="btn btn-primary btn-lg" href="https://github.com/jagerzhang/PoHW/releases/latest">下载 APK（最新 Release）</a>
+          <a class="btn btn-ghost" href="https://github.com/jagerzhang/PoHW/releases">所有 Releases</a>
+          <a class="btn btn-ghost" href="https://github.com/jagerzhang/PoHW">GitHub 仓库</a>
+        </div>
+        <p class="download-hint">本项目不上架任何应用商店，仅发布 APK 供自行侧载；请从仓库 Releases 页面获取，不要使用第三方镜像。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 版本更新记录 ===== -->
+  <section id="releases" class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Changelog</span>
+        <h2 class="section-title">版本更新记录</h2>
+        <p class="section-lead">按时间倒序整理自仓库 <a href="https://github.com/jagerzhang/PoHW/blob/main/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a>。v1.0.0 之前为开发期内部迭代编号，已下架三个历史 Release；自 v1.0.0 起按 MAJOR.MINOR.PATCH 递增，<code>versionCode</code> 为单调技术计数、不随展示版本重置。具体构建号与改动以仓库 CHANGELOG 为准。</p>
+      </div>
+      <div id="releases-list" class="releases"></div>
+    </div>
+  </section>
+
+  <!-- ===== 打赏作者 ===== -->
+  <section id="donate" class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Donate</span>
+        <h2 class="section-title">打赏作者</h2>
+        <p class="section-lead">如果这个小工具对你有用，可以请作者喝一杯咖啡。<strong>完全自愿</strong>，与功能无关。</p>
+      </div>
+      <div class="donate-grid">
+        <figure class="qr-card">
+          <img src="assets/donate_wechat.png" alt="微信收款码" loading="lazy">
+          <figcaption>微信支付</figcaption>
+        </figure>
+        <figure class="qr-card">
+          <img src="assets/donate_alipay.png" alt="支付宝收款码" loading="lazy">
+          <figcaption>支付宝</figcaption>
+        </figure>
+      </div>
+      <p class="donate-note">这里是<strong>纯静态收款码</strong>，与 APP 内「打赏作者」页一致：不含任何支付 SDK、不创建订单、不发起网络请求、不收集数据，APP 不接触金额与账号。扫码与付款都在家长自己的手机上完成。两张码是从作者提供的海报里裁出的白色卡片，保留了二维码静区与署名。</p>
+    </div>
+  </section>
+
+  <!-- ===== FAQ / 边界与免责声明 ===== -->
+  <section id="faq" class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">FAQ & Disclaimer</span>
+        <h2 class="section-title">常见问题、边界与免责声明</h2>
+        <p class="section-lead">请把 PoHW 当成一个「自己家里用的玩具项目」，而不是商用家长控制产品。</p>
+      </div>
+
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>视频暂停一定生效吗？</summary>
+          <p>不一定，是 <strong>best-effort</strong>。Android 没有「强制暂停第三方播放器」的公开 API，APP 只能请求短暂音频焦点并派发媒体暂停键，答对后归还焦点并尝试恢复；不保证所有视频 App 响应。Android 12+ 视频 App 还可用 <code>HIDE_OVERLAY_WINDOWS</code> 隐藏非系统浮层，各家 ROM 与小米电视的实际表现需要上机实测。窗口焦点重抢同样是 best-effort，重抢失败时遮罩保留、不自动放行，触摸 / 鼠标点击仍可答题。</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>内置题库是教材同步练习题吗？</summary>
+          <p>不是。题目由开源仓库 <a href="https://github.com/RedSamerai/learning-content" target="_blank" rel="noopener">RedSamerai/learning-content</a> 的<strong>知识点纲目</strong>参数化生成，偏「知识点辨识 / 定位」，不是教材同步真题，也不是教辅题库。上游只有纲目字段、没有题目选项答案，仓库与 APK 不含任何第三方真题文本或付费题数据。它的作用是打断连续观看、让孩子回忆一下学过什么。</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>题库能按教材版本或单元序号出题吗？</summary>
+          <p>题库本身<strong>不含出版社版本字段、不含单元序号</strong>，也没有难度标签；分学科教材版本只用于在线题包筛选与题面标注。上下学期可直接用 <code>term</code> 字段过滤。单元进度靠 APP 内置的 <code>assets/syllabus.json</code> 人工维护：目前覆盖小学 1-6 年级数学共 12 册有序单元，把 <code>topic</code> 里的单元名别名归并后按教学顺序排列；语文是课文名、英语是主题词，7-9 年级亦无可靠顺序，这些组合只按学期过滤，不假装精确。设计与边界见 <a href="https://github.com/jagerzhang/PoHW/blob/main/docs/QUESTION_BANK.md" target="_blank" rel="noopener">docs/QUESTION_BANK.md</a>。</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>会收集数据或联网支付吗？</summary>
+          <p>不收集数据，默认完全离线、零联网：<code>INTERNET</code> 权限仅用于家长自行配置的可选在线题库源，地址为空时 APP 一次请求都不发。打赏只显示静态收款码，无支付 SDK、无订单、无网络请求，扫码与付款都在家长手机上完成。清单同时设置了 <code>allowBackup=false</code> 与默认禁止明文 HTTP。</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>开源许可证的边界是什么？</summary>
+          <p>代码采用 <a href="https://github.com/jagerzhang/PoHW/blob/main/LICENSE" target="_blank" rel="noopener">MIT 许可证</a>；上游 learning-content 仓库未附 LICENSE，<code>app/assets/quiz.db</code> 中的纲目数据<strong>不在 MIT 授权范围内</strong>，仅供个人非商业学习使用。如需公开再分发，请先确认上游授权状态，或换成自己有权使用的数据源自行重建题库。仓库与 APK 中不含任何密钥与付费接口。</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>为什么不在应用商店上架？能拦住卸载吗？</summary>
+          <p>这是个人非商业实验，<strong>不上架任何应用商店、非应用商店分发</strong>，只发布 APK 供自行侧载。第三方应用拦不住 Home 键、系统「强制停止」、卸载与清除数据，本项目明确禁止 Device Admin / Device Owner / 锁屏任务 / 防卸载这类 API。</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>适合什么场景？</summary>
+          <p>仅供<strong>家庭自用</strong>：请在自己设备上、在自己孩子知情的前提下使用。它不是商用家长控制产品，也不承诺任何监护效果；题目质量、真机兼容性与遥控器体验以实际设备为准。</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 文档 ===== -->
+  <section id="docs" class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Docs</span>
+        <h2 class="section-title">文档</h2>
+        <p class="section-lead">全部文档都在仓库里，以下链接指向 <code>main</code> 分支的对应文件。</p>
+      </div>
+
+      <div class="docs-grid">
+        <a class="doc-card" href="https://github.com/jagerzhang/PoHW/blob/main/README.md" target="_blank" rel="noopener">
+          <span class="doc-path">README.md</span>
+          <h3>项目总览</h3>
+          <p>能力边界、快速开始、内置题库、家长设置、构建与权限说明。</p>
+          <span class="doc-arrow">在 GitHub 打开 →</span>
+        </a>
+        <a class="doc-card" href="https://github.com/jagerzhang/PoHW/blob/main/CHANGELOG.md" target="_blank" rel="noopener">
+          <span class="doc-path">CHANGELOG.md</span>
+          <h3>版本变更</h3>
+          <p>版本口径、各次 versionCode 改动与验证数据的权威来源。</p>
+          <span class="doc-arrow">在 GitHub 打开 →</span>
+        </a>
+        <a class="doc-card" href="https://github.com/jagerzhang/PoHW/blob/main/docs/QUESTION_BANK.md" target="_blank" rel="noopener">
+          <span class="doc-path">docs/QUESTION_BANK.md</span>
+          <h3>题库设计与数据来源</h3>
+          <p>纲目导入口径、题目生成、校验、许可证边界与学习进度调研。</p>
+          <span class="doc-arrow">在 GitHub 打开 →</span>
+        </a>
+        <a class="doc-card" href="https://github.com/jagerzhang/PoHW/blob/main/docs/BANK_STATS.md" target="_blank" rel="noopener">
+          <span class="doc-path">docs/BANK_STATS.md</span>
+          <h3>题库统计</h3>
+          <p>知识点、学科、年级段与题量的分布统计。</p>
+          <span class="doc-arrow">在 GitHub 打开 →</span>
+        </a>
+        <a class="doc-card" href="https://github.com/jagerzhang/PoHW/blob/main/docs/BUILD.md" target="_blank" rel="noopener">
+          <span class="doc-path">docs/BUILD.md</span>
+          <h3>构建指南</h3>
+          <p>零 Gradle 命令行构建链、签名与常见报错。</p>
+          <span class="doc-arrow">在 GitHub 打开 →</span>
+        </a>
+        <a class="doc-card" href="https://github.com/jagerzhang/PoHW/blob/main/docs/ARCHITECTURE.md" target="_blank" rel="noopener">
+          <span class="doc-path">docs/ARCHITECTURE.md</span>
+          <h3>架构与安全边界</h3>
+          <p>组件结构、前台服务、悬浮窗与权限说明。</p>
+          <span class="doc-arrow">在 GitHub 打开 →</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-brand">
+          <img src="assets/ic_launcher.png" alt="PoHW 应用图标" width="40" height="40">
+          <div>
+            <strong>PoHW</strong>
+            <span>Proof of Homework · 答对一题，续租 30 分钟</span>
+          </div>
+        </div>
+        <p style="margin-top:16px">个人非商业的 Android TV 反沉迷实验。仅供家庭自用、不上架应用商店、不收集数据、不联网支付。代码 MIT 许可证，题库纲目数据仅供个人非商业学习。</p>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/jagerzhang/PoHW/releases/latest">下载 APK</a>
+        <a href="https://github.com/jagerzhang/PoHW/releases">Releases</a>
+        <a href="https://github.com/jagerzhang/PoHW">GitHub 仓库</a>
+        <a href="https://github.com/jagerzhang/PoHW/blob/main/README.md">README</a>
+        <a href="https://github.com/jagerzhang/PoHW/blob/main/LICENSE">LICENSE</a>
+        <a href="#donate">打赏作者</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span id="year">2026</span> jagerzhang · PoHW</span>
+      <span>纯静态页面 · 零构建依赖 · 无 CDN 外链 · 国内可直接打开</span>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

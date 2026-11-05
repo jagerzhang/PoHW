@@ -10,6 +10,7 @@
 否则把调用注释掉也会被计数放行；三栏残留这类负向断言仍基于原始文件。
 """
 import io
+import json
 import os
 import re
 import sys
@@ -178,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="17"' in _mf, "manifest versionCode advances to 17")
-check('VERSION_CODE="17"' in b, "build script versionCode advances to 17")
+check('android:versionCode="18"' in _mf, "manifest versionCode advances to 18")
+check('VERSION_CODE="18"' in b, "build script versionCode advances to 18")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -220,7 +221,7 @@ check("MAX(1, (SELECT COUNT(*) FROM questions " in _d
 check("POOL_OTHER_ALL" in _chk and "POOL_CORE_ALL" in _chk,
       "distribution check reads the same named SQL constants")
 check(os.path.isfile(_mut), "mutation harness is committed and reproducible")
-check("204 assertions" in b, "build log states the actual JVM assertion count")
+check("245 assertions" in b, "build log states the actual JVM assertion count")
 check("显示「—」并禁用焦点" not in raw_s, "stale UI comment about the fourth row is gone")
 check("题库不可用" in raw_s, "settings note explains the bank-unavailable case")
 
@@ -290,5 +291,71 @@ check(raw_s.find('"检查题库更新"') < raw_s.find('"默认完全离线：')
       < raw_s.find('"打赏作者 · 请喝一杯咖啡"')
       < raw_s.find('"如果觉得 PoHW 好用'),
       "offline note sits directly under the bank-update button, before the donate entry")
+
+# ---- 方案 B（学习进度）：学期 + 单元过滤的源码、数据与门禁契约 ----
+_syl = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/Syllabus.java")))
+_json = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/Json.java"))
+_assets = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SyllabusAssets.java"))
+_syljson = json.load(io.open(os.path.join(ROOT, "app/assets/syllabus.json"), encoding="utf-8"))
+_scope = read(os.path.join(ROOT, "tests/study_scope_check.py"))
+
+books = [(g, t, subj) for g, terms in _syljson["grades"].items()
+         for t, subjs in terms.items() for subj in subjs]
+check(len(_syljson["grades"]) == 6 and len(books) == 12,
+      "syllabus.json declares 12 books (grades 1-6 x upper/lower term)")
+check(all(subj == "数学" for _, _, subj in books),
+      "only math has ordered units; chinese/english degrade honestly")
+check(all(t in ("1", "2") for _, t, _ in books),
+      "term keys are the same indices used by SettingsStore")
+check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/build_syllabus.py")),
+      "syllabus generator / quiz.db consistency validator is committed")
+check(os.path.isfile(os.path.join(ROOT, "tests/study_scope_check.py")),
+      "runtime study-scope SQL regression is committed")
+check("term IN ('上','全')" in _syl and "term IN ('下','全')" in _syl,
+      "upper/lower term include 全一册 and exclude empty-term practice")
+check("term == TERM_FIRST" in _syl and "TERM_ALL = 0" in _syl,
+      "full-year default adds no term predicate (upgrade-safe)")
+check('sb.append("(topic LIKE ? OR topic = ?)")' in _syl,
+      "unit predicate matches both prefixed and bare topic names")
+check('a[i * 2] = "%：" + names[i];' in _syl
+      and 'a[i * 2 + 1] = names[i];' in _syl,
+      "unit args keep the exact placeholder order, Chinese colon included")
+check(all(k in _syl for k in ("matchNames", "maxUnits", "unitLabel", "bookCount")),
+      "syllabus exposes ordered unit lookup for UI and SQL")
+check("public static Object parse(String text)" in _json
+      and "unknown escape" in _json,
+      "dependency-free JSON parser is strict, not a silent fallback")
+check("Syllabus.fromJson" in _assets and "Syllabus.empty()" in _assets,
+      "asset loader degrades to term-only filtering when the table is broken")
+check("random(int grade, int subject, boolean allSubjects," in _d,
+      "QuizDb exposes the study-scope aware random() overload")
+check("String strict = where + termW + unitW" in _d
+      and "String termOnly = where + termW" in _d,
+      "QuizDb relaxes unit before term before grade")
+check("concat(args, unitA)" in _d and "!other" in _d,
+      "unit args are bound and skipped for the OTHER pool")
+check("setStudyScope" in _e and "syllabus, termIndex, unitLimit" in _e,
+      "engine forwards study scope to the SQL layer")
+check("SyllabusAssets.get(this)" in _o and "st.termIndex()" in _o,
+      "service injects the real table and both settings")
+check('getInt("termIdx", Syllabus.TERM_ALL)' in _st
+      and 'getInt("unitLimit", 0)' in _st,
+      "both study-scope settings default to the old unrestricted behaviour")
+check("rowTerm" in raw_s and "rowUnit" in raw_s and "学习进度" in raw_s,
+      "settings exposes term / unit rows with an honest scope note")
+check("SyllabusAssets.get(this)" in raw_s
+      and "maxUnits" in raw_s and "unitLabel" in raw_s,
+      "settings clamps the unit index to the real book size")
+check("Syllabus.TERM_LABELS" in m and "学习进度：" in raw_m,
+      "home status line reports the active study scope")
+check(all(k in _run for k in ("Json.java", "Syllabus.java", "SyllabusTest")),
+      "JSON parser, syllabus and its JVM test are compiled and executed")
+check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
+      "build runs both syllabus consistency and runtime scope regressions")
+check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
+      "runtime regression asserts the fallback order, not just final answers")
+check('android:versionCode="18"' in _mf, "manifest versionCode advances to 18")
+check('VERSION_CODE="18"' in b, "build script versionCode advances to 18")
+
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

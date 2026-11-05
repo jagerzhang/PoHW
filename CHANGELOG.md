@@ -8,6 +8,42 @@
 > 标识，同样不代表发布版本。Android `versionCode` 是单调技术计数，不随展示版本
 > 重置：v1.0.0 为 12（前值 11），因此可直接 `adb install -r` 覆盖安装。
 
+## v1.0.1 (versionCode 18) - study scope: term + ordered textbook units (plan B)
+
+Display version stays **1.0.1**; `versionCode` moves 17 -> 18 with the same
+release keystore (SHA-256 `76eb6063b574...26172`).
+
+- Parent settings gain `学习学期` (全学年 / 上册 / 下册, default 全学年) and
+  `已学单元` (不限 / 第 N 单元, default 不限). Both are new SharedPreferences
+  keys, so an in-place upgrade keeps the old unrestricted draw range.
+- New `app/assets/syllabus.json`: **12 ordered books** for primary grade 1–6
+  math (upper / lower term), **105 units / 134 aliases**, covering every distinct
+  `topic` unit name in `quiz.db`. Aliases such as `时、分、秒` / `时分秒` are
+  merged into a single unit. `tools/quizbank/build_syllabus.py --check` rejects
+  any alias that is missing, stale, duplicated or contains a SQL wildcard.
+- New dependency-free `Json` parser and pure-Java `Syllabus`; Android asset
+  loading is isolated in `SyllabusAssets` so JVM tests stay android-free.
+  `Syllabus.termWhere()` uses `term IN ('上','全')` / `('下','全')`, which also
+  excludes the 810 un-termed 综合练习 questions; `unitWhere()` / `unitArgs()`
+  bind both `"%：" + alias` and the bare alias for every unit.
+- `QuizDb.random()` now accepts the scope and relaxes constraints in order:
+  same grade + subject + term + unit -> + term -> + grade + subject ->
+  same subject across grades -> full bank. The first four layers always keep the
+  subject constraint. Chinese / English / other subjects and grades 7–9 have no
+  reliable unit order, so they degrade honestly to term-only filtering; the
+  full-year option disables the unit selector entirely.
+- Home status line and the settings card report the active scope; the settings
+  note spells out the grading boundaries and the fallback order.
+- New `site/` static promo page (hero, 10 feature cards, install steps, download,
+  release timeline, FAQ) and deployment to Tencent Cloud EdgeOne Makers
+  (`pohw-home`, `makers-optiyqkj3jjq`). `src.zip` now includes `site/` when present.
+- Verification: `LAYOUT_CONTRACT_OK total=140` (114 -> 140),
+  `JVM_TESTS_OK total=245` (204 -> 245, new `SyllabusTest` 41 assertions),
+  `SYLLABUS_CHECK_OK books=12`, `STUDY_SCOPE_OK pools=4 books=12` (term/unit
+  isolation, empty-term exclusion, graceful degradation, four fallback layers,
+  default-scope compatibility), `BANK_DISTRIBUTION_OK`, `MUTATION_SUITE_OK 37/37`,
+  `BUILD_OK version=1.0.1 code=18`; APK now ships `assets/syllabus.json`.
+
 ## v1.0.1 (versionCode 17) - bank note placement; question-bank granularity study
 
 Display version stays **1.0.1**; `versionCode` moves 16 -> 17 with the same

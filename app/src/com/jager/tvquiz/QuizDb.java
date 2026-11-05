@@ -18,10 +18,10 @@ import java.io.OutputStream;
  * 避免「只比文件长度」导致的同长度旧库残留，以及写一半断电产生损坏库。
  *
  * <p>表结构由 tools/quizbank/build_bank.py 生成：
- * questions(grade,grade_label,subject,subject_group,chapter,topic,text,opt_a..opt_d,
+ * questions(grade,grade_label,term,subject,subject_group,chapter,topic,text,opt_a..opt_d,
  *           answer_index,explain,source,qhash)、knowledge(全量纲目)、chapters、meta。
- * 抽题按学科池查一次；该年级该池为空时退到「同学科跨年级」，再退全库（最多三次）。
- * 任何异常都返回 null，由 QuizEngine 回退到参数化生成器。
+ * 抽题按学科池查一次，可叠加 term / topic 学习进度；空池时逐级放宽学期、单元、年级，
+ * 但前几层始终保留学科约束，最后才退全库。任何异常返回 null，由 QuizEngine 回退生成器。
  */
 public final class QuizDb {
 
@@ -275,15 +275,22 @@ public final class QuizDb {
         return n > 0;
     }
 
+    /** 兼容旧调用：不带学习进度，行为与 code17 完全一致（全学年 / 不限单元）。 */
+    public QuizEngine.Question random(int grade, int subject, boolean allSubjects) {
+        return random(grade, subject, allSubjects, null, Syllabus.TERM_ALL, 0);
+    }
+
     /**
      * 本地随机挑一题：三科按 grade + subject 精确抽，
-     * 「其他学科」按 grade + subject NOT IN (三科) 抽，
-     * 由 SubjectWeights 决定进哪个池，配比不再被全学科开关旁路。
-     * 三层兜底：同年级同池 -> 同池跨年级 -> 全库（仅题库本身缺该科时），
-     * 前两层都保留学科约束，最后一层仍按题目真实学科贴标签。
+     * 「其他学科」按 grade + subject NOT IN (三科) 抽，由 SubjectWeights 决定进哪个池。
+     * 学习进度（方案 B）在池谓词之后叠加学期与单元条件；空池时逐级放宽：
+     * 同年级+同学科+学期+单元 -> +学期 -> 同年级+同学科 -> 同学科跨年级 -> 全库。
+     * 前四层始终保留学科约束，最后一层仅在题库本身缺该科时才走。
+     * tests/study_scope_check.py 用真实 SQL 复刻这条链并逐层断言。
      * 用 OFFSET 采样避免整表排序；COUNT 子查询走 grade/subject 索引。
      */
-    public QuizEngine.Question random(int grade, int subject, boolean allSubjects) {
+    public QuizEngine.Question random(int grade, int subject, boolean allSubjects,
+                                      Syllabus syllabus, int termIndex, int unitLimit) {
         int s = Subjects.norm(subject);
         // 路由条件必须与此字面量一致：只有「选中 OTHER 且开启全学科」才进其他池。
         // tests/layout_contract.py 与 build.sh 都钉死了这一行。
@@ -304,10 +311,41 @@ public final class QuizDb {
             poolWhere = POOL_CORE_ALL;
             poolArgs = new String[]{name};
         }
-        QuizEngine.Question q = pick(where, args);
+
+        String termW = Syllabus.termWhere(termIndex);
+        // 其他学科池与未覆盖的册没有有序单元表：只做学期过滤，绝不假装精确。
+        String[] names = (syllabus != null && unitLimit > 0 && !other)
+                ? syllabus.matchNames(grade, termIndex, s, unitLimit) : new String[0];
+        String unitW = Syllabus.unitWhere(names);
+        String[] unitA = Syllabus.unitArgs(names);
+
+        QuizEngine.Question q;
+        String strict = where + termW + unitW;
+        String tried = strict;
+        q = pick(strict, concat(args, unitA));
+        if (q == null) {
+            String termOnly = where + termW;
+            if (!termOnly.equals(tried)) {
+                q = pick(termOnly, args);
+                tried = termOnly;
+            }
+        }
+        if (q == null && !where.equals(tried)) {
+            q = pick(where, args);
+            tried = where;
+        }
         if (q == null) q = pick(poolWhere, poolArgs);
         if (q == null) q = pick("", null);
         return q;
+    }
+
+    /** 基础池参数与单元别名参数拼接；顺序必须与 unitWhere() 的占位符一致。 */
+    private static String[] concat(String[] base, String[] extra) {
+        if (extra == null || extra.length == 0) return base;
+        String[] out = new String[base.length + extra.length];
+        System.arraycopy(base, 0, out, 0, base.length);
+        System.arraycopy(extra, 0, out, base.length, extra.length);
+        return out;
     }
 
     private QuizEngine.Question pick(String where, String[] args) {

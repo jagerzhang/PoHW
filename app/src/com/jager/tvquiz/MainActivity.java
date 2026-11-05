@@ -407,6 +407,13 @@ public class MainActivity extends Activity {
                                 + "/" + st.weight(2) + "/" + st.weight(3))
                         : ("数/语/英 " + st.weight(0) + "/" + st.weight(1) + "/" + st.weight(2)))
                 .append(NL);
+        s.append("学习进度：").append(Syllabus.TERM_LABELS[st.termIndex()]);
+        if (st.unitLimit() > 0) {
+            s.append(" · 数学已学到第 ").append(st.unitLimit()).append(" 单元");
+        } else {
+            s.append(" · 单元不限");
+        }
+        s.append(NL);
         s.append("教材版本：");
         for (int i = 0; i < Subjects.COUNT; i++) {
             if (i > 0) s.append(" / ");

@@ -30,9 +30,11 @@ C = os.path.join(ROOT, "tests/layout_contract.py")
 DO = os.path.join(SRC, "DonateActivity.java")
 LP = os.path.join(SRC, "LaunchPolicy.java")
 CHK = os.path.join(ROOT, "tests/bank_distribution_check.py")
+SYL = os.path.join(SRC, "Syllabus.java")
+SYLJ = os.path.join(ROOT, "app/assets/syllabus.json")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
-for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK):
+for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ):
     BK[p] = os.path.join(BK_DIR, os.path.basename(p) + ".bk")
     shutil.copyfile(p, BK[p])
 ORIG = {p: hashlib.sha256(open(p, "rb").read()).hexdigest() for p in BK}
@@ -132,7 +134,7 @@ MUTATIONS = [
     ("O", "service stops passing the fourth weight",
      lambda: replace(O, "st.weight(Subjects.OTHER)", "0"), False, True, False),
     ("P", "versionCode rolled back",
-     lambda: replace(B, 'VERSION_CODE="17"', 'VERSION_CODE="16"'), False, True, False),
+     lambda: replace(B, 'VERSION_CODE="18"', 'VERSION_CODE="17"'), False, True, False),
     ("Q", "OTHER routing disabled",
      lambda: replace(D, "boolean other = s == Subjects.OTHER && allSubjects;", "boolean other = false;"), True, True, False),
     ("R", "single WHERE binding",
@@ -163,6 +165,24 @@ MUTATIONS = [
     ("AC", "alipay QR resource dropped",
      lambda: replace(DO, "R.drawable.donate_alipay",
                      "R.drawable.donate_wechat"), True, True, False),
+    ("AD", "upper-term predicate disabled",
+     lambda: replace(SYL, "term == TERM_FIRST", "term == -1"), False, True, False),
+    ("AE", "unit LIKE/equality predicate broken",
+     lambda: replace(SYL, "topic LIKE ? OR topic = ?", "topic = ?"), False, True, False),
+    ("AF", "unit LIKE pattern loses the chinese colon",
+     lambda: replace(SYL, "%：", "%"), False, True, False),
+    ("AG", "term default flipped to upper term",
+     lambda: replace(ST, "getInt(\"termIdx\", Syllabus.TERM_ALL)",
+                     "getInt(\"termIdx\", Syllabus.TERM_FIRST)"), False, True, False),
+    ("AH", "strict scope layer dropped",
+     lambda: replace(D, "String strict = where + termW + unitW;",
+                     "String strict = where;"), False, True, False),
+    ("AI", "engine stops passing study scope",
+     lambda: replace(E, "syllabus, termIndex, unitLimit", "null, 0, 0"), False, True, False),
+    ("AJ", "service stops injecting study scope",
+     lambda: replace(O, "SyllabusAssets.get(this)", "Syllabus.empty()"), False, True, False),
+    ("AK", "syllabus.json diverges from quiz.db",
+     lambda: write(SYLJ, read(SYLJ).replace("时、分、秒", "错位单元")), True, False, False),
 ]
 
 print("--- baseline ---")

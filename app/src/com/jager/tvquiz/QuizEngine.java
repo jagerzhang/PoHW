@@ -103,6 +103,10 @@ public final class QuizEngine {
     private int lastMathType = -1;
     private QuizDb db;
     private boolean allSubjects = false;
+    /** 方案 B：学期 + 单元进度。默认全学年 / 不限，行为与 code17 一致。 */
+    private Syllabus syllabus;
+    private int termIndex = Syllabus.TERM_ALL;
+    private int unitLimit = 0;
 
     /** 兼容旧调用：第 4 槽为 0（不出其他学科）。 */
     public QuizEngine(int grade, String edition, int mathW, int chineseW, int englishW) {
@@ -144,6 +148,17 @@ public final class QuizEngine {
 
     public boolean hasDb() { return db != null; }
 
+    /** 注入学习进度；syllabus 为 null 时单元限制自动失效，只保留学期过滤。 */
+    public void setStudyScope(Syllabus syllabus, int termIndex, int unitLimit) {
+        this.syllabus = syllabus;
+        this.termIndex = (termIndex == Syllabus.TERM_FIRST || termIndex == Syllabus.TERM_SECOND)
+                ? termIndex : Syllabus.TERM_ALL;
+        this.unitLimit = unitLimit < 0 ? 0 : Math.min(unitLimit, Syllabus.MAX_UNITS);
+    }
+
+    public int termIndex() { return termIndex; }
+    public int unitLimit() { return unitLimit; }
+
     /** true: allow the other-subject pool; the ratio still comes from SubjectWeights. */
     public void setAllSubjects(boolean v) {
         this.allSubjects = v;
@@ -168,7 +183,7 @@ public final class QuizEngine {
             return list.get(r.nextInt(list.size()));
         }
         if (hasDb) {
-            Question q = db.random(grade, s, allSubjects);
+            Question q = db.random(grade, s, allSubjects, syllabus, termIndex, unitLimit);
             if (q != null) return q;
         }
         if (hasBank) return list.get(r.nextInt(list.size()));

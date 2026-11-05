@@ -16,6 +16,8 @@ mkdir -p "$OUT"
   tests/src/android/content/Context.java \
   app/src/com/jager/tvquiz/Hashes.java \
   app/src/com/jager/tvquiz/Subjects.java \
+  app/src/com/jager/tvquiz/Json.java \
+  app/src/com/jager/tvquiz/Syllabus.java \
   app/src/com/jager/tvquiz/SubjectWeights.java \
   app/src/com/jager/tvquiz/AnswerPolicy.java \
   app/src/com/jager/tvquiz/BootPolicy.java \
@@ -34,11 +36,12 @@ mkdir -p "$OUT"
   tests/src/GradeScopeTest.java \
   tests/src/FeatureV6Test.java \
   tests/src/BehaviorV601Test.java \
-  tests/src/SubjectWeightsTest.java
+  tests/src/SubjectWeightsTest.java \
+  tests/src/SyllabusTest.java
 
 TOTAL=0
 for t in PinGateTest QuizLayoutTest StopGuardTest StopStateTest GradeScopeTest \
-         FeatureV6Test BehaviorV601Test SubjectWeightsTest; do
+         FeatureV6Test BehaviorV601Test SubjectWeightsTest SyllabusTest; do
   LOG="$ROOT/.build/$t.log"
   "$JAVA_HOME/bin/java" -Dfile.encoding=UTF-8 -cp "$OUT" "$t" > "$LOG"
   grep -q 'VERIFY=PASS' "$LOG" || { cat "$LOG"; echo "FAILED: $t"; exit 1; }

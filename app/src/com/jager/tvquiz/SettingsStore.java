@@ -104,6 +104,23 @@ public final class SettingsStore implements PinGate.Store {
         sp.edit().putBoolean("resumePlayback", v).commit();
     }
 
+    // ---------- 学习进度（方案 B） ----------
+
+    /** 0=全学年（默认）, 1=上册, 2=下册。默认全学年保证覆盖安装不改变旧抽题范围。 */
+    public int termIndex() {
+        return clamp(sp.getInt("termIdx", Syllabus.TERM_ALL),
+                Syllabus.TERM_ALL, Syllabus.TERM_SECOND);
+    }
+    public void termIndex(int v) {
+        sp.edit().putInt("termIdx", clamp(v, Syllabus.TERM_ALL, Syllabus.TERM_SECOND)).commit();
+    }
+
+    /** 已学到第 N 单元（1–6 年级数学进度表）；0=不限（默认）。 */
+    public int unitLimit() { return clamp(sp.getInt("unitLimit", 0), 0, Syllabus.MAX_UNITS); }
+    public void unitLimit(int v) {
+        sp.edit().putInt("unitLimit", clamp(v, 0, Syllabus.MAX_UNITS)).commit();
+    }
+
     // ---------- 频率 / 配比 / 在线源 ----------
 
     public int intervalSec() { return sp.getInt("interval", 30); }

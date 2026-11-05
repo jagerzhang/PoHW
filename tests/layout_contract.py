@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="19"' in _mf, "manifest versionCode advances to 19")
-check('VERSION_CODE="19"' in b, "build script versionCode advances to 19")
+check('android:versionCode="20"' in _mf, "manifest versionCode advances to 20")
+check('VERSION_CODE="20"' in b, "build script versionCode advances to 20")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -235,7 +235,7 @@ _launch = strip_comments(read(os.path.join(
 _res = os.path.join(ROOT, "app/res")
 
 check("ROW_GAP_DP = 12" in s, "settings declares a shared 12dp row gap")
-check(s.count("rowLp()") == 5, "row gap is applied to every row, button and note")
+check(s.count("rowLp()") == 6, "row gap is applied to every row, button, note and paired bank row")
 check("p.setMargins(0, half, 0, half)" in s, "row gap is symmetric top and bottom")
 check('getBoolean("bootAutostart", false)' in _st,
       "boot autostart defaults off (parent opt-in)")
@@ -354,8 +354,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="19"' in _mf, "manifest versionCode advances to 19")
-check('VERSION_CODE="19"' in b, "build script versionCode advances to 19")
+check('android:versionCode="20"' in _mf, "manifest versionCode advances to 20")
+check('VERSION_CODE="20"' in b, "build script versionCode advances to 20")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -371,5 +371,56 @@ check(_legacy not in _site and _legacy not in _gen,
       "legacy 30-minute slogan is gone from site and banner generator")
 check(_legacy_caption not in _site, "legacy TV caption wording is gone")
 
+
+# ---- code20：官网收敛、U 盘侧载、页脚版权、设置页并排行 ----
+def adb_word(text):
+    """只认独立单词，避免 preloadBank / deadbeef 这类巧合子串误报。"""
+    return re.search(r"\badb\b", text, re.I) is not None
+
+_user_files = [
+    "README.md", "CHANGELOG.md",
+    "docs/ARCHITECTURE.md", "docs/BUILD.md", "docs/QUESTION_BANK.md", "docs/BANK_STATS.md",
+    "site/index.html", "site/script.js", "site/style.css",
+    "app/src/com/jager/tvquiz/MainActivity.java",
+    "app/src/com/jager/tvquiz/SettingsActivity.java",
+]
+check(not any(adb_word(read(os.path.join(ROOT, f))) for f in _user_files),
+      "no debug-bridge command remains in user-facing docs, site or in-app hints")
+_site_js = read(os.path.join(ROOT, "site/script.js"))
+check("U 盘" in _site and "文件管理器" in _site,
+      "site documents USB-drive sideload through the TV file manager")
+check('id="donate"' not in _site and 'href="#donate"' not in _site,
+      "donate section and its nav link are gone from the site")
+check("打赏" not in _site and "收款码" not in _site,
+      "site no longer promotes donations or QR codes")
+check("assets/donate_wechat.png" not in _site and "assets/donate_alipay.png" not in _site,
+      "site references no donation QR image")
+check(not os.path.isfile(os.path.join(ROOT, "site/assets/donate_wechat.png"))
+      and not os.path.isfile(os.path.join(ROOT, "site/assets/donate_alipay.png")),
+      "donation QR PNGs are removed from the public site")
+check('© 2026 <a href="https://zhang.ge/"' in _site
+      and '>张戈博客</a> 保留所有权利 · Proof of Homework' in _site,
+      "footer links 张戈博客 to https://zhang.ge/ and states the new copyright")
+check("保留所有权利 · Proof of Homework" in _site and "jagerzhang · PoHW" not in _site,
+      "footer copyright uses the new wording")
+check('id="year"' not in _site and 'getElementById("year")' not in _site_js,
+      "footer year is fixed in HTML, not overwritten by JS")
+check("versionCode 20" in _site and "versionCode 20" in _site_js,
+      "site and release notes report build 20")
+check("addView(bankRow, rowLp())" in s,
+      "bank update and auto-update share one side-by-side row")
+check("track(btnCheck, rowSync)" in s,
+      "both bank buttons are registered in one vertical focus row")
+check("bankPair = new Button[]{btnCheck, rowSync};" in s,
+      "bank button pair is registered for the horizontal focus chain")
+check("bankPair[0].setNextFocusRightId(rightId);" in s
+      and "bankPair[1].setNextFocusLeftId(leftId);" in s,
+      "DPAD left/right moves inside the paired bank row")
+check('addRow(quiz, "自动更新"' not in s,
+      "auto-update row no longer lives in the quiz card")
+check(raw_s.find('"检查题库更新"') < raw_s.find('"自动更新"'),
+      "auto-update sits to the right of the bank-update button")
+check('"自动更新 · "' in s,
+      "auto-update value button keeps its label in refreshRows")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

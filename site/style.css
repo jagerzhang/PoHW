@@ -401,20 +401,6 @@ code {
 .release-body li::before { content: "·"; position: absolute; left: 2px; color: var(--mint); font-weight: 700; }
 .release-note { margin-top: 14px; font-size: 13px; color: var(--amber); border-left: 2px solid rgba(232, 163, 61, .5); padding-left: 12px; }
 
-/* ---------- 打赏 ---------- */
-.donate-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 260px)); gap: 24px; justify-content: center; margin: 8px 0 28px; }
-.qr-card {
-  margin: 0;
-  background: #FFFFFF;
-  border-radius: 14px;
-  padding: 14px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, .35);
-}
-.qr-card img { width: 100%; border-radius: 8px; }
-.qr-card figcaption { text-align: center; color: #1C2738; font-size: 14px; font-weight: 600; padding: 10px 0 2px; }
-.donate-note { max-width: 760px; margin: 0 auto; text-align: center; color: var(--muted); font-size: 14px; }
-.donate-note strong { color: var(--text); }
-
 /* ---------- FAQ ---------- */
 .faq-list { display: grid; gap: 12px; max-width: 900px; }
 .faq-item {
@@ -474,6 +460,8 @@ code {
 .footer p { color: var(--muted); font-size: 13px; max-width: 620px; }
 .footer-links { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; }
 .footer-bottom { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+.footer-bottom a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
+.footer-bottom a:hover { color: var(--amber); }
 
 /* ---------- 响应式 ---------- */
 @media (max-width: 980px) {
@@ -504,8 +492,6 @@ code {
   .container { padding: 0 18px; }
   .hero { padding: 56px 0 52px; }
   .btn-lg { width: 100%; }
-  .donate-grid { grid-template-columns: 1fr; justify-items: center; }
-  .qr-card { width: 100%; max-width: 280px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

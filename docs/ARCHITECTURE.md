@@ -31,7 +31,7 @@ v1.0.1 起控制台只有一个守护开关：`GuardState.toggleColor(running)` 
 左右关系，保证 TV 遥控器能在教材版本与题目配比之间移动，且不需要跨栏跳转。
 单列行两端未显式定义的左右目标指向自身（URL `EditText` 例外，左右键留给光标移动），
 避免系统按几何邻近把焦点甩到相邻行；行按钮 `WRAP_CONTENT` + 44dp 最小高度，兼容系统大字模式。
-源码结构由 `tests/layout_contract.py` 的 **144 条**断言在构建门禁里守住，
+源码结构由 `tests/layout_contract.py` 的 **161 条**断言在构建门禁里守住，
 `build.sh` 另在签名后强制比对发布证书指纹。
 
 **学科配比（versionCode 15）**：`SubjectWeights` 保存数 / 语 / 英 / 其他四槽权重（默认 5:3:2:2）。
@@ -45,7 +45,7 @@ v1.0.1 起控制台只有一个守护开关：`GuardState.toggleColor(running)` 
 提取真实 SQL 实跑内置题库，验证池隔离、配比分布与全学科关闭时 0 题，纳入 `[0/9]` 门禁。
 兜底是**池保持**的：默认作用域下先只放宽年级（`POOL_CORE_ALL` / `POOL_OTHER_ALL`），最后才全库；启用学习进度后按「单元 → 学期 → 年级 → 全库」逐级放宽，见下节；
 空池用 `MAX(1, (SELECT COUNT(*) ...))` 保证 `OFFSET` 不为 NULL，避免 SQL 异常被吞后静默串池。
-同一批 `POOL_*` 常量、双份参数绑定与池保持兜底都被 144 条契约、`tests/study_scope_check.py` 的运行时回归和 `tests/mutation_suite.py` 的 38 组回归（37 变异 + 1 构建门禁）钉死。
+同一批 `POOL_*` 常量、双份参数绑定与池保持兜底都被 161 条契约、`tests/study_scope_check.py` 的运行时回归和 `tests/mutation_suite.py` 的 44 组回归（43 变异 + 1 构建门禁）钉死。
 
 **学习进度（versionCode 18，方案 B）**：`SettingsStore` 新增 `termIdx`（0 全学年 / 1 上 / 2 下）
 与 `unitLimit`（0 不限 / 1..24 已学到第 N 单元），默认保持旧行为。`SyllabusAssets` 读
@@ -107,8 +107,8 @@ Android 8+ 的「5 秒内前台化」要求；`onDestroy()` 还会显式 `stopFo
 `EXTRA_STOP_VERIFIED=true` 可被伪造。审查加固后（自 v1.0.0 起）授权依据是只有本进程能签发的
 一次性令牌；服务读完立即删除，重放与过期都失败。
 
-边界：服务 `exported=false`，普通第三方应用无法直接发该 Intent；但 `adb shell am`、
-系统「强制停止」、卸载、清除数据属系统级能力，第三方无法防御，本项目也不尝试防御
+边界：服务 `exported=false`，普通第三方应用无法直接发该 Intent；但系统「强制停止」、
+卸载、清除数据属系统级能力，第三方无法防御，本项目也不尝试防御
 （静态守卫明确禁止 DeviceAdmin / `startLockTask` / `DELETE_PACKAGES`）。
 
 ## PIN 存储
@@ -122,7 +122,7 @@ Android 8+ 的「5 秒内前台化」要求；`onDestroy()` 还会显式 `stopFo
 - 兼容 v4.x 的旧 `SHA-256(salt:pin)` 格式（`pinIter=0` 走旧逻辑），重设密码即迁移。
 - 年级、出题范围、守护开关等关键设置同样用 `commit()`。
 - `android:allowBackup=false`，避免哈希随备份导出。
-- 4-8 位数字没有速率限制，KDF 只提高离线爆破成本；拿到 root / adb 的设备
+- 4-8 位数字没有速率限制，KDF 只提高离线爆破成本；拿到 root 或系统调试权限的设备
   可以直接改 SharedPreferences，这属于物理接触设备的边界，不在防护范围内。
 
 ## 悬浮窗与生命周期
@@ -200,4 +200,4 @@ Android 8+ 的「5 秒内前台化」要求；`onDestroy()` 还会显式 `stopFo
 
 - 暂停视频是 best-effort，不同视频 App 对音频焦点与媒体键的响应不一致，需要在真机逐个验证。
 - 内置离线题库没有出版社版本字段，分学科版本不会改变离线抽题结果。
-- 错题库不做云同步、不跨设备；`adb shell pm clear` 会一并清空。
+- 错题库不做云同步、不跨设备；在系统设置里「清除数据」会一并清空。

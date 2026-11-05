@@ -73,8 +73,8 @@ python3 tools/quizbank/verify.py app/assets/quiz.db
 | `MISSING android.jar` | 缺 `platforms/android-34`，用 sdkmanager 安装 |
 | `apksigner` 报找不到 java | `apksigner` 依赖 `JAVA_HOME/bin/java` |
 | `aapt2 link` 报资源错误 | `res/values/strings.xml`、`res/xml/network_security_config.xml` 是否齐全 |
-| 覆盖安装后仍要求输入旧密码 | SharedPreferences 被保留；`adb shell pm clear com.jager.tvquiz` 重置 |
-| 遮罩卡住卸载确认框 | `adb shell am force-stop com.jager.tvquiz`，或先关守护 |
+| 覆盖安装后仍要求输入旧密码 | SharedPreferences 被保留；在电视「设置 → 应用管理 → PoHW → 清除数据」重置 |
+| 遮罩卡住卸载确认框 | 在电视「设置 → 应用管理 → PoHW」点「强制停止」，或先关守护 |
 | 题库升级不生效 | 确认 `app/assets/quiz.db.version` 与库内 `meta.version` 一致 |
 
 ## 6. 为什么不用 Gradle
@@ -95,7 +95,7 @@ Gradle Wrapper、联网拉依赖和一套额外的构建缓存。命令行链路
 `EXTRA_STOP_VERIFIED`。另外确认 `QuickBootReceiver` 已注册、
 `KeyRouter` / `QuizFlow` / `BehaviorV601Test` 真的被编译与执行。
 
-`[0/9]` 还会执行 `python3 tests/layout_contract.py`：**144 条**源码级布局与发布契约断言，
+`[0/9]` 还会执行 `python3 tests/layout_contract.py`：**161 条**源码级布局与发布契约断言，
 覆盖首页 3×2 网格、设置页单列卡片流、等宽 weight 布局、四向 DPAD 焦点链、
 滚动容器参数（`setFillViewport` / `Ui.fill(1)` / wrap-content 子容器）、
 四槽学科权重、双路径 SQL、题目学科标签反推以及证书门禁本身；复审加固后还钉死
@@ -114,11 +114,11 @@ OTHER 池路由字面量、SQL 双份参数绑定、池保持兜底常量、`has
 `QuizDb.java` 的 `POOL_*` 命名常量提取与 Java 同源的真实 SQL，校验双份绑定与池保持兜底，
 对内置题库做 9 年级 × 4 池 × 60 次池隔离、两次 5000 次配比分布、全学科关闭 0 题校验，
 以及 `FALLBACK_POOL_OK`（模拟三年级英语池 / 其他池为空，兜底仍保持学科约束、不串池）。
-`tests/mutation_suite.py` 落仓库可复核：**37 组负向变异 + 1 次不带发布密钥构建（38/38）**（含注释诱饵、破坏绑定、
+`tests/mutation_suite.py` 落仓库可复核：**43 组负向变异 + 1 次不带发布密钥构建（44/44）**（含注释诱饵、破坏绑定、
 去掉池保持兜底、不带发布密钥构建、恢复 gradeWide SQL）全部被契约 / 运行时分布 / 构建门禁拦下，
 末尾自动恢复源码哈希并用发布密钥重建 `dist/`。
 注意 `grep -q 'new int[Subjects.COUNT]'` 会把方括号当正则字符类；必须用 `grep -qF`。
-`[0/9]` 另钉死本轮新增结构：`ROW_GAP_DP`（设置页行间距）、`LaunchPolicy.shouldAutoGuard`
+`[0/9]` 另钉死在线源卡片的并排行符号（`addView(bankRow, rowLp())` / `track(btnCheck, rowSync)` / `bankPair` 左右焦点链），以及本轮新增结构：`ROW_GAP_DP`（设置页行间距）、`LaunchPolicy.shouldAutoGuard`
 （首页冷启动自动守护）、Manifest 里的 `DonateActivity`，以及两张收款码 PNG 与
 `tools/branding/make_icons.py` 必须存在。图标 / TV banner / 状态栏小图标由该脚本用 PIL
 确定性生成（5 档 launcher 密度 + 640×360 banner），改设计只需改脚本后重跑，无需设计工具。

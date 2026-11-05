@@ -6,7 +6,39 @@
 > （仅不兼容变更才升 MAJOR）。下方历史条目保留原始编号以便追溯 commit，但不再
 > 对应任何可下载的 Release；部分内部测试类名（如 `BehaviorV601Test`）沿用开发期
 > 标识，同样不代表发布版本。Android `versionCode` 是单调技术计数，不随展示版本
-> 重置：v1.0.0 为 12（前值 11），因此可直接 `adb install -r` 覆盖安装。
+> 重置：v1.0.0 为 12（前值 11），因此可直接覆盖安装。
+
+## v1.0.1 (versionCode 20) - site cleanup, USB-drive sideload, paired bank row
+
+Display version stays **1.0.1**; `versionCode` moves 19 -> 20 with the same
+release keystore (SHA-256 `76eb6063b574...26172`).
+
+- **Site stops promoting donations.** The `微信 / 支付宝打赏` feature card, the
+  whole `#donate` section, the footer link and both public QR PNGs
+  (`site/assets/donate_wechat.png`, `donate_alipay.png`) are removed from the
+  promo page. The in-app `DonateActivity` is unchanged: static QR resources,
+  no payment SDK, no orders, no network requests. The code16 entry below still
+  records the feature as history, not as promotion.
+- **USB-drive sideload is the documented install path.** Real-device testing
+  confirmed the APK installs straight from a USB stick via the TV file manager;
+  no computer-to-TV debug link is needed. Every user-facing debug command was
+  removed from README, CHANGELOG, docs, the site and both in-app hints.
+  Password recovery and stuck-overlay recovery now point at
+  `设置 → 应用管理 → PoHW → 清除数据 / 强制停止`. A new contract assertion
+  scans all user-facing files for such a command word.
+- **Footer** is now `© 2026 张戈博客 保留所有权利 · Proof of Homework`, with
+  `张戈博客` linking to https://zhang.ge/ . The year is fixed in HTML and the
+  JS year-overwrite block is gone.
+- **Settings:** `自动更新` moved out of the `01 出题基础` card and now sits
+  side by side with `检查题库更新` in the `05 在线题库源` card (check on the
+  left, auto-update value on the right). Both share one `track()` focus row;
+  DPAD left/right moves inside the pair via `bankPair`, up/down still follows
+  `wireVerticalFocus()`. The offline note and donate entry keep their order
+  below the row.
+- Gates: `layout_contract.py` 144 -> **161** (site / USB / footer / paired-row
+  assertions), `mutation_suite.py` 37 -> **43** negative cases (+ 1 dev-sign
+  build = **44/44**), `[0/9]` pins the paired-row symbols. `LAYOUT_CONTRACT_OK 161`,
+  `JVM_TESTS_OK 245`, `MUTATION_SUITE_OK 44/44`, `BUILD_OK version=1.0.1 code=20`.
 
 ## v1.0.1 (versionCode 19) - unified slogan: 答对题目，无限续租！
 
@@ -84,8 +116,8 @@ release keystore (SHA-256 `76eb6063b574...26172`).
 ## v1.0.1 (versionCode 16) - settings polish, launch-to-guard, donation, branding
 
 Display version stays **1.0.1**; `versionCode` moves 15 -> 16 with the same
-release keystore (SHA-256 `76eb6063b574...26172`), so `adb install -r` is a
-real upgrade.
+release keystore (SHA-256 `76eb6063b574...26172`), so a direct
+over-the-top install is a real upgrade.
 
 - **Row gap.** Every settings row, button and note now goes through `rowLp()`
   (`ROW_GAP_DP=12`, 6dp on each side); card spacing moves 4/10 -> 6/14dp and
@@ -217,7 +249,7 @@ release keystore (SHA-256 `76eb6063b574…26172`). Initial implementation
 ## v1.0.1 (versionCode 14) — home grid & single-column settings
 
 Display version stays **1.0.1** (no version-number churn); `versionCode` moves
-13 -> 14 so `adb install -r` still upgrades, signed with the same release
+13 -> 14 so a direct over-the-top install still upgrades, signed with the same release
 keystore (SHA-256 `76eb6063b574…26172`).
 
 - **Home grid 3x2.** Six action buttons move from 2 columns x 3 rows to
@@ -283,7 +315,7 @@ keystore (SHA-256 `76eb6063b574…26172`).
   and forbid a home-screen bank-update button. `StopStateTest` gains 4
   assertions: **178/178 total** across 7 suites.
 - Version 1.0.1 / versionCode 13 (PATCH: UI consolidation, no new capability).
-  Same externally-supplied keystore, so `adb install -r` works.
+  Same externally-supplied keystore, so over-the-top upgrade works.
 
 ## v1.0.0 (versionCode 12) — first stable release
 
@@ -355,7 +387,7 @@ and adds the missing behaviour-level tests.
   predated these fixes); `classes.dex` contains `refreshAsync`, `wireColumns`,
   `setUrlText`, `consumeStopToken` and `rebuildOverlay`.
 - Version 1.0.0 / versionCode 12. Release artifacts are signed with the same
-  externally-supplied keystore as all earlier dev builds so `adb install -r` works;
+  externally-supplied keystore as all earlier dev builds so over-the-top upgrade works;
   the default (no `POHW_KEYSTORE`) still generates a random dev key and does
   NOT guarantee signature continuity.
 
@@ -395,7 +427,7 @@ and adds the missing behaviour-level tests.
   classes and 45 new JVM assertions (`FeatureV6Test`): **123/123 total**.
 - Build static guards extended with v6 regression checks; version bumped to
   6.0.0 / versionCode 10. Signing certificate is unchanged from v4.x/v5 for
-  in-place `adb install -r` upgrades.
+  in-place over-the-top upgrades.
 
 ## Dev build v5.0.0 (versionCode 9) — PoHW / full offline catalog
 

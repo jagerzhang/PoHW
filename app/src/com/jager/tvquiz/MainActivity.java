@@ -288,7 +288,7 @@ public class MainActivity extends Activity {
 
         l.addView(Ui.tv(this,
                 "开启守护后按 Home 切到任意应用，到点弹出全屏答题页；Home 键属系统级按键，第三方无法拦截。\n"
-                        + "卸载前请先关闭守护；遮罩卡住可在电脑执行 adb shell am force-stop com.jager.tvquiz",
+                        + "卸载前请先关闭守护；遮罩卡住可在电视「设置 → 应用管理 → PoHW」点「强制停止」",
                 13, Ui.MUTED), Ui.fixed(this, 44));
 
         rootView.addView(l, new FrameLayout.LayoutParams(

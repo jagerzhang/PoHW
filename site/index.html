@@ -154,13 +154,6 @@
 
         <article class="feature-card">
           <span class="feature-no">09</span>
-          <h3>微信 / 支付宝打赏</h3>
-          <p>全屏展示两张静态收款码，遥控器左右键切换渠道，返回键退出。纯静态收款码、无支付 SDK、无订单、无网络请求，APP 不接触金额与账号，扫码与付款都在家长手机上完成。</p>
-          <span class="tag warn">纯静态 · 不联网支付</span>
-        </article>
-
-        <article class="feature-card">
-          <span class="feature-no">10</span>
           <h3>学习进度按学期与单元过滤</h3>
           <p>方案 B：新增「学习学期」与「已学单元」，按内置 12 册数学有序单元表限制出题范围，贴合开学初只学 1-2 个单元的实际进度；选不到题时依次放宽单元 → 学期 → 年级，始终不换学科。语文 / 英语与初中暂无可靠单元顺序，仅按学期过滤。</p>
           <span class="tag">学期 + 单元</span>
@@ -182,9 +175,9 @@
         <li class="step">
           <span class="step-no">1</span>
           <div>
-            <h3>侧载 APK 到电视</h3>
-            <p>把 APK 装到 Android TV 设备（文件管理器安装，或 adb 覆盖安装）。本项目不上架任何应用商店、仅自行侧载，只发布 APK。</p>
-            <code>adb install -r &lt;你下载的 APK&gt;</code>
+            <h3>用 U 盘把 APK 装到电视</h3>
+            <p>在电脑上从 Releases 下载 APK，拷进 U 盘；把 U 盘插到电视 USB 口，用电视自带的「文件管理器」找到 APK 并点击安装。首次安装若提示「未知来源」，按系统提示允许即可。整个过程不需要电脑连接电视，也不需要任何调试工具。</p>
+            <p>已有旧版时直接覆盖安装即可：签名证书保持一致，家长密码、设置与错题库都会保留。</p>
           </div>
         </li>
         <li class="step">
@@ -223,7 +216,7 @@
           <li>不上架应用商店、仅自行侧载：这是个人非商业实验，只发布 APK，不在任何应用商店分发。</li>
           <li>需要 Android 5.0+（<code>minSdk 21</code>，<code>targetSdk 33</code>）；电视、手机、平板均可安装，不强制 Leanback。</li>
           <li>厂商自启动权限需家长手动放行：「开机自启」默认关闭，开启后还要在系统设置里允许该应用自启动。</li>
-          <li>忘记密码可用 <code>adb shell pm clear com.jager.tvquiz</code> 重置（会清空全部设置与统计）；遮罩卡住卸载流程可用 <code>adb shell am force-stop com.jager.tvquiz</code>。</li>
+          <li>忘记密码：在电视「设置 → 应用管理 → PoHW → 清除数据」重置（会清空全部设置与错题库）；遮罩卡住卸载流程时，在同一页面点「强制停止」，或先关闭守护。</li>
           <li>拦不住 Home 键、系统「强制停止」、卸载与清除数据 —— 第三方应用没有这些能力，本仓库明确禁止 Device Admin / 防卸载类 API。</li>
         </ul>
       </div>
@@ -236,7 +229,7 @@
       <div class="download-box">
         <span class="eyebrow">Download</span>
         <h2 class="section-title">下载最新版本</h2>
-        <p>最新版本 <strong>v1.0.1</strong>（当前构建 <code>versionCode 19</code>）；签名证书连续（<code>76eb6063…6172</code>），可直接 <code>adb install -r</code> 覆盖安装。APK 附件以 Releases 页面实际发布为准，本页不写死任何直链资产文件名。</p>
+        <p>最新版本 <strong>v1.0.1</strong>（当前构建 <code>versionCode 20</code>）；签名证书连续（<code>76eb6063…6172</code>），旧版可直接覆盖安装，家长密码、设置与错题库都会保留。APK 附件以 Releases 页面实际发布为准，本页不写死任何直链资产文件名。</p>
         <div class="download-actions">
           <a class="btn btn-primary btn-lg" href="https://github.com/jagerzhang/PoHW/releases/latest">下载 APK（最新 Release）</a>
           <a class="btn btn-ghost" href="https://github.com/jagerzhang/PoHW/releases">所有 Releases</a>
@@ -256,28 +249,6 @@
         <p class="section-lead">按时间倒序整理自仓库 <a href="https://github.com/jagerzhang/PoHW/blob/main/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a>。v1.0.0 之前为开发期内部迭代编号，已下架三个历史 Release；自 v1.0.0 起按 MAJOR.MINOR.PATCH 递增，<code>versionCode</code> 为单调技术计数、不随展示版本重置。具体构建号与改动以仓库 CHANGELOG 为准。</p>
       </div>
       <div id="releases-list" class="releases"></div>
-    </div>
-  </section>
-
-  <!-- ===== 打赏作者 ===== -->
-  <section id="donate" class="section">
-    <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">Donate</span>
-        <h2 class="section-title">打赏作者</h2>
-        <p class="section-lead">如果这个小工具对你有用，可以请作者喝一杯咖啡。<strong>完全自愿</strong>，与功能无关。</p>
-      </div>
-      <div class="donate-grid">
-        <figure class="qr-card">
-          <img src="assets/donate_wechat.png" alt="微信收款码" loading="lazy">
-          <figcaption>微信支付</figcaption>
-        </figure>
-        <figure class="qr-card">
-          <img src="assets/donate_alipay.png" alt="支付宝收款码" loading="lazy">
-          <figcaption>支付宝</figcaption>
-        </figure>
-      </div>
-      <p class="donate-note">这里是<strong>纯静态收款码</strong>，与 APP 内「打赏作者」页一致：不含任何支付 SDK、不创建订单、不发起网络请求、不收集数据，APP 不接触金额与账号。扫码与付款都在家长自己的手机上完成。两张码是从作者提供的海报里裁出的白色卡片，保留了二维码静区与署名。</p>
     </div>
   </section>
 
@@ -307,8 +278,8 @@
         </details>
 
         <details class="faq-item">
-          <summary>会收集数据或联网支付吗？</summary>
-          <p>不收集数据，默认完全离线、零联网：<code>INTERNET</code> 权限仅用于家长自行配置的可选在线题库源，地址为空时 APP 一次请求都不发。打赏只显示静态收款码，无支付 SDK、无订单、无网络请求，扫码与付款都在家长手机上完成。清单同时设置了 <code>allowBackup=false</code> 与默认禁止明文 HTTP。</p>
+          <summary>会收集数据或联网吗？</summary>
+          <p>不收集数据，默认完全离线、零联网：<code>INTERNET</code> 权限仅用于家长自行配置的可选在线题库源，地址为空时 APP 一次请求都不发；不含任何统计、广告或支付 SDK。清单同时设置了 <code>allowBackup=false</code> 与默认禁止明文 HTTP。</p>
         </details>
 
         <details class="faq-item">
@@ -392,7 +363,7 @@
             <span>Proof of Homework · 答对题目，无限续租！</span>
           </div>
         </div>
-        <p style="margin-top:16px">个人非商业的 Android TV 反沉迷实验。仅供家庭自用、不上架应用商店、不收集数据、不联网支付。代码 MIT 许可证，题库纲目数据仅供个人非商业学习。</p>
+        <p style="margin-top:16px">个人非商业的 Android TV 反沉迷实验。仅供家庭自用、不上架应用商店、不收集数据、默认完全离线。代码 MIT 许可证，题库纲目数据仅供个人非商业学习。</p>
       </div>
       <div class="footer-links">
         <a href="https://github.com/jagerzhang/PoHW/releases/latest">下载 APK</a>
@@ -400,11 +371,11 @@
         <a href="https://github.com/jagerzhang/PoHW">GitHub 仓库</a>
         <a href="https://github.com/jagerzhang/PoHW/blob/main/README.md">README</a>
         <a href="https://github.com/jagerzhang/PoHW/blob/main/LICENSE">LICENSE</a>
-        <a href="#donate">打赏作者</a>
+        <a href="https://zhang.ge/" target="_blank" rel="noopener">张戈博客</a>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© <span id="year">2026</span> jagerzhang · PoHW</span>
+      <span>© 2026 <a href="https://zhang.ge/" target="_blank" rel="noopener">张戈博客</a> 保留所有权利 · Proof of Homework</span>
       <span>纯静态页面 · 零构建依赖 · 无 CDN 外链 · 国内可直接打开</span>
     </div>
   </div>

@@ -57,6 +57,8 @@ public class SettingsActivity extends Activity {
     private Button rowGrade, rowInterval, rowScope, rowSync, rowTerm, rowUnit;
     /** 学科设置复合行：左按钮切教材版本，右按钮切题目配比。 */
     private Button[] rowEd = new Button[Subjects.COUNT];
+    /** 在线源并排行：左检查题库更新 / 右自动更新，供行内左右焦点链使用。 */
+    private Button[] bankPair;
     private Button[] rowWt = new Button[Subjects.COUNT];
     private final java.util.List<Button[]> subjectPairs = new java.util.ArrayList<Button[]>();
     private Button rowBoot, rowAutoGuard, rowPause, rowResume;
@@ -149,7 +151,7 @@ public class SettingsActivity extends Activity {
                 "遥控器可直接按数字键输入；也可以点屏幕键盘，输完点「确定」。",
                 13, Ui.MUTED), Ui.fixed(this, 26));
         l.addView(Ui.tv(this,
-                "忘记密码请在电脑执行：adb shell pm clear com.jager.tvquiz（会清空全部设置与统计）",
+                "忘记密码请在系统「设置 → 应用管理 → PoHW」清除数据（会清空全部设置与错题库）",
                 13, Ui.MUTED), Ui.fixed(this, 26));
         return l;
     }
@@ -332,12 +334,6 @@ public class SettingsActivity extends Activity {
                 refreshRows();
             }
         });
-        rowSync = addRow(quiz, "自动更新", new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                st.syncIndex((st.syncIndex() + 1) % SettingsStore.SYNC_HOURS.length);
-                refreshRows();
-            }
-        });
         note(quiz, "点击右侧取值即可循环切换，离开设置页时统一保存。");
         note(quiz, "学习进度：学期按题库 term 过滤（上 / 下册含「全一册」，排除无学期的综合练习）；"
                 + "「已学单元」按 1–6 年级数学教材顺序只抽已学单元。语文 / 英语 / 其他学科与 7–9 年级暂无可靠单元顺序，仅按学期过滤。"
@@ -421,7 +417,16 @@ public class SettingsActivity extends Activity {
         online.addView(bankStatus, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        addButton(online, "检查题库更新", 0xFF6C4F9E, new View.OnClickListener() {
+        // 在线源操作行：左「检查题库更新」触发同步，右「自动更新」循环切换周期。
+        // 两个按钮并排且共用同一行焦点链：左右键在本行内切换，上下键仍沿单列链移动。
+        LinearLayout bankRow = Ui.hbox(this);
+        bankRow.setGravity(Gravity.CENTER_VERTICAL);
+        Button btnCheck = Ui.button(this, "检查题库更新", 0xFF6C4F9E, 0xFFFFFFFF, 15);
+        btnCheck.setSingleLine(false);
+        btnCheck.setMaxLines(2);
+        btnCheck.setEllipsize(null);
+        btnCheck.setMinHeight(Ui.dp(this, 44));
+        btnCheck.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 String url = urlEdit.getText().toString().trim();
                 if (url.isEmpty()) {
@@ -443,6 +448,32 @@ public class SettingsActivity extends Activity {
                         });
             }
         });
+        Ui.focus(btnCheck, this, 0xFF6C4F9E, 0xFFFFFFFF);
+        LinearLayout.LayoutParams checkLp = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        checkLp.setMargins(0, 0, Ui.dp(this, 6), 0);
+        bankRow.addView(btnCheck, checkLp);
+
+        rowSync = Ui.button(this, "自动更新", Ui.BTN_BG, 0xFFF5F7FA, 14);
+        rowSync.setSingleLine(false);
+        rowSync.setMaxLines(2);
+        rowSync.setEllipsize(null);
+        rowSync.setMinHeight(Ui.dp(this, 44));
+        rowSync.setPadding(Ui.dp(this, 10), Ui.dp(this, 2), Ui.dp(this, 10), Ui.dp(this, 2));
+        rowSync.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                st.syncIndex((st.syncIndex() + 1) % SettingsStore.SYNC_HOURS.length);
+                refreshRows();
+            }
+        });
+        Ui.focus(rowSync, this, Ui.BTN_BG, 0xFFF5F7FA);
+        LinearLayout.LayoutParams syncLp = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        syncLp.setMargins(Ui.dp(this, 6), 0, 0, 0);
+        bankRow.addView(rowSync, syncLp);
+        online.addView(bankRow, rowLp());
+        track(btnCheck, rowSync);
+        bankPair = new Button[]{btnCheck, rowSync};
         // 离线说明紧跟「检查题库更新」：它解释的是在线源开关本身，不要和打赏说明挤在一起。
         note(online, "默认完全离线：内置全量 K12 题库，不联网；只有填写在线源地址后才会按周期联网。");
         // 打赏入口：纯静态收款码，不联网、不含支付 SDK。
@@ -602,6 +633,14 @@ public class SettingsActivity extends Activity {
                 wt.setNextFocusLeftId(edId);
             }
         }
+        // 在线源并排行：检查题库更新 ↔ 自动更新，左右键在本行内切换。
+        if (bankPair != null && bankPair[0] != null && bankPair[1] != null
+                && bankPair[1].isEnabled()) {
+            int leftId = ensureId(bankPair[0]);
+            int rightId = ensureId(bankPair[1]);
+            bankPair[0].setNextFocusRightId(rightId);
+            bankPair[1].setNextFocusLeftId(leftId);
+        }
     }
 
     private static int ensureId(View v) {
@@ -613,7 +652,7 @@ public class SettingsActivity extends Activity {
         rowGrade.setText(st.gradeLabel());
         rowInterval.setText(intervalLabel());
         rowScope.setText(st.allSubjects() ? "全学科（含物理/历史等）" : "仅数 / 语 / 英");
-        rowSync.setText(SettingsStore.SYNC_LABELS[st.syncIndex()]);
+        rowSync.setText("自动更新 · " + SettingsStore.SYNC_LABELS[st.syncIndex()]);
         rowTerm.setText(Syllabus.TERM_LABELS[st.termIndex()]);
         int maxUnit = syllabus.maxUnits(st.grade(), st.termIndex());
         int lim = st.unitLimit();

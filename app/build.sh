@@ -8,7 +8,7 @@ APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
 VERSION_NAME="1.0.1"
-VERSION_CODE="19"
+VERSION_CODE="20"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -86,6 +86,11 @@ fi
 grep -q "ROW_GAP_DP" "$SET"
 grep -q "DonateActivity" "$APP/AndroidManifest.xml"
 grep -q "LaunchPolicy.shouldAutoGuard" "$MAIN"
+# code20：在线源卡片内「检查题库更新 / 自动更新」并排行与行内左右焦点链。
+grep -qF 'addView(bankRow, rowLp())' "$SET"
+grep -qF 'track(btnCheck, rowSync)' "$SET"
+grep -qF 'bankPair = new Button[]{btnCheck, rowSync};' "$SET"
+grep -qF 'bankPair[0].setNextFocusRightId(rightId);' "$SET"
 [ -f "$APP/res/drawable-nodpi/donate_wechat.png" ] || { echo "MISSING wechat QR"; exit 1; }
 [ -f "$APP/res/drawable-nodpi/donate_alipay.png" ] || { echo "MISSING alipay QR"; exit 1; }
 [ -f "$ROOT/tools/branding/make_icons.py" ] || { echo "MISSING icon generator"; exit 1; }
@@ -246,7 +251,7 @@ apksigner sign --ks "$KS" --ks-pass "pass:$KS_PASS" --key-pass "pass:$KS_PASS" \
 apksigner verify --verbose "$DIST/$APK_NAME"
 
 # 发布证书连续性门禁：apksigner verify 只证明签名有效，不证明签名者相同。
-# 指纹不一致时 adb install -r 会因 signature mismatch 拒绝覆盖安装，
+# 指纹不一致时覆盖安装会因 signature mismatch 被系统拒绝，
 # 因此默认强制比对已发布 v1.0.0 / v1.0.1 的证书；仅本地实验构建可显式跳过。
 RELEASE_CERT_SHA256="76eb6063b574d6df1cd52ac490d82185793bf48abe0185687f4d977e49626172"
 ACTUAL_CERT_SHA256="$(apksigner verify --print-certs "$DIST/$APK_NAME"   | sed -n 's/.*SHA-256 digest: //p' | tr -d '[:space:]')"

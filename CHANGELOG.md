@@ -8,6 +8,24 @@
 > 标识，同样不代表发布版本。Android `versionCode` 是单调技术计数，不随展示版本
 > 重置：v1.0.0 为 12（前值 11），因此可直接 `adb install -r` 覆盖安装。
 
+## v1.0.1 (versionCode 17) - bank note placement; question-bank granularity study
+
+Display version stays **1.0.1**; `versionCode` moves 16 -> 17 with the same
+release keystore (SHA-256 `76eb6063b574...26172`).
+
+- Move the `默认完全离线：内置全量 K12 题库...` note from after the donation
+  button to directly below `检查题库更新` in the online-bank card: it documents
+  the bank-source switch, not the donation. A new source-level ordering
+  assertion pins the four elements (`检查题库更新` < offline note < donate
+  button < donate note), so `tests/layout_contract.py` grows 113 -> **114**.
+- Read-only study of whether the bundled SQLite bank can scope questions by
+  term / textbook unit, documented in `docs/QUESTION_BANK.md`. **No
+  quiz-drawing logic changed**: `QuizDb.random()` still filters on
+  `grade + subject` only. Implementation waits for a product decision.
+- Verification: `LAYOUT_CONTRACT_OK total=114`, `JVM_TESTS_OK total=204`,
+  `BANK_DISTRIBUTION_OK` (incl. `FALLBACK_POOL_OK`), `MUTATION_SUITE_OK 29/29`,
+  `BUILD_OK version=1.0.1 code=17`, v1/v2/v3 signatures valid.
+
 ## v1.0.1 (versionCode 16) - settings polish, launch-to-guard, donation, branding
 
 Display version stays **1.0.1**; `versionCode` moves 15 -> 16 with the same

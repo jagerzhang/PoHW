@@ -178,8 +178,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="16"' in _mf, "manifest versionCode advances to 16")
-check('VERSION_CODE="16"' in b, "build script versionCode advances to 16")
+check('android:versionCode="17"' in _mf, "manifest versionCode advances to 17")
+check('VERSION_CODE="17"' in b, "build script versionCode advances to 17")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -257,7 +257,7 @@ check("LaunchPolicy.java" in _run, "launch policy is compiled into JVM tests")
 check('"打赏作者 · 请喝一杯咖啡"' in raw_s, "donate entry is in parent settings")
 check("DonateActivity.class" in raw_s, "donate entry opens the donate page")
 check(raw_s.find('"检查题库更新"') < raw_s.find('"打赏作者'),
-      "donate entry sits directly below the bank-update option")
+      "donate entry follows the bank-update option in the online card")
 check('android:name=".DonateActivity"' in _mf,
       "donate activity is declared in the manifest")
 check("R.drawable.donate_wechat" in _donate
@@ -283,5 +283,12 @@ check(all(os.path.isfile(os.path.join(_res, d, "ic_launcher.png")) for d in
 check(os.path.isfile(os.path.join(_res, "drawable-xhdpi/tv_banner.png")),
       "TV banner is shipped")
 check("make_icons.py" in b, "build gate verifies the branding generator")
+
+
+# ---- 题库说明位置：离线说明必须紧跟「检查题库更新」按钮 ----
+check(raw_s.find('"检查题库更新"') < raw_s.find('"默认完全离线：')
+      < raw_s.find('"打赏作者 · 请喝一杯咖啡"')
+      < raw_s.find('"如果觉得 PoHW 好用'),
+      "offline note sits directly under the bank-update button, before the donate entry")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

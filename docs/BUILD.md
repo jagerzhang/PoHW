@@ -20,7 +20,7 @@ command -v aapt2 javac d8 zipalign apksigner   # 应全部能找到
 ## 2. 完整构建
 
 ```bash
-bash tests/run.sh                                   # 178 个 JVM 单测（7 组）
+bash tests/run.sh                                   # 197 个 JVM 单测（8 组）
 python3 tools/quizbank/verify.py app/assets/quiz.db  # 题库独立校验
 bash app/build.sh                                    # 产出 dist/PoHW-v1.0.1.apk
 ```
@@ -79,7 +79,7 @@ python3 tools/quizbank/verify.py app/assets/quiz.db
 
 ## 6. 为什么不用 Gradle
 
-这个工程只有一个模块、27 个 Java 文件、零第三方依赖，用 Gradle 需要 AGP、
+这个工程只有一个模块、28 个 Java 文件、零第三方依赖，用 Gradle 需要 AGP、
 Gradle Wrapper、联网拉依赖和一套额外的构建缓存。命令行链路把每一步都显式暴露出来，
 便于审查、便于在离线环境复现，也让「APK 里到底装了什么」一目了然。
 
@@ -95,14 +95,18 @@ Gradle Wrapper、联网拉依赖和一套额外的构建缓存。命令行链路
 `EXTRA_STOP_VERIFIED`。另外确认 `QuickBootReceiver` 已注册、
 `KeyRouter` / `QuizFlow` / `BehaviorV601Test` 真的被编译与执行。
 
-`[0/9]` 还会执行 `python3 tests/layout_contract.py`：40 条源码级布局与发布契约断言，
+`[0/9]` 还会执行 `python3 tests/layout_contract.py`：**69 条**源码级布局与发布契约断言，
 覆盖首页 3×2 网格、设置页单列卡片流、等宽 weight 布局、四向 DPAD 焦点链、
-滚动容器参数（`setFillViewport` / `Ui.fill(1)` / wrap-content 子容器）以及证书门禁本身。
+滚动容器参数（`setFillViewport` / `Ui.fill(1)` / wrap-content 子容器）、
+四槽学科权重、双路径 SQL、题目学科标签反推以及证书门禁本身。
 调用次数类断言基于带 `/* */` 块注释状态机的去注释代码行，行注释与块注释掉调用都会被拦下；
-负向门禁同时禁止 `wireColumns` / `addColumn` 三栏旧助手残留。
-8 组负向变异（含不带发布密钥构建）全部被拦下。
+负向门禁同时禁止 `wireColumns` / `addColumn` 三栏助手与 `gradeWide` / 15% / `int[3]` 旧抽题残留。
+另执行 `python3 tests/bank_distribution_check.py`：从 `QuizDb.java` 提取真实 SQL，
+对内置题库做 9 年级 × 4 池 × 60 次池隔离、两次 5000 次配比分布、全学科关闭 0 题校验。
+**16 组负向变异**（含不带发布密钥构建、恢复 gradeWide SQL）全部被契约 / 构建 / 运行时校验拦下。
+注意 `grep -q 'new int[Subjects.COUNT]'` 会把方括号当正则字符类；必须用 `grep -qF`。
 
-`[2/9]` 现在跑 7 组共 **178** 个 JVM 单测（新增 `BehaviorV601Test` 51 项，
+`[2/9]` 现在跑 8 组共 **197** 个 JVM 单测（新增 `BehaviorV601Test` 51 项与 `SubjectWeightsTest` 19 项，
 覆盖按键 ACTION_DOWN/UP 与 repeat、2x2 高亮邻接、答题状态机、令牌 TTL/重放/进程重启）；
 `[6/9]` 仍检查 dex 中含「错题库」字符串。
 

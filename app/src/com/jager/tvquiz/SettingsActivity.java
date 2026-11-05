@@ -310,8 +310,9 @@ public class SettingsActivity extends Activity {
         // ---- 02 学科设置 ----
         LinearLayout subjects = addCard(col, "02  学科设置 · 教材版本 / 题目配比");
         for (int s = 0; s < Subjects.COUNT; s++) addSubjectRow(subjects, s);
-        note(subjects, "配比 0 表示该科不出题；「其他学科」由全学科开关控制，不单独配比。"
-                + "内置离线题库按课标纲目组织，不含出版社版本，本设置用于在线题包筛选、题面标注与错题标记。");
+        note(subjects, "配比按四科权重随机抽题，0 表示该科不出题；「其他学科」配比仅在「出题范围 = 全学科」时生效，"
+                + "关闭时显示「未启用」但可预先设置。内置离线题库按课标纲目组织，不含出版社版本，"
+                + "教材版本用于在线题包筛选、题面标注与错题标记。");
 
         // ---- 03 开机与播放 ----
         LinearLayout boot = addCard(col, "03  开机与播放");
@@ -524,27 +525,17 @@ public class SettingsActivity extends Activity {
         wt.setEllipsize(null);
         wt.setMinHeight(Ui.dp(this, 44));
         wt.setPadding(Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2));
-        if (subj < 3) {
-            wt.setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View v) {
-                    st.weight(subj, (st.weight(subj) + 1) % 6);
-                    refreshRows();
-                }
-            });
-            Ui.focus(wt, this, Ui.BTN_BG, 0xFFF5F7FA);
-            row.addView(wt, new LinearLayout.LayoutParams(0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            track(ed, wt);
-        } else {
-            wt.setText("—");
-            wt.setEnabled(false);
-            wt.setFocusable(false);
-            wt.setTextColor(0xFF7C8AA3);
-            wt.setBackground(Ui.round(0xFF1B2432, 10, this));
-            row.addView(wt, new LinearLayout.LayoutParams(0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            track(ed);
-        }
+        // 四科都可配权：全学科关闭时第 4 槽仍可预设，只是不参与抽题。
+        wt.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                st.weight(subj, (st.weight(subj) + 1) % (SubjectWeights.MAX_WEIGHT + 1));
+                refreshRows();
+            }
+        });
+        Ui.focus(wt, this, Ui.BTN_BG, 0xFFF5F7FA);
+        row.addView(wt, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        track(ed, wt);
 
         parent.addView(row, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -579,7 +570,9 @@ public class SettingsActivity extends Activity {
         rowSync.setText(SettingsStore.SYNC_LABELS[st.syncIndex()]);
         for (int s = 0; s < Subjects.COUNT; s++) {
             rowEd[s].setText(st.editionFor(s));
-            if (s < 3) rowWt[s].setText("配比 " + st.weight(s));
+            String w = "配比 " + st.weight(s);
+            if (s == Subjects.OTHER && !st.allSubjects()) w += " · 未启用";
+            rowWt[s].setText(w);
         }
         rowBoot.setText(st.bootAutostart() ? "开启（响应开机广播）" : "关闭");
         rowAutoGuard.setText(st.autoGuardOnBoot() ? "开启（开机即守护）" : "关闭（仅恢复上次）");

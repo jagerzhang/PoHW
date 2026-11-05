@@ -258,24 +258,34 @@ public final class QuizDb {
     }
 
     /**
-     * 本地随机挑一题。
-     * allSubjects=true 时从该年级的全部学科抽题（覆盖内置的全量 K12 纲目），
-     * 否则只抽数学/语文/英语；两者都取不到时回退全库，保证「一定能出题」。
+     * 本地随机挑一题：三科按 grade + subject 精确抽，
+     * 「其他学科」按 grade + subject NOT IN (三科) 抽，
+     * 由 SubjectWeights 决定进哪个池，配比不再被全学科开关旁路。
+     * 取不到时先退到该年级任意题、再退到全库，保证「一定能出题」。
      * 用 OFFSET 采样避免整表排序；COUNT 子查询走 grade/subject 索引。
      */
     public QuizEngine.Question random(int grade, int subject, boolean allSubjects) {
-        String name = subjectName(subject);
-        boolean gradeWide = allSubjects || name == null;
-        String where = gradeWide ? "WHERE grade=?" : "WHERE grade=? AND subject=?";
-        String[] args = gradeWide
-                ? new String[]{Integer.toString(grade)}
-                : new String[]{Integer.toString(grade), name};
-        QuizEngine.Question q = pick(where, args, subject);
-        if (q == null) q = pick("", null, subject);
+        int s = Subjects.norm(subject);
+        boolean other = s == Subjects.OTHER && allSubjects;
+        String g = Integer.toString(grade);
+        String where;
+        String[] args;
+        if (other) {
+            where = "WHERE grade=? AND subject NOT IN ('数学','语文','英语')";
+            args = new String[]{g};
+        } else {
+            String name = subjectName(s);
+            if (name == null) name = "数学";
+            where = "WHERE grade=? AND subject=?";
+            args = new String[]{g, name};
+        }
+        QuizEngine.Question q = pick(where, args);
+        if (q == null) q = pick("WHERE grade=?", new String[]{g});
+        if (q == null) q = pick("", null);
         return q;
     }
 
-    private QuizEngine.Question pick(String where, String[] args, int subject) {
+    private QuizEngine.Question pick(String where, String[] args) {
         // The WHERE params must be bound twice: main query and COUNT subquery.
         String[] bind = null;
         if (args != null) {
@@ -296,12 +306,10 @@ public final class QuizDb {
             }
             String[] opts = new String[]{
                     c.getString(2), c.getString(3), c.getString(4), c.getString(5)};
-            QuizEngine.Question q = QuizEngine.Question.fromBank(subject, topic,
+            // 用题目真实学科反推标签：配比选中的学科池可能与兜底结果不同，
+            // 错题库与统计必须以题库里的 subject 为准，不能沿用传入的池编号。
+            return QuizEngine.Question.fromBank(subjectFromBank(bankSubject), topic,
                     c.getString(1), opts, c.getInt(6), c.getString(7));
-            if (q != null && bankSubject != null && !isCoreSubject(bankSubject)) {
-                q.subject = Subjects.OTHER;
-            }
-            return q;
         } catch (Exception e) {
             return null;
         }
@@ -309,6 +317,13 @@ public final class QuizDb {
 
     private static boolean isCoreSubject(String s) {
         return "数学".equals(s) || "语文".equals(s) || "英语".equals(s);
+    }
+
+    private static int subjectFromBank(String s) {
+        if ("数学".equals(s)) return QuizEngine.MATH;
+        if ("语文".equals(s)) return QuizEngine.CHINESE;
+        if ("英语".equals(s)) return QuizEngine.ENGLISH;
+        return Subjects.OTHER;
     }
 
     private static String subjectName(int subject) {

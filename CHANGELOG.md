@@ -8,6 +8,45 @@
 > 标识，同样不代表发布版本。Android `versionCode` 是单调技术计数，不随展示版本
 > 重置：v1.0.0 为 12（前值 11），因此可直接 `adb install -r` 覆盖安装。
 
+## v1.0.1 (versionCode 15) — four-slot subject weighting
+
+Display version stays **1.0.1**; `versionCode` moves 14 -> 15 with the same
+release keystore (SHA-256 `76eb6063b574…26172`).
+
+- **Bug fixed: weights were bypassed in all-subjects mode.** `QuizDb.random()`
+  previously switched to `WHERE grade=?` (gradeWide) whenever `allSubjects`
+  was on, so the configured 5:3:2 ratio did not control which subject the
+  question came from; the share of non-core subjects was decided by bank size
+  (~7% in grade 3, ~58% in grade 9), and the hardcoded 15% OTHER branch only
+  fired when an online question pack existed. Core-subject questions were also
+  labelled with the roulette-selected pool instead of their real subject,
+  corrupting wrong-book subject names.
+- **Four slots.** New pure-Java `SubjectWeights` holds math/chinese/english/other
+  weights (default 5:3:2:2, range 0-5). The fourth slot is zeroed when
+  all-subjects is off, and also when neither the builtin DB nor an OTHER online
+  pack is available, so a missing bank can never degrade into a math fallback.
+  `QuizEngine` delegates `pickSubject()` to it; the 15% constant and the
+  `OTHER -> MATH` downgrade are removed.
+- **Two SQL pools.** `QuizDb.random()` now uses `grade + subject` for the three
+  core subjects and `grade + subject NOT IN (...)` for other subjects, with
+  same-grade then full-bank fallbacks. `QuizDb.pick()` derives `q.subject` from
+  the real bank subject via `subjectFromBank()`.
+- **UI.** The fourth subject row is an adjustable weight button (shows
+  "not active" when all-subjects is off but can be preset); the home status
+  line shows all four weights. Existing `w0/w1/w2` survive an in-place upgrade.
+- **Gates.** `tests/layout_contract.py` grows to 69 assertions (forbids
+  gradeWide / 15% / `int[3]` / legacy labels); new
+  `tests/bank_distribution_check.py` extracts the real SQL from `QuizDb.java`
+  and exercises the bank (9 grades x 4 pools x 60 draws, two 5000-draw
+  distribution checks, zero-OTHER check), wired into `[0/9]`. A regex-trap in
+  the build gate was fixed (`grep -qF` for `new int[Subjects.COUNT]`).
+- Verification: `LAYOUT_CONTRACT_OK total=69`, `JVM_TESTS_OK total=197`
+  (new `SubjectWeightsTest`, 19 assertions), `BANK_DISTRIBUTION_OK`
+  (grade 3: 42.54/24.60/16.06/16.80, grade 9: 42.26/24.76/15.26/17.72,
+  expected 41.67/25.00/16.67/16.67), `MUTATION_SUITE3_OK 16/16`,
+  `BUILD_OK version=1.0.1 code=15`, v1/v2/v3 signatures valid. TV DPAD, IME
+  and font-scale checks still need an on-device pass.
+
 ## v1.0.1 (versionCode 14) — home grid & single-column settings
 
 Display version stays **1.0.1** (no version-number churn); `versionCode` moves

@@ -114,11 +114,16 @@ public final class SettingsStore implements PinGate.Store {
     public void syncIndex(int v) { sp.edit().putInt("syncIdx", clamp(v, 0, SYNC_HOURS.length - 1)).apply(); }
     public long syncIntervalMs() { return SYNC_HOURS[syncIndex()] * 3600L * 1000L; }
 
+    /** 四科配比默认 5:3:2:2；第 4 槽仅在「出题范围 = 全学科」时参与轮盘赌。 */
     public int weight(int subject) {
-        int def = subject == 0 ? 5 : (subject == 1 ? 3 : 2);
-        return clamp(sp.getInt("w" + subject, def), 0, 5);
+        int s = Subjects.norm(subject);
+        int def = s == Subjects.MATH ? 5 : (s == Subjects.CHINESE ? 3 : 2);
+        return clamp(sp.getInt("w" + s, def), 0, SubjectWeights.MAX_WEIGHT);
     }
-    public void weight(int subject, int v) { sp.edit().putInt("w" + subject, clamp(v, 0, 5)).apply(); }
+    public void weight(int subject, int v) {
+        int s = Subjects.norm(subject);
+        sp.edit().putInt("w" + s, clamp(v, 0, SubjectWeights.MAX_WEIGHT)).apply();
+    }
 
     public String bankUrl() { return sp.getString("bankUrl", ""); }
     public void bankUrl(String v) { sp.edit().putString("bankUrl", v == null ? "" : v.trim()).apply(); }

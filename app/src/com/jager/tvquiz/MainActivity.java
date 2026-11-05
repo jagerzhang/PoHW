@@ -394,7 +394,9 @@ public class MainActivity extends Activity {
         s.append("  ·  家长密码：").append(st.hasPin() ? "已设置 ✓" : "未设置 ✗").append(NL);
         s.append("当前配置：").append(st.gradeLabel()).append(" · 每 ").append(st.intervalSec())
                 .append(" 秒一题 · ")
-                .append(st.allSubjects() ? "全学科"
+                .append(st.allSubjects()
+                        ? ("全学科 数/语/英/其他 " + st.weight(0) + "/" + st.weight(1)
+                                + "/" + st.weight(2) + "/" + st.weight(3))
                         : ("数/语/英 " + st.weight(0) + "/" + st.weight(1) + "/" + st.weight(2)))
                 .append(NL);
         s.append("教材版本：");

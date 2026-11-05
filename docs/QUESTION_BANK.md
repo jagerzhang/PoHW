@@ -112,3 +112,9 @@ v6 的分学科教材版本设置会：
 现在 `next()` 按 `BANK_RATIO` 概率在「在线题包 / 内置 DB」之间混合，两者都为空时
 才回退参数化生成器；`Subjects.OTHER` 的题包也会在全学科模式下被抽中。
 在线题包的 `subject` 字段除数学/语文/英语外一律归入「其他学科」。
+
+**v1.0.1 / versionCode 15 修正（配比被旁路）**：此前 `allSubjects=true` 会让 `QuizDb.random()`
+退化为 `WHERE grade=?` 的 gradeWide 抽样，配比完全不决定题目学科，其他学科占比由题库题量决定。
+现在改为四槽权重（默认 5:3:2:2）+ 两条 SQL 池：三科按 `grade + subject`，其他学科按
+`grade + subject NOT IN (数/语/英)`；`q.subject` 由题目真实学科反推，错题库不再串科。
+`tests/bank_distribution_check.py` 会用源码里的真实 SQL 复验池隔离与配比分布。

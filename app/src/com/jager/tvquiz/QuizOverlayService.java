@@ -286,8 +286,8 @@ public class QuizOverlayService extends Service {
         if (first) BankRepository.installBuiltin(this, st);
         interval = st.intervalSec();
         engine = new QuizEngine(st.grade(), st.edition(),
-                st.weight(QuizEngine.MATH), st.weight(QuizEngine.CHINESE),
-                st.weight(QuizEngine.ENGLISH));
+                st.weight(Subjects.MATH), st.weight(Subjects.CHINESE),
+                st.weight(Subjects.ENGLISH), st.weight(Subjects.OTHER));
         engine.setAllSubjects(st.allSubjects());
         QuizDb cached = QuizDb.peek();
         if (cached != null) {

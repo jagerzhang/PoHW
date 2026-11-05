@@ -8,7 +8,7 @@ APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
 VERSION_NAME="1.0.1"
-VERSION_CODE="14"
+VERSION_CODE="15"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -73,6 +73,20 @@ fi
 # 布局契约（3x2 网格 / 单列卡片流 / DPAD 焦点链）由独立脚本逐条断言，
 # 纯 JVM 单测无法实例化 android.view.*，这里守住结构，javac 再守住编译。
 python3 tests/layout_contract.py
+# 运行时回归：用与 App 相同的两条 SQL 实跑内置题库，验证配比与标签。
+python3 tests/bank_distribution_check.py
+# 方案 B：配比必须真的进入抽题链路，禁止退回 gradeWide / 15% / 旧标签路径。
+W="$APP/src/com/jager/tvquiz/SubjectWeights.java"
+DB="$APP/src/com/jager/tvquiz/QuizDb.java"
+ENG="$APP/src/com/jager/tvquiz/QuizEngine.java"
+grep -qF 'new int[Subjects.COUNT]' "$W"
+grep -q 'SubjectWeights' "$ENG"
+grep -q 'st.weight(Subjects.OTHER)' "$SVC"
+grep -q 'NOT IN (' "$DB"
+grep -q 'subjectFromBank' "$DB"
+if grep -q -e 'gradeWide' -e 'nextInt(100) < 15' -e 'fromBank(subject,' "$ENG" "$DB"; then
+  echo 'FORBIDDEN: legacy gradeWide / 15 percent / wrong subject label'; exit 1
+fi
 # P0: FGS 契约覆盖所有分支（startForeground 必须在 onStartCommand 入口）
 grep -q 'fgReady = enterForeground()' "$SVC"
 grep -q 'startForeground(NOTIF_ID' "$SVC"
@@ -141,6 +155,7 @@ aapt2 link -o "$BUILD/out/base.apk" \
 echo "[5/9] javac"
 find "$APP/src" "$BUILD/gen" -name '*.java' > "$BUILD/sources.txt"
 grep -q 'QuizDb.java' "$BUILD/sources.txt"
+grep -q 'SubjectWeights.java' "$BUILD/sources.txt"
 grep -q 'PinVerifyView.java' "$BUILD/sources.txt"
 grep -q 'WrongBook.java' "$BUILD/sources.txt"
 javac -source 8 -target 8 -encoding UTF-8 -nowarn \

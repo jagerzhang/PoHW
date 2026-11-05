@@ -134,4 +134,55 @@ check("POHW_ALLOW_DEV_SIGN" in b,
 check("versionCode='$VERSION_CODE'" in b,
       "artifact check verifies versionCode as well as versionName")
 
+
+# ---- 方案 B：四槽学科权重、双路径抽题与题目标签反推 ----
+_w = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SubjectWeights.java")))
+_rw_e = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizEngine.java"))
+_e = strip_comments(_rw_e)
+_rw_d = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizDb.java"))
+_d = strip_comments(_rw_d)
+_st = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsStore.java")))
+_o = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizOverlayService.java")))
+_mf = read(os.path.join(ROOT, "app/AndroidManifest.xml"))
+_run = read(os.path.join(ROOT, "tests/run.sh"))
+
+check("new int[Subjects.COUNT]" in _w, "weights declare four subject slots")
+check("w[Subjects.OTHER] = clampWeight(other);" in _w, "other slot is wired to the setting")
+check("!(allSubjects && otherAvailable)" in _w, "other slot is gated by the all-subjects switch")
+check("setOtherAvailable" in _w, "other slot can be disabled when no question bank is ready")
+check("public int pick(Random r)" in _w and "MAX_WEIGHT" in _w,
+      "weighted roulette is pure Java and clamped")
+check("private final SubjectWeights weights;" in _e, "engine delegates to SubjectWeights")
+check("int[3]" not in _rw_e, "legacy three-slot weight array is gone")
+check("return weights.pick(r);" in _e, "engine draws from the four-slot roulette")
+check("syncOtherAvailable()" in _e, "engine refreshes OTHER availability on db/bank changes")
+check("r.nextInt(100) < 15" not in _rw_e, "hardcoded 15 percent branch is gone")
+check("s == Subjects.OTHER) s = MATH" not in _rw_e,
+      "OTHER is no longer downgraded to a math question")
+check("gradeWide" not in _rw_d, "grade-wide cross-subject SQL is gone")
+check("NOT IN ('数学','语文','英语')" in _d, "other-subject pool uses its own SQL predicate")
+check("WHERE grade=? AND subject=?" in _d, "core subjects keep their own SQL predicate")
+check('new String[]{g}' in _d and 'WHERE grade=?' in _d,
+      "same-grade fallback exists before the full-bank fallback")
+check("subjectFromBank(bankSubject)" in _d, "question label is derived from the real bank subject")
+check("fromBank(subject," not in _d, "legacy label from the chosen pool is gone")
+check("st.weight(Subjects.OTHER)" in _o, "service passes the fourth weight to the engine")
+check("st.weight(3)" in m, "home status line shows the four-subject ratio")
+check("wt.setEnabled(false)" not in raw_s, "other-subject weight button is enabled")
+check("if (subj < 3)" not in raw_s and "if (s < 3)" not in raw_s,
+      "no three-subject-only UI branches remain")
+check("未启用" in raw_s, "disabled fourth slot is labelled in the UI")
+check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
+      "UI weight cycle is driven by the same max weight")
+check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
+      "settings store persists all four normalized slots")
+check('android:versionCode="15"' in _mf, "manifest versionCode advances to 15")
+check('VERSION_CODE="15"' in b, "build script versionCode advances to 15")
+check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
+      "new weights class and JVM test are wired into the test runner")
+check("bank_distribution_check.py" in b,
+      "runtime SQL distribution regression is wired into the build")
+check("grep -qF 'new int[Subjects.COUNT]'" in b,
+      "build gate matches the four-slot declaration literally, not as a regex")
+
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

@@ -95,7 +95,7 @@ public final class QuizEngine {
 
     private final Random r = new Random();
     private final int grade;
-    private final int[] weights = new int[3];
+    private final SubjectWeights weights;
     private final List<Question> bankMath = new ArrayList<Question>();
     private final List<Question> bankChinese = new ArrayList<Question>();
     private final List<Question> bankEnglish = new ArrayList<Question>();
@@ -104,11 +104,22 @@ public final class QuizEngine {
     private QuizDb db;
     private boolean allSubjects = false;
 
+    /** 兼容旧调用：第 4 槽为 0（不出其他学科）。 */
     public QuizEngine(int grade, String edition, int mathW, int chineseW, int englishW) {
+        this(grade, edition, mathW, chineseW, englishW, 0);
+    }
+
+    /** 四槽配比：数 / 语 / 英 / 其他学科。 */
+    public QuizEngine(int grade, String edition, int mathW, int chineseW,
+                      int englishW, int otherW) {
         this.grade = grade < 1 ? 1 : (grade > 9 ? 9 : grade);
-        weights[MATH] = Math.max(0, mathW);
-        weights[CHINESE] = Math.max(0, chineseW);
-        weights[ENGLISH] = Math.max(0, englishW);
+        weights = new SubjectWeights(mathW, chineseW, englishW, otherW);
+        syncOtherAvailable();
+    }
+
+    /** 内置题库或其他学科在线题包至少有一个可用时，OTHER 才参与轮盘赌。 */
+    private void syncOtherAvailable() {
+        weights.setOtherAvailable(db != null || !bankOther.isEmpty());
     }
 
     public void setBank(List<Question> qs) {
@@ -121,17 +132,21 @@ public final class QuizEngine {
             else if (q.subject == ENGLISH) bankEnglish.add(q);
             else if (q.subject == Subjects.OTHER) bankOther.add(q);
         }
+        syncOtherAvailable();
     }
 
     public int bankSize() { return bankMath.size() + bankChinese.size() + bankEnglish.size() + bankOther.size(); }
 
     /** 注入内置 SQLite 题库；为空时完全走原有生成器链路。 */
-    public void setDb(QuizDb db) { this.db = db; }
+    public void setDb(QuizDb db) { this.db = db; syncOtherAvailable(); }
 
     public boolean hasDb() { return db != null; }
 
     /** true: draw from every subject of the grade (full K12 catalog). */
-    public void setAllSubjects(boolean v) { this.allSubjects = v; }
+    public void setAllSubjects(boolean v) {
+        this.allSubjects = v;
+        weights.setAllSubjects(v);
+    }
     public boolean isAllSubjects() { return allSubjects; }
 
     private List<Question> bankFor(int s) {
@@ -150,7 +165,6 @@ public final class QuizEngine {
         if (hasBank && (!hasDb || r.nextInt(100) < BANK_RATIO)) {
             return list.get(r.nextInt(list.size()));
         }
-        if (s == Subjects.OTHER) s = MATH; // no offline generator for OTHER
         if (hasDb) {
             Question q = db.random(grade, s, allSubjects);
             if (q != null) return q;
@@ -160,14 +174,9 @@ public final class QuizEngine {
         return mathByGrade();
     }
 
+    /** 配比真正生效：四槽轮盘赌决定题目来自哪个学科池。 */
     private int pickSubject() {
-        if (allSubjects && !bankOther.isEmpty() && r.nextInt(100) < 15) return Subjects.OTHER;
-        int total = weights[MATH] + weights[CHINESE] + weights[ENGLISH];
-        if (total <= 0) return MATH;
-        int n = r.nextInt(total);
-        if (n < weights[MATH]) return MATH;
-        if (n < weights[MATH] + weights[CHINESE]) return CHINESE;
-        return ENGLISH;
+        return weights.pick(r);
     }
 
     private Question wordQuestion(int subject) {

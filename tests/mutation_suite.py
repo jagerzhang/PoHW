@@ -33,9 +33,15 @@ CHK = os.path.join(ROOT, "tests/bank_distribution_check.py")
 SYL = os.path.join(SRC, "Syllabus.java")
 SYLJ = os.path.join(ROOT, "app/assets/syllabus.json")
 SITE = os.path.join(ROOT, "site/index.html")
+RM = os.path.join(ROOT, "README.md")
+CH = os.path.join(ROOT, "CHANGELOG.md")
+SJS = os.path.join(ROOT, "site/script.js")
+CI = os.path.join(ROOT, ".github/workflows/ci.yml")
+APNG = os.path.join(ROOT, "app/res/drawable-nodpi/donate_alipay.png")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
-for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE):
+for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
+           RM, CH, SJS, CI, APNG):
     BK[p] = os.path.join(BK_DIR, os.path.basename(p) + ".bk")
     shutil.copyfile(p, BK[p])
 ORIG = {p: hashlib.sha256(open(p, "rb").read()).hexdigest() for p in BK}
@@ -135,7 +141,7 @@ MUTATIONS = [
     ("O", "service stops passing the fourth weight",
      lambda: replace(O, "st.weight(Subjects.OTHER)", "0"), False, True, False),
     ("P", "versionCode rolled back",
-     lambda: replace(B, 'VERSION_CODE="20"', 'VERSION_CODE="19"'), False, True, False),
+     lambda: replace(B, 'VERSION_CODE="21"', 'VERSION_CODE="20"'), False, True, False),
     ("Q", "OTHER routing disabled",
      lambda: replace(D, "boolean other = s == Subjects.OTHER && allSubjects;", "boolean other = false;"), True, True, False),
     ("R", "single WHERE binding",
@@ -209,6 +215,22 @@ MUTATIONS = [
     ("AR", "footer blog link removed",
      lambda: replace(SITE, 'href="https://zhang.ge/" target="_blank" rel="noopener">张戈博客</a> 保留所有权利',
                      'href="#">张戈博客</a> 保留所有权利'), False, True, False),
+    ("AS", "duplicate release label restored on site",
+     lambda: replace(SJS, 'version: "v1.0.2"', 'version: "v1.0.1"'), False, True, False),
+    ("AT", "pre-1.0 dev section restored in changelog",
+     lambda: write(CH, read(CH) + "\n## Dev build v6.0.0 (versionCode 10)\n"),
+     False, True, False),
+    ("AU", "promo-site section restored in README",
+     lambda: write(RM, read(RM) + "\n## 官网与部署\nEdgeOne Makers\n"),
+     False, True, False),
+    ("AV", "auto-review workflow removed",
+     lambda: os.remove(CI), False, True, False),
+    ("AW", "display version rolled back to 1.0.1",
+     lambda: replace(MF, 'android:versionName="1.0.2"', 'android:versionName="1.0.1"'),
+     False, True, False),
+    ("AX", "alipay QR crop corrupted",
+     lambda: open(APNG, "wb").write(bytes([137, 80, 78, 71, 13, 10, 26, 10]) + bytes(16)),
+     False, True, False),
 ]
 
 print("--- baseline ---")

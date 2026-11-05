@@ -1,14 +1,54 @@
 # Changelog
 
-> **版本口径（2026-11-05 起）**：`v1`–`v6` 是开发期内部迭代序号，不是语义化版本，
-> 主版本号曾随功能迭代跳变。为纠正这一口径，已下架 `v5.0.0` / `v6.0.0` /
-> `v6.0.1` 三个历史 Release，自 **v1.0.0** 起统一采用 `MAJOR.MINOR.PATCH`
-> （仅不兼容变更才升 MAJOR）。下方历史条目保留原始编号以便追溯 commit，但不再
-> 对应任何可下载的 Release；部分内部测试类名（如 `BehaviorV601Test`）沿用开发期
-> 标识，同样不代表发布版本。Android `versionCode` 是单调技术计数，不随展示版本
-> 重置：v1.0.0 为 12（前值 11），因此可直接覆盖安装。
+> **版本口径**：对外只保留 3 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）。
+> `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
+> 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
+> 已合并归档为末尾的 `v0.9.0-re`，不对应任何可下载的 Release。
+> Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
+> **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
+> 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
 
-## v1.0.1 (versionCode 20) - site cleanup, USB-drive sideload, paired bank row
+## v1.0.2 (versionCode 18–21) — release versioning, assets and MR workflow
+
+> 内部构建 18–20 当时仍挂 `1.0.1` 展示标签，本版本线统一归并为 **v1.0.2**；
+> 对外只发布 versionCode 21 的成品。GitHub 上共 3 个 Release，与官网
+> 「版本更新记录」的 3 张卡片一一对应。
+
+### versionCode 21 — release versioning, release assets, MR workflow
+
+Display version moves 1.0.1 -> **1.0.2**, `versionCode` 20 -> **21**, signed
+with the same release keystore (SHA-256 `76eb6063b574...26172`).
+
+- **Three releases, not nine.** `site/script.js` now renders exactly three
+  aggregated cards (v1.0.2 / v1.0.1 / v1.0.0) instead of nine build rows all
+  labelled v1.0.1. `versionCode` ranges are explicit on each card.
+- **Release assets refreshed.** All three GitHub Releases carry an APK and a
+  `PoHW-src.zip` built from that release line with the same certificate;
+  `v1.0.2` is a new tag at the merged main HEAD. The two older release notes
+  were rewritten to cover their whole version line and drop debug-bridge
+  install commands in favour of USB-drive sideload.
+- **CHANGELOG archive.** Dev builds `v1`-`v3` / `v4.x` / `v5.0.0` / `v6.0.0`
+  / `v6.0.1` are collapsed into one `## v0.9.0-re (versionCode 1-11)` entry;
+  the three formal releases are `##` sections with per-build `###` children.
+- **README** no longer documents the static promo site (its own `site/`
+  directory, deploy command and preview URL). It now documents the release
+  workflow instead.
+- **Alipay QR replaced.** `app/res/drawable-nodpi/donate_alipay.png` is a fresh
+  945x1050 crop from the newly supplied poster; the QR finder patterns, white
+  quiet zone are intact, and the payee caption is now `Jager(*戈)`, matching the
+  WeChat card glyphs and colour. The site still publishes no QR image.
+- **Release workflow.** New `.github/workflows/ci.yml` runs `layout_contract`,
+  JVM tests, syllabus / study-scope / distribution checks and a full APK build
+  on every feature-branch push and PR to main. Changes now go
+  feature branch -> PR -> auto review -> merge; tags and Releases are cut only
+  when the maintainer says so. Branch protection on `main` requires the
+  `auto-review` check.
+- Gates: `layout_contract.py` **170** assertions, `mutation_suite.py`
+  **49 negative mutations + 1 dev-sign build gate (50/50)**; `[0/9]` pins the
+  three site versions, the archive heading and the CI workflow.
+
+### versionCode 20 — site cleanup, USB-drive sideload, paired bank row
 
 Display version stays **1.0.1**; `versionCode` moves 19 -> 20 with the same
 release keystore (SHA-256 `76eb6063b574...26172`).
@@ -40,7 +80,7 @@ release keystore (SHA-256 `76eb6063b574...26172`).
   build = **44/44**), `[0/9]` pins the paired-row symbols. `LAYOUT_CONTRACT_OK 161`,
   `JVM_TESTS_OK 245`, `MUTATION_SUITE_OK 44/44`, `BUILD_OK version=1.0.1 code=20`.
 
-## v1.0.1 (versionCode 19) - unified slogan: 答对题目，无限续租！
+### versionCode 19 — unified slogan: 答对题目，无限续租！
 
 Display version stays **1.0.1**; `versionCode` moves 18 -> 19 with the same
 release keystore (SHA-256 `76eb6063b574...26172`).
@@ -59,7 +99,7 @@ release keystore (SHA-256 `76eb6063b574...26172`).
   case (37 -> 38). `LAYOUT_CONTRACT_OK 144`, `JVM_TESTS_OK 245`,
   `MUTATION_SUITE_OK 38/38`, `BUILD_OK version=1.0.1 code=19`.
 
-## v1.0.1 (versionCode 18) - study scope: term + ordered textbook units (plan B)
+### versionCode 18 — study scope: term + ordered textbook units (plan B)
 
 Display version stays **1.0.1**; `versionCode` moves 17 -> 18 with the same
 release keystore (SHA-256 `76eb6063b574...26172`).
@@ -95,7 +135,12 @@ release keystore (SHA-256 `76eb6063b574...26172`).
   default-scope compatibility), `BANK_DISTRIBUTION_OK`, `MUTATION_SUITE_OK 37/37`,
   `BUILD_OK version=1.0.1 code=18`; APK now ships `assets/syllabus.json`.
 
-## v1.0.1 (versionCode 17) - bank note placement; question-bank granularity study
+## v1.0.1 (versionCode 13–17) — UI consolidation and weighting fixes
+
+> tag `v1.0.1` points at the first commit of this line; the Release assets are
+> the final build (versionCode 17). Per-build details below.
+
+### versionCode 17 — bank note placement; question-bank granularity study
 
 Display version stays **1.0.1**; `versionCode` moves 16 -> 17 with the same
 release keystore (SHA-256 `76eb6063b574...26172`).
@@ -113,7 +158,7 @@ release keystore (SHA-256 `76eb6063b574...26172`).
   `BANK_DISTRIBUTION_OK` (incl. `FALLBACK_POOL_OK`), `MUTATION_SUITE_OK 29/29`,
   `BUILD_OK version=1.0.1 code=17`, v1/v2/v3 signatures valid.
 
-## v1.0.1 (versionCode 16) - settings polish, launch-to-guard, donation, branding
+### versionCode 16 — settings polish, launch-to-guard, donation, branding
 
 Display version stays **1.0.1**; `versionCode` moves 15 -> 16 with the same
 release keystore (SHA-256 `76eb6063b574...26172`), so a direct
@@ -156,7 +201,7 @@ over-the-top install is a real upgrade.
   still needed: 12dp gap appearance, QR scannability at distance, DPAD channel
   switch focus chain, cold-start auto-guard vs PIN stop, new icon/banner.
 
-## v1.0.1 (versionCode 15, final) - review-driven hardening
+### versionCode 15, final — review-driven hardening
 
 Display version and `versionCode` are unchanged; this is the final hardened
 build of the four-slot weighting change, signed with the same release keystore
@@ -206,7 +251,7 @@ with no P0, 4 x P1 and 6 x P2. All code findings are fixed here.
   TV DPAD, IME, font-scale and 640dp narrow-screen checks still need a
   physical Xiaomi TV pass.
 
-## v1.0.1 (versionCode 15) — four-slot subject weighting (initial)
+### versionCode 15 — four-slot subject weighting (initial)
 
 Display version stays **1.0.1**; `versionCode` moves 14 -> 15 with the same
 release keystore (SHA-256 `76eb6063b574…26172`). Initial implementation
@@ -246,7 +291,7 @@ release keystore (SHA-256 `76eb6063b574…26172`). Initial implementation
   `BUILD_OK version=1.0.1 code=15`, v1/v2/v3 signatures valid. TV DPAD, IME
   and font-scale checks still need an on-device pass.
 
-## v1.0.1 (versionCode 14) — home grid & single-column settings
+### versionCode 14 — home grid & single-column settings
 
 Display version stays **1.0.1** (no version-number churn); `versionCode` moves
 13 -> 14 so a direct over-the-top install still upgrades, signed with the same release
@@ -286,7 +331,7 @@ keystore (SHA-256 `76eb6063b574…26172`).
   `MUTATION_SUITE2_OK 8/8`. TV DPAD behaviour, font scale 1.5 and the URL
   field IME still need an on-device pass.
 
-## v1.0.1 (versionCode 13) — console & settings UI consolidation
+### versionCode 13 — console & settings UI consolidation
 
 - **Merged guard toggle.** `btnStart`/`btnStop` replaced by a single `btnGuard`.
   `GuardState.toggleColor()` / `toggleLabel()` drive the state: idle = ON_GREEN
@@ -391,85 +436,23 @@ and adds the missing behaviour-level tests.
   the default (no `POHW_KEYSTORE`) still generates a random dev key and does
   NOT guarantee signature continuity.
 
-## Dev build v6.0.0 (versionCode 10) — real-device feedback from a Xiaomi TV
+## v0.9.0-re (versionCode 1–11) — 开发期归档
 
-- **Fix: overlay lost remote-control input on the second quiz.** The service now
-  creates a fresh `OverlayQuizView` per quiz instead of re-adding the same View,
-  explicitly clears `FLAG_NOT_FOCUSABLE`, and routes DPAD / ENTER / number keys
-  inside the root view's `dispatchKeyEvent` with manual highlight painting. Focus
-  no longer depends on the window's child-view focus state.
-- **Pause background video while answering.** `MediaPauseController` requests
-  transient audio focus and dispatches `KEYCODE_MEDIA_PAUSE` when the quiz shows,
-  then abandons focus and optionally dispatches `KEYCODE_MEDIA_PLAY` on unlock.
-  Media keys are swallowed by the overlay while the quiz is on screen. This is
-  best-effort by design: Android has no public API to force-pause a third-party
-  player, and no extra permission is requested.
-- **Per-subject textbook editions.** Four independent `edition_s0..3` settings
-  (math / Chinese / English / other), with the old single `edition` value used as
-  the migration default. `BankRepository.load(grade, String[])` filters optional
-  online packs by subject edition; quiz metadata and wrong-book entries carry the
-  subject's edition. The built-in offline catalog has no edition column, so
-  offline draws remain edition-agnostic (documented).
-- **Boot autostart controls.** `bootAutostart` (default on, v5-compatible) and
-  `autoGuardOnBoot` (default off) switches, a pure-Java `BootPolicy` action
-  allow-list, and `BootSettings` opening OEM autostart screens (MIUI / ColorOS /
-  EMUI / Funtouch) with a fallback to the app details page.
-- **Wrong-answer swap and wrong-question book.** Two wrong attempts on the same
-  question swap to a fresh question in place (no window re-attach) and record the
-  original into a separate writable `pohw_wrong.db`, deduplicated by a SHA-256
-  key of stem + options. `WrongBookActivity` gives a TV-friendly paged review
-  with correct answer, last wrong pick, explanation, delete and two-step clear.
-  The console shows the count and an entry button.
-- Fresh question draws now avoid immediately repeating the previous question.
-- Settings screen reorganized into three independently scrollable columns so all
-  new rows stay reachable with a TV remote.
-- Added `Hashes`, `Subjects`, `AnswerPolicy`, `BootPolicy`, pure-Java policy
-  classes and 45 new JVM assertions (`FeatureV6Test`): **123/123 total**.
-- Build static guards extended with v6 regression checks; version bumped to
-  6.0.0 / versionCode 10. Signing certificate is unchanged from v4.x/v5 for
-  in-place over-the-top upgrades.
+> 本节是 `v1`–`v6` 开发期内部迭代的合并归档，**不是可下载的 Release**。
+> 原始编号曾随功能跳变（v4.1 → v6.0），不符合语义化版本；commit 历史完整保留，
+> 可按需 `git log` 追溯。下列为当时的关键里程碑摘要。
 
-## Dev build v5.0.0 (versionCode 9) — PoHW / full offline catalog
+- **v1–v3**：demo APK、跨应用答题遮罩、在线题库缓存、家长密码原型。
+- **v4.0.0 (code 4)**：改用内置 SQLite 题库，本地随机抽题、不再依赖 API。
+- **v4.1.0 (code 5)**：修复 PIN 设置（同步 commit、模式复位、硬件数字键）。
+- **v4.2.0 / v4.3.0 (code 6–7)**：题面文字裁切与自适应字号；停止守护需家长 PIN。
+- **v4.4.0 (code 8)**：就地 PIN 验证浮层、按钮换色而不退出界面、动态版本展示；修复悬浮窗僵尸窗口。
+- **v5.0.0 (code 9)**：定名 **PoHW / Proof of Homework**；导入 4,319 个知识点 →
+  5,129 道可校验四选一题，覆盖 1–9 年级 19 学科；在线题库源改为家长自选、
+  默认完全离线；安全加固（PBKDF2 PIN、SHA-256 校验、`allowBackup=false`、禁明文 HTTP）。
+- **v6.0.0 (code 10)**：小米电视真机反馈：暂停 / 恢复播放、分学科教材版本、
+  开机自启、答错 2 次换题与错题库、第二次弹题遥控器焦点修复、三栏设置页。
+- **v6.0.1 (code 11)**：两轮独立复审后的 P0/P1 加固，最终由 v1.0.0 承接。
 
-- Renamed the project to **PoHW (Proof of Homework)**; version label is now read
-  from `PackageManager` at runtime instead of being hardcoded.
-- **Full offline catalog**: all 4,319 unique knowledge points from
-  `RedSamerai/learning-content` (19 subjects, 21 grade bands) are imported into
-  `app/assets/quiz.db`, producing 5,129 locally verifiable four-choice questions.
-  See `docs/BANK_STATS.md`.
-- Added grade 7-9 support and an optional "all subjects" draw mode, so the full
-  K12 catalog is actually reachable from the parent settings.
-- **Removed all third-party / paid question packs** from the APK. Online bank
-  sources are now strictly opt-in: the parent must enter a URL in settings,
-  otherwise the app never touches the network.
-- Hardening: `allowBackup=false`, cleartext HTTP disabled by network security
-  config, boot receiver validates actions, foreground-service strings moved to
-  resources, built-in DB copy is versioned + atomic + fsync'd.
-- Build is now reproducible from the repository root (`app/build.sh` +
-  `tests/run.sh`), with 78 JVM unit tests and an independent bank verifier.
-- Security hardening after an independent Android review: PBKDF2 PIN derivation
-  (legacy hash migration), mandatory SHA-256 on downloaded packs, cross-host URL
-  rejection, foreground-service contract on rejected STOP, background DB open,
-  dedicated notification icon, randomly generated local signing key, and removal
-  of unused permissions.
-
-## v4.4.0 (versionCode 8)
-- In-place PIN verification overlay when stopping the guard; toggle buttons
-  change color/label instead of leaving the screen; dynamic version display.
-- Fixed the zombie overlay window on `addView` failure.
-
-## v4.3.0 (versionCode 7)
-- Stopping the guard requires the parent PIN, enforced a second time in the
-  service (`GuardPolicy`).
-
-## v4.2.0 (versionCode 6)
-- Fixed clipped topic text on the quiz overlay; adaptive question font size.
-
-## v4.1.0 (versionCode 5)
-- Fixed PIN setup (synchronous commit, mode reset, hardware number keys).
-
-## v4.0.0 (versionCode 4)
-- Switched to a built-in SQLite question bank; random local draw, no API.
-
-## v1 - v3
-- Demo APK, cross-app overlay, online bank cache, parent password experiments.
+> 已下架 `v5.0.0` / `v6.0.0` / `v6.0.1` 三个历史 Release；部分内部测试类名
+> （如 `BehaviorV601Test`）沿用开发期标识，不代表发布版本。

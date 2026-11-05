@@ -27,10 +27,12 @@ W = os.path.join(SRC, "SubjectWeights.java")
 B = os.path.join(ROOT, "app/build.sh")
 MF = os.path.join(ROOT, "app/AndroidManifest.xml")
 C = os.path.join(ROOT, "tests/layout_contract.py")
+DO = os.path.join(SRC, "DonateActivity.java")
+LP = os.path.join(SRC, "LaunchPolicy.java")
 CHK = os.path.join(ROOT, "tests/bank_distribution_check.py")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
-for p in (M, S, E, D, O, ST, W, B, MF, C, CHK):
+for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK):
     BK[p] = os.path.join(BK_DIR, os.path.basename(p) + ".bk")
     shutil.copyfile(p, BK[p])
 ORIG = {p: hashlib.sha256(open(p, "rb").read()).hexdigest() for p in BK}
@@ -130,7 +132,7 @@ MUTATIONS = [
     ("O", "service stops passing the fourth weight",
      lambda: replace(O, "st.weight(Subjects.OTHER)", "0"), False, True, False),
     ("P", "versionCode rolled back",
-     lambda: replace(B, 'VERSION_CODE="15"', 'VERSION_CODE="14"'), False, True, False),
+     lambda: replace(B, 'VERSION_CODE="16"', 'VERSION_CODE="15"'), False, True, False),
     ("Q", "OTHER routing disabled",
      lambda: replace(D, "boolean other = s == Subjects.OTHER && allSubjects;", "boolean other = false;"), True, True, False),
     ("R", "single WHERE binding",
@@ -140,6 +142,27 @@ MUTATIONS = [
      lambda: replace(D, "        if (q == null) q = pick(poolWhere, poolArgs);", "        if (q == null) q = pick(\"\", null);"), True, True, False),
     ("U", "empty non-core pool ignored",
      lambda: replace(E, "db.hasOtherQuestions()", "true"), False, True, False),
+    ("V", "row gap removed",
+     lambda: replace(S, "ROW_GAP_DP = 12", "ROW_GAP_DP = 0"), False, True, False),
+    ("W", "boot autostart default flipped back on",
+     lambda: replace(ST, 'getBoolean("bootAutostart", false)',
+                     'getBoolean("bootAutostart", true)'), False, True, False),
+    ("X", "launch-to-guard default flipped back off",
+     lambda: replace(ST, 'getBoolean("autoGuardOnBoot", true)',
+                     'getBoolean("autoGuardOnBoot", false)'), False, True, False),
+    ("Y", "stale boot-only label restored",
+     lambda: replace(S, "开启（启动即守护）", "开启（开机即守护）"), False, True, False),
+    ("Z", "home no longer delegates to LaunchPolicy",
+     lambda: replace(M, "LaunchPolicy.shouldAutoGuard",
+                     "LaunchPolicy.alwaysGuard"), True, True, False),
+    ("AA", "donate activity removed from manifest",
+     lambda: replace(MF, 'android:name=".DonateActivity"',
+                     'android:name=".NoDonate"'), False, True, False),
+    ("AB", "DPAD channel switching removed",
+     lambda: replace(DO, "KEYCODE_DPAD_LEFT", "KEYCODE_DPAD_DOWN"), False, True, False),
+    ("AC", "alipay QR resource dropped",
+     lambda: replace(DO, "R.drawable.donate_alipay",
+                     "R.drawable.donate_wechat"), True, True, False),
 ]
 
 print("--- baseline ---")

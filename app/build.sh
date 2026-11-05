@@ -8,7 +8,7 @@ APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
 VERSION_NAME="1.0.1"
-VERSION_CODE="15"
+VERSION_CODE="16"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -72,6 +72,13 @@ if grep -q -e 'wireColumns' -e 'addColumn' "$SET"; then
 fi
 # 布局契约（3x2 网格 / 单列卡片流 / DPAD 焦点链）由独立脚本逐条断言，
 # 纯 JVM 单测无法实例化 android.view.*，这里守住结构，javac 再守住编译。
+# v1.0.1 家长设置收口：行间距、启动策略与打赏入口的行为符号门禁。
+grep -q "ROW_GAP_DP" "$SET"
+grep -q "DonateActivity" "$APP/AndroidManifest.xml"
+grep -q "LaunchPolicy.shouldAutoGuard" "$MAIN"
+[ -f "$APP/res/drawable-nodpi/donate_wechat.png" ] || { echo "MISSING wechat QR"; exit 1; }
+[ -f "$APP/res/drawable-nodpi/donate_alipay.png" ] || { echo "MISSING alipay QR"; exit 1; }
+[ -f "$ROOT/tools/branding/make_icons.py" ] || { echo "MISSING icon generator"; exit 1; }
 python3 tests/layout_contract.py
 # 运行时回归：用与 App 相同的两条 SQL 实跑内置题库，验证配比与标签。
 python3 tests/bank_distribution_check.py
@@ -137,7 +144,7 @@ fi
 echo "[1/9] verify built-in question bank"
 python3 tools/quizbank/verify.py "$APP/assets/quiz.db"
 
-echo "[2/9] JVM unit tests (198 assertions incl. behaviour regressions)"
+echo "[2/9] JVM unit tests (204 assertions incl. behaviour regressions)"
 bash tests/run.sh
 
 STAMP="$(date +%s)"

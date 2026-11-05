@@ -17,6 +17,10 @@ classes.txt
 *.keystore
 *.jks
 
+# Donation / branding working files (only the cropped PNGs and generator ship)
+/.donate_src/
+/.branding_preview.png
+
 # Python
 __pycache__/
 *.py[cod]

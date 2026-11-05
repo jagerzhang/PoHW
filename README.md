@@ -21,7 +21,7 @@
 | 家长密码 | PBKDF2 + 随机 salt，保护设置页；**关闭守护也必须先验证**，服务侧二次校验 |
 | 就地验证 | 点合并后的守护开关（运行中显示「关闭守护」）不跳页、不退出，只叠加验证层并切换按钮颜色/文字 |
 | 答题暂停视频 | 弹题时申请短暂音频焦点并派发媒体暂停键，答对解锁后归还焦点并尝试恢复（best-effort） |
-| 开机自启 | 「开机自动启动」+「开机自动开启守护」两个独立开关，并提供厂商自启动权限设置入口 |
+| 开机自启 | 「开机自启」默认关闭（家长自行开启）+「启动即守护」默认开启（打开 APP 即自动守护）两个独立开关，并提供厂商自启动权限设置入口 |
 | 错题库 | 同一题答错 2 次自动换题；错题按题面去重记入本地 SQLite，控制台可翻页查看/删除/清空 |
 | 遥控器答题 | 全屏遮罩自主路由方向键/确定键/数字键 1-4，不依赖窗口 View 焦点；服务侧还有窗口焦点重抢状态机，反复弹题/失焦后可恢复 |
 | 可选在线源 | 预留 `index.json + packs/*.json` 同步协议，需家长自己填地址才启用 |
@@ -34,6 +34,7 @@
 - 题目是**由知识点纲目参数化生成**的，不是教材同步真题，也不是教辅题库。
 - **暂停视频是 best-effort**：Android 没有「强制暂停第三方播放器」的公开 API，只能请求音频焦点 + 派发媒体暂停键；不保证所有视频 App 响应。
 - 内置离线题库按课标纲目组织、**不含出版社版本字段**，分学科教材版本用于在线题包筛选、题面标注与错题标记，不会改变离线抽题结果。
+- 打赏页只显示两张静态收款码，**不发起支付、不联网**，APP 不接触金额与账号；扫码与付款都在家长手机上完成。
 - **窗口焦点重抢也是 best-effort**：Android 没有强制夺取 focused window 的公开 API。通知栏/系统对话框抢走焦点时，服务会有限次重下发窗口参数并重建一次窗口；极端情况下遥控器可能仍无法作答，此时遮罩保留（不自动放行），触摸/鼠标点击仍可答题。
 
 ---
@@ -125,7 +126,7 @@ GET <base>/packs/<file>      { schema, id, grade, edition, subject, questions:[{
 ```bash
 export JAVA_HOME=/path/to/jdk-17
 export ANDROID_HOME=/path/to/android-sdk
-bash tests/run.sh          # 198 个 JVM 单测（8 组，含四槽权重分布回归）
+bash tests/run.sh          # 204 个 JVM 单测（8 组，含启动策略与四槽权重回归）
 python3 tools/quizbank/verify.py app/assets/quiz.db
 bash app/build.sh          # -> dist/PoHW-v1.0.1.apk + dist/PoHW-src.zip
 ```
@@ -181,12 +182,13 @@ PoHW/
 ├── app/
 │   ├── AndroidManifest.xml
 │   ├── build.sh                 # 零 Gradle 构建链
-│   ├── src/com/jager/tvquiz/    # 28 个 Java 源文件
-│   ├── res/                     # 图标 / TV banner / strings / network_security_config
+│   ├── src/com/jager/tvquiz/    # 30 个 Java 源文件
+│   ├── res/                     # 5 档图标 / TV banner / 收款码 / strings / network_security_config
 │   └── assets/quiz.db(.version) # 内置离线题库
 ├── tests/
 │   ├── run.sh                   # JVM 单测入口
 │   └── src/                     # 8 组测试 + Android 轻量 stub
+├── tools/branding/make_icons.py  # 可复现图标 / TV banner 生成
 ├── tools/quizbank/
 │   ├── build_bank.py            # 全量纲目 -> SQLite
 │   └── verify.py                # 独立校验
@@ -196,10 +198,37 @@ PoHW/
 
 ---
 
-## v1.0.1 定版（versionCode 15）：独立复审加固
+## v1.0.1 当前定版（versionCode 16）：设置页体验、启动即守护、打赏与品牌图标
 
-> 展示版本与 `versionCode` 都不变（1.0.1 / 15），签名证书 `76eb6063…6172` 连续；
-> 本节是 code15 的最终定版，覆盖同名交付物。下一节记录的是同一 code 的初版实现。
+> 展示版本仍是 **v1.0.1**；`versionCode` 15 → 16，签名证书 `76eb6063…6172` 连续，可直接 `adb install -r` 覆盖安装。
+
+按真机反馈做的 5 项改动：
+
+| 项 | 改动 |
+| --- | --- |
+| **行间距** | 家长设置里所有取值行、按钮、说明文字统一走 `rowLp()`，上下各 6dp（`ROW_GAP_DP=12`），相邻控件 12dp 间距；卡片间距 4/10 → 6/14dp；卡片标题行改 `WRAP_CONTENT + 28dp minHeight`，系统大字模式不再裁切。 |
+| **文案** | 「开启（开机即守护）」改为「开启（启动即守护）」；首页状态行同步改成「启动即守护」。 |
+| **默认开关** | 「启动即守护」默认开、「暂停视频」/「恢复播放」默认开、「开机自启」默认关（家长显式选择并放行厂商自启动权限后才随开机拉起）。`SettingsStore` 键名保持不变，覆盖安装不丢家长旧设置。 |
+| **启动即守护语义** | 新增纯 Java `LaunchPolicy`：APP **冷启动**（`savedInstanceState == null`）+ 开关开启 + 已授权悬浮窗 + 服务未运行，四个条件同时满足才自动拉起守护；从后台返回前台只走 `onResume`，不会把家长手动关掉的守护又打开。开机广播链路仍由 `BootPolicy` 管，两条链路共用同一个开关。 |
+| **打赏作者** | 「检查题库更新」下方新增「打赏作者 · 请喝一杯咖啡」按钮与说明；点开 `DonateActivity` 全屏展示收款码，遥控器 ← / → 切换微信支付 / 支付宝，返回键退出。两张二维码是从家长提供的海报里裁出的白色卡片（保留二维码静区与署名），作为 `res/drawable-nodpi/*.png` 打包。本页**不含任何支付 SDK / 订单 / 网络请求**，扫码与付款都在手机上完成，APP 不接触金额与账号。 |
+| **APP 图标** | 新增可复现的 `tools/branding/make_icons.py`（PIL，零第三方设计工具）：深蓝渐变圆角底 + 琥珀计时弧 + 屏幕里的青绿对勾 + 底座，呼应「答对一题，续租 30 分钟」；生成 5 档密度的 `ic_launcher.png`、640×360 的 `tv_banner.png` 与 2 档白色状态栏小图标。 |
+
+**回归护栏**：布局 / 发布契约 88 → **113 条**；`tests/mutation_suite.py` 21 → **29 组**（新增行间距、四个默认值、启动策略、打赏页位置 / DPAD / 资源、品牌资源等 8 组）；JVM 单测 198 → **204**（`FeatureV6Test` 新增 6 项 `LaunchPolicy` 断言，并同步修正 F1–F4 默认值预期）。
+
+**验证**：`LAYOUT_CONTRACT_OK total=113`、`JVM_TESTS_OK total=204`、
+`BANK_DISTRIBUTION_OK`（含 `FALLBACK_POOL_OK`）、`MUTATION_SUITE_OK 29/29`、
+`BUILD_OK version=1.0.1 code=16`，v1/v2/v3 签名与证书一致。
+
+**真机待确认**：12dp 行间距在小米电视上的观感、打赏页二维码远距离可扫性、
+左右键切渠道与「返回」焦点链、冷启动自动守护与 PIN 关闭守护的交互、
+新图标 / TV banner 在 launcher 里的实际显示。
+
+---
+
+## v1.0.1 复审加固（versionCode 15，历史）
+
+> 本节记录 code15 的独立复审加固；当前定版为 **code16**，见上一节。
+> 签名证书 `76eb6063…6172` 连续；下一节记录的是同一 code 的初版实现。
 
 独立只读复审（`weighting-reviewer`）结论为**有条件通过、无 P0**，但指出 4 个 P1 都落在
 「门禁自己没守住、最易回归的代码点」，另有 6 个 P2。全部已在代码层面修掉：

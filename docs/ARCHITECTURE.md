@@ -8,6 +8,8 @@
 | `SettingsActivity` | 家长设置：PIN 门禁 + 单列卡片流（居中窄栏 + 5 张分组卡片 + 底部固定操作条），学科行左教材右配比 |
 | `QuizOverlayService` | 前台服务：1 秒计时、WindowManager 全屏遮罩、答题判定、可选在线同步 |
 | `BootReceiver` | 开机恢复守护（校验 action + 守护开关 + 悬浮窗授权） |
+| `LaunchPolicy` | 「启动即守护」冷启动判定（纯 Java，可 JVM 单测） |
+| `DonateActivity` | 打赏页：微信 / 支付宝收款码 + 遥控器左右切渠道，纯静态资源、无支付 SDK |
 | `QuizDb` | 内置 SQLite：版本化原子复制、只读、按学科池本地随机抽题、池保持跨年级兜底 + 全库最后兜底；用题目真实 `subject` 反推标签 |
 | `QuizEngine` | 三层出题链：DB -> 在线缓存题 -> 参数化生成器；委托 `SubjectWeights` 做四槽轮盘赌 |
 | `BankRepository` | 可选在线题库：版本比对、分块下载、SHA-256、原子缓存 |
@@ -26,7 +28,7 @@ v1.0.1 起控制台只有一个守护开关：`GuardState.toggleColor(running)` 
 左右关系，保证 TV 遥控器能在教材版本与题目配比之间移动，且不需要跨栏跳转。
 单列行两端未显式定义的左右目标指向自身（URL `EditText` 例外，左右键留给光标移动），
 避免系统按几何邻近把焦点甩到相邻行；行按钮 `WRAP_CONTENT` + 44dp 最小高度，兼容系统大字模式。
-源码结构由 `tests/layout_contract.py` 的 **88 条**断言在构建门禁里守住，
+源码结构由 `tests/layout_contract.py` 的 **113 条**断言在构建门禁里守住，
 `build.sh` 另在签名后强制比对发布证书指纹。
 
 **学科配比（versionCode 15）**：`SubjectWeights` 保存数 / 语 / 英 / 其他四槽权重（默认 5:3:2:2）。
@@ -40,7 +42,14 @@ v1.0.1 起控制台只有一个守护开关：`GuardState.toggleColor(running)` 
 提取真实 SQL 实跑内置题库，验证池隔离、配比分布与全学科关闭时 0 题，纳入 `[0/9]` 门禁。
 兜底是**池保持**的：先只放宽年级（`POOL_CORE_ALL` / `POOL_OTHER_ALL`），最后才全库；
 空池用 `MAX(1, (SELECT COUNT(*) ...))` 保证 `OFFSET` 不为 NULL，避免 SQL 异常被吞后静默串池。
-同一批 `POOL_*` 常量、双份参数绑定与三层兜底都被 88 条契约和 `tests/mutation_suite.py` 的 21 组变异钉死。
+同一批 `POOL_*` 常量、双份参数绑定与三层兜底都被 113 条契约和 `tests/mutation_suite.py` 的 29 组变异钉死。
+
+**默认开关与启动链路**：全新安装时「开机自启」关、「启动即守护」开、答题暂停与恢复播放均开。
+`MainActivity.onCreate()` 用 `LaunchPolicy.shouldAutoGuard()` 判定是否自动拉起守护，四个条件缺一不可：
+冷启动（`savedInstanceState == null`）、开关开启、已授权悬浮窗、服务未运行。从后台返回前台只走
+`onResume`，不会撤销家长用 PIN 手动关闭的守护；开机广播仍由 `BootPolicy` 管，两条链路共用
+`SettingsStore.autoGuardOnBoot()`（键名保留以兼容覆盖安装）。家长设置页所有行、按钮与说明
+统一走 `rowLp()` 拿 12dp 行间距，卡片标题按内容自适应高度。
 
 ## 主流程
 

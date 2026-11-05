@@ -36,6 +36,8 @@ public class SettingsActivity extends Activity {
     /** 行标签宽度：普通行与学科行分别取不同值，避免右侧取值被压窄。 */
     private static final int LABEL_DP = 150;
     private static final int SUBJ_LABEL_DP = 100;
+    /** 卡片内行、按钮、说明共用的上下留白（相邻两行间距 = 上下各一半相加）。 */
+    private static final int ROW_GAP_DP = 12;
 
     private SettingsStore st;
     private PinGate gate;
@@ -190,7 +192,7 @@ public class SettingsActivity extends Activity {
         card.setPadding(Ui.dp(this, 18), Ui.dp(this, 8), Ui.dp(this, 18), Ui.dp(this, 12));
         LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        cp.setMargins(0, Ui.dp(this, 4), 0, Ui.dp(this, 10));
+        cp.setMargins(0, Ui.dp(this, 6), 0, Ui.dp(this, 14));
         parent.addView(card, cp);
 
         LinearLayout head = Ui.hbox(this);
@@ -202,8 +204,10 @@ public class SettingsActivity extends Activity {
         tv.setPadding(Ui.dp(this, 10), 0, 0, 0);
         head.addView(tv, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        // 标题行随系统字体缩放自适应，不写死 28dp 高度。
+        head.setMinimumHeight(Ui.dp(this, 28));
         card.addView(head, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 28)));
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return card;
     }
 
@@ -211,8 +215,7 @@ public class SettingsActivity extends Activity {
         TextView t = Ui.tv(this, text, 12, Ui.MUTED, Gravity.LEFT);
         t.setLineSpacing(0, 1.15f);
         t.setPadding(0, Ui.dp(this, 3), 0, Ui.dp(this, 2));
-        parent.addView(t, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        parent.addView(t, rowLp());
     }
 
     /** 把本行可聚焦控件登记进纵向焦点链；说明文字与禁用占位不登记。 */
@@ -222,6 +225,15 @@ public class SettingsActivity extends Activity {
             if (v != null && v.isEnabled() && v.isFocusable()) usable.add(v);
         }
         if (!usable.isEmpty()) focusRows.add(usable.toArray(new View[0]));
+    }
+
+    /** 卡片内所有行、按钮、说明共用的上下留白，避免遥控器视角下按钮连成一片。 */
+    private LinearLayout.LayoutParams rowLp() {
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        int half = Ui.dp(this, ROW_GAP_DP / 2);
+        p.setMargins(0, half, 0, half);
+        return p;
     }
 
     /** 统一行：左侧固定标签，右侧取值按钮按 weight 填满窄栏，不再写死 178dp。 */
@@ -242,8 +254,7 @@ public class SettingsActivity extends Activity {
         // 高度随系统字体缩放自适应，避免大字模式下两行文案被固定 44dp 裁切。
         row.addView(b, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        parent.addView(row, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        parent.addView(row, rowLp());
         track(b);
         return b;
     }
@@ -253,10 +264,7 @@ public class SettingsActivity extends Activity {
         b.setOnClickListener(l);
         Ui.focus(b, this, bg, 0xFFFFFFFF);
         b.setMinHeight(Ui.dp(this, 44));
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        p.setMargins(0, Ui.dp(this, 3), 0, Ui.dp(this, 3));
-        parent.addView(b, p);
+        parent.addView(b, rowLp());
         track(b);
     }
 
@@ -336,6 +344,8 @@ public class SettingsActivity extends Activity {
                         Toast.LENGTH_LONG).show();
             }
         });
+        note(boot, "「启动即守护」默认开启：打开 APP 即自动进入守护；「开机自启」默认关闭，"
+                + "需家长自行开启并允许厂商自启动权限后，才会随开机拉起。");
         note(boot, "暂停视频是 best-effort：靠音频焦点 + 媒体键请求播放器暂停，不保证所有视频 App 响应。");
 
         // ---- 04 错题库 ----
@@ -405,6 +415,14 @@ public class SettingsActivity extends Activity {
                         });
             }
         });
+        // 打赏入口紧跟「检查题库更新」：纯静态收款码，不联网、不含支付 SDK。
+        addButton(online, "打赏作者 · 请喝一杯咖啡", 0xFFB5762E, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(SettingsActivity.this, DonateActivity.class));
+            }
+        });
+        note(online, "如果觉得 PoHW 好用，可以请作者喝一杯咖啡。完全自愿、不影响任何功能；"
+                + "点开后可用遥控器左右键切换微信支付 / 支付宝收款码，用手机扫码即可。");
         note(online, "默认完全离线：内置全量 K12 题库，不联网；只有填写在线源地址后才会按周期联网。");
 
         root.addView(sv, Ui.fill(1));
@@ -537,8 +555,7 @@ public class SettingsActivity extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         track(ed, wt);
 
-        parent.addView(row, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        parent.addView(row, rowLp());
         rowEd[subj] = ed;
         rowWt[subj] = wt;
         subjectPairs.add(new Button[]{ed, wt});
@@ -574,8 +591,8 @@ public class SettingsActivity extends Activity {
             if (s == Subjects.OTHER && !st.allSubjects()) w += " · 未启用";
             rowWt[s].setText(w);
         }
-        rowBoot.setText(st.bootAutostart() ? "开启（响应开机广播）" : "关闭");
-        rowAutoGuard.setText(st.autoGuardOnBoot() ? "开启（开机即守护）" : "关闭（仅恢复上次）");
+        rowBoot.setText(st.bootAutostart() ? "开启（响应开机广播）" : "关闭（需家长手动开启）");
+        rowAutoGuard.setText(st.autoGuardOnBoot() ? "开启（启动即守护）" : "关闭（仅恢复上次）");
         rowPause.setText(st.pauseOnQuiz() ? "开启（音频焦点+媒体键）" : "关闭");
         rowResume.setText(st.resumePlayback() ? "开启（尝试恢复）" : "关闭");
         if (!urlDirty) setUrlText(st.bankUrl(), false);

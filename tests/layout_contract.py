@@ -178,8 +178,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="15"' in _mf, "manifest versionCode advances to 15")
-check('VERSION_CODE="15"' in b, "build script versionCode advances to 15")
+check('android:versionCode="16"' in _mf, "manifest versionCode advances to 16")
+check('VERSION_CODE="16"' in b, "build script versionCode advances to 16")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -220,8 +220,68 @@ check("MAX(1, (SELECT COUNT(*) FROM questions " in _d
 check("POOL_OTHER_ALL" in _chk and "POOL_CORE_ALL" in _chk,
       "distribution check reads the same named SQL constants")
 check(os.path.isfile(_mut), "mutation harness is committed and reproducible")
-check("198 assertions" in b, "build log states the actual JVM assertion count")
+check("204 assertions" in b, "build log states the actual JVM assertion count")
 check("显示「—」并禁用焦点" not in raw_s, "stale UI comment about the fourth row is gone")
 check("题库不可用" in raw_s, "settings note explains the bank-unavailable case")
+
+
+
+# ---- 设置页行间距 / 四个默认开关 / APP 启动即守护 ----
+_donate = strip_comments(read(os.path.join(
+    ROOT, "app/src/com/jager/tvquiz/DonateActivity.java")))
+_launch = strip_comments(read(os.path.join(
+    ROOT, "app/src/com/jager/tvquiz/LaunchPolicy.java")))
+_res = os.path.join(ROOT, "app/res")
+
+check("ROW_GAP_DP = 12" in s, "settings declares a shared 12dp row gap")
+check(s.count("rowLp()") == 5, "row gap is applied to every row, button and note")
+check("p.setMargins(0, half, 0, half)" in s, "row gap is symmetric top and bottom")
+check('getBoolean("bootAutostart", false)' in _st,
+      "boot autostart defaults off (parent opt-in)")
+check('getBoolean("autoGuardOnBoot", true)' in _st,
+      "launch-to-guard defaults on")
+check('getBoolean("pauseOnQuiz", true)' in _st
+      and 'getBoolean("resumePlayback", true)' in _st,
+      "pause and resume both default on")
+check("开启（启动即守护）" in raw_s and "开机即守护" not in raw_s,
+      "auto-guard label says launch, not boot")
+check("LaunchPolicy.shouldAutoGuard" in m,
+      "home delegates launch auto-guard to a pure policy")
+check("b == null" in m, "auto-guard fires only on a genuine cold start")
+check("启动即守护" in m, "home status line uses the new wording")
+check("public static boolean shouldAutoGuard" in _launch,
+      "launch policy is pure Java and unit-testable")
+check("LaunchPolicy.java" in _run, "launch policy is compiled into JVM tests")
+
+# ---- 打赏入口：位置、页面、渠道切换、静态资源 ----
+check('"打赏作者 · 请喝一杯咖啡"' in raw_s, "donate entry is in parent settings")
+check("DonateActivity.class" in raw_s, "donate entry opens the donate page")
+check(raw_s.find('"检查题库更新"') < raw_s.find('"打赏作者'),
+      "donate entry sits directly below the bank-update option")
+check('android:name=".DonateActivity"' in _mf,
+      "donate activity is declared in the manifest")
+check("R.drawable.donate_wechat" in _donate
+      and "R.drawable.donate_alipay" in _donate,
+      "both QR resources are referenced by the donate page")
+check("KEYCODE_DPAD_LEFT" in _donate and "KEYCODE_DPAD_RIGHT" in _donate,
+      "DPAD left/right switch the donation channel")
+check("微信支付" in _donate and "支付宝" in _donate,
+      "both payment tabs are labelled")
+check("ImageView.ScaleType.FIT_CENTER" in _donate,
+      "QR keeps its aspect ratio so it stays scannable on TV")
+check(os.path.isfile(os.path.join(_res, "drawable-nodpi/donate_wechat.png"))
+      and os.path.isfile(os.path.join(_res, "drawable-nodpi/donate_alipay.png")),
+      "both QR PNGs are packaged as APK resources")
+
+# ---- 品牌资源：可复现生成器 + 多密度图标 + TV banner ----
+check(os.path.isfile(os.path.join(ROOT, "tools/branding/make_icons.py")),
+      "icon generator is committed and reproducible")
+check(all(os.path.isfile(os.path.join(_res, d, "ic_launcher.png")) for d in
+          ("drawable-mdpi", "drawable-hdpi", "drawable-xhdpi",
+           "drawable-xxhdpi", "drawable-xxxhdpi")),
+      "launcher icon ships at five densities")
+check(os.path.isfile(os.path.join(_res, "drawable-xhdpi/tv_banner.png")),
+      "TV banner is shipped")
+check("make_icons.py" in b, "build gate verifies the branding generator")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

@@ -2,6 +2,7 @@ import android.content.Context;
 import com.jager.tvquiz.AnswerPolicy;
 import com.jager.tvquiz.BootPolicy;
 import com.jager.tvquiz.Hashes;
+import com.jager.tvquiz.LaunchPolicy;
 import com.jager.tvquiz.SettingsStore;
 import com.jager.tvquiz.Subjects;
 
@@ -105,15 +106,15 @@ public class FeatureV6Test {
                         && "外研版".equals(st2.editionFor(Subjects.ENGLISH)));
 
         // ---------- SettingsStore: 开机 / 播放开关 ----------
-        ok("F1 bootAutostart default true (v5 compatible)", st2.bootAutostart());
-        ok("F2 autoGuardOnBoot default false", !st2.autoGuardOnBoot());
-        st2.bootAutostart(false);
-        st2.autoGuardOnBoot(true);
-        ok("F3 boot flag toggles", !st2.bootAutostart() && st2.autoGuardOnBoot());
+        ok("F1 bootAutostart default false (parent opt-in)", !st2.bootAutostart());
+        ok("F2 autoGuardOnBoot default true (launch = guard)", st2.autoGuardOnBoot());
+        st2.bootAutostart(true);
+        st2.autoGuardOnBoot(false);
+        ok("F3 boot flag toggles", st2.bootAutostart() && !st2.autoGuardOnBoot());
         Context.restartProcess();
         SettingsStore st3 = new SettingsStore(new Context());
         ok("F4 boot flags survive process restart",
-                !st3.bootAutostart() && st3.autoGuardOnBoot());
+                st3.bootAutostart() && !st3.autoGuardOnBoot());
         ok("P1 pauseOnQuiz default on", st3.pauseOnQuiz());
         ok("P2 resumePlayback default on", st3.resumePlayback());
         st3.pauseOnQuiz(false);
@@ -123,6 +124,21 @@ public class FeatureV6Test {
         SettingsStore st4 = new SettingsStore(new Context());
         ok("P4 playback flags survive process restart",
                 !st4.pauseOnQuiz() && !st4.resumePlayback());
+
+        // ---------- LaunchPolicy：APP 启动即守护 ----------
+        ok("L1 cold start + configured + permission -> auto guard",
+                LaunchPolicy.shouldAutoGuard(true, true, true, false));
+        ok("L2 warm resume never re-enables guard",
+                !LaunchPolicy.shouldAutoGuard(false, true, true, false));
+        ok("L3 parent opt-out respected",
+                !LaunchPolicy.shouldAutoGuard(true, false, true, false));
+        ok("L4 missing overlay permission blocks auto guard",
+                !LaunchPolicy.shouldAutoGuard(true, true, false, false));
+        ok("L5 already running is not started twice",
+                !LaunchPolicy.shouldAutoGuard(true, true, true, true));
+        ok("L6 all four gates combined",
+                LaunchPolicy.shouldAutoGuard(true, true, true, false)
+                        && !LaunchPolicy.shouldAutoGuard(false, true, true, false));
 
         System.out.println("----");
         System.out.println("PASS=" + pass + " FAIL=" + fail);

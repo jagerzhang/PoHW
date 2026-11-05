@@ -1,8 +1,9 @@
 package com.jager.tvquiz;
 
 /**
- * 开机自启策略：action 白名单 + 两个开关的组合判定。
+ * 开机广播策略：action 白名单 + 两个开关的组合判定。
  * 纯 Java，便于 JVM 单测；真机拉起服务仍由 BootReceiver 负责。
+ * 「启动即守护」另有 APP 冷启动链路（见 LaunchPolicy），本类只管开机广播。
  */
 public final class BootPolicy {
 

@@ -75,21 +75,24 @@ public final class SettingsStore implements PinGate.Store {
     public void editionIndex(int v) { setEditionIndexFor(Subjects.MATH, v); }
     public String edition() { return editionFor(Subjects.MATH); }
 
-    // ---------- 开机自启 / 自动守护 ----------
+    // ---------- 开机自启 / 启动即守护 ----------
 
-    /** 是否响应开机广播（v5 行为为 true，保持向后兼容）。 */
-    public boolean bootAutostart() { return sp.getBoolean("bootAutostart", true); }
+    /** 是否响应开机广播。默认关闭：是否随系统开机拉起，必须由家长显式选择并放行厂商自启动权限。 */
+    public boolean bootAutostart() { return sp.getBoolean("bootAutostart", false); }
     public void bootAutostart(boolean v) {
         sp.edit().putBoolean("bootAutostart", v).commit();
     }
 
-    /** 开机时无论上次守护是否开启，都自动开启守护（默认关，需家长显式打开）。 */
-    public boolean autoGuardOnBoot() { return sp.getBoolean("autoGuardOnBoot", false); }
+    /**
+     * 「启动即守护」默认开启：APP 冷启动（含开机广播链路）即进入守护。
+     * SharedPreferences 键沿用 autoGuardOnBoot，保证覆盖安装不丢家长旧设置。
+     */
+    public boolean autoGuardOnBoot() { return sp.getBoolean("autoGuardOnBoot", true); }
     public void autoGuardOnBoot(boolean v) {
         sp.edit().putBoolean("autoGuardOnBoot", v).commit();
     }
 
-    // ---------- 答题时暂停播放 ----------
+    // ---------- 答题时暂停播放（两项默认开启，家长可分别关闭） ----------
 
     public boolean pauseOnQuiz() { return sp.getBoolean("pauseOnQuiz", true); }
     public void pauseOnQuiz(boolean v) {

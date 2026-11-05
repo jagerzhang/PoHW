@@ -76,6 +76,14 @@ public class MainActivity extends Activity {
         readVersion();
         setContentView(buildView());
         render();
+        // 「启动即守护」：只在冷启动（savedInstanceState 为空）触发；从后台返回前台
+        // 走 onResume，不会把家长手动关闭的守护又自动打开。
+        if (LaunchPolicy.shouldAutoGuard(b == null, st.autoGuardOnBoot(),
+                canDrawCached, QuizOverlayService.isRunning())) {
+            send(QuizOverlayService.ACTION_START);
+            Toast.makeText(this, "已按设置自动开启守护", Toast.LENGTH_SHORT).show();
+            handler.postDelayed(renderOnce, 300);
+        }
     }
 
     @Override protected void onResume() {
@@ -412,7 +420,7 @@ public class MainActivity extends Activity {
         s.append("  ·  统计：答对 ")
                 .append(st.correct()).append(" / ").append(st.questioned()).append(" 题").append(NL);
         s.append("开机自启：").append(st.bootAutostart() ? "开" : "关")
-                .append("（自动开启守护：").append(st.autoGuardOnBoot() ? "开" : "关")
+                .append("（启动即守护：").append(st.autoGuardOnBoot() ? "开" : "关")
                 .append("）  ·  答题暂停视频：").append(st.pauseOnQuiz() ? "开" : "关")
                 .append(" / 自动恢复：").append(st.resumePlayback() ? "开" : "关").append(NL);
         s.append("题库源：").append(st.bankSource()).append(" · 版本 ").append(st.bankVersion())

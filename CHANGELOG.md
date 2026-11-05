@@ -8,6 +8,49 @@
 > 标识，同样不代表发布版本。Android `versionCode` 是单调技术计数，不随展示版本
 > 重置：v1.0.0 为 12（前值 11），因此可直接 `adb install -r` 覆盖安装。
 
+## v1.0.1 (versionCode 16) - settings polish, launch-to-guard, donation, branding
+
+Display version stays **1.0.1**; `versionCode` moves 15 -> 16 with the same
+release keystore (SHA-256 `76eb6063b574...26172`), so `adb install -r` is a
+real upgrade.
+
+- **Row gap.** Every settings row, button and note now goes through `rowLp()`
+  (`ROW_GAP_DP=12`, 6dp on each side); card spacing moves 4/10 -> 6/14dp and
+  the card header uses `WRAP_CONTENT` + 28dp minHeight so font scale 1.5 no
+  longer clips it. This fixes buttons visually glued together on the TV.
+- **Wording.** `开启（开机即守护）` becomes `开启（启动即守护）`; the home
+  status line uses the same wording.
+- **Defaults (fresh installs).** `bootAutostart` false (parent must opt in and
+  grant the vendor autostart permission), `autoGuardOnBoot` true, `pauseOnQuiz`
+  and `resumePlayback` true. SharedPreferences keys are unchanged so an
+  in-place upgrade never resets a parent's own choices.
+- **Launch = guard.** New pure-Java `LaunchPolicy.shouldAutoGuard()` gates the
+  cold start on four conditions (cold start, switch on, overlay permission
+  granted, service not already running). `MainActivity.onCreate()` delegates to
+  it; returning from background only runs `onResume`, so a guard the parent
+  stopped with PIN is not silently re-enabled. The boot broadcast path stays
+  in `BootPolicy`; both share the same switch.
+- **Donation.** A `打赏作者 · 请喝一杯咖啡` button sits directly below the bank
+  update option in parent settings. `DonateActivity` shows full-screen QR codes,
+  DPAD left/right switches WeChat Pay / Alipay, BACK exits. The two QR cards
+  are cropped from the posters supplied by the author (quiet zone and signature
+  preserved) and shipped as `res/drawable-nodpi/*.png`. There is no payment SDK,
+  no order and no network call: scanning and paying happen on the phone.
+- **Branding.** New reproducible `tools/branding/make_icons.py` (PIL only)
+  draws a dark-navy rounded icon with an amber timer arc, a screen and a mint
+  checkmark; it emits launcher icons at 5 densities, a 640x360 TV banner and
+  2 white status-bar glyphs.
+- **Gates.** `tests/layout_contract.py` grows 88 -> **113** assertions;
+  `tests/mutation_suite.py` grows 21 -> **29** mutations (row gap, four
+  defaults, launch policy, donation position/DPAD/resources, branding);
+  `FeatureV6Test` adds 6 `LaunchPolicy` assertions and updates F1-F4, so JVM
+  tests grow 198 -> **204**.
+- Verification: `LAYOUT_CONTRACT_OK total=113`, `JVM_TESTS_OK total=204`,
+  `BANK_DISTRIBUTION_OK` (incl. `FALLBACK_POOL_OK`), `MUTATION_SUITE_OK 29/29`,
+  `BUILD_OK version=1.0.1 code=16`, v1/v2/v3 signatures valid. TV-side checks
+  still needed: 12dp gap appearance, QR scannability at distance, DPAD channel
+  switch focus chain, cold-start auto-guard vs PIN stop, new icon/banner.
+
 ## v1.0.1 (versionCode 15, final) - review-driven hardening
 
 Display version and `versionCode` are unchanged; this is the final hardened

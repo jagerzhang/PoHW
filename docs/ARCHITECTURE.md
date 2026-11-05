@@ -23,7 +23,10 @@ v1.0.1 起控制台只有一个守护开关：`GuardState.toggleColor(running)` 
 家长设置只有一个 `ScrollView`：5 张卡片按行登记进 `focusRows`，
 `wireVerticalFocus()` 串起跨卡片的上下链，`wireSubjectRows()` 再覆盖学科行内的
 左右关系，保证 TV 遥控器能在教材版本与题目配比之间移动，且不需要跨栏跳转。
-源码结构由 `tests/layout_contract.py` 的 27 条断言在构建门禁里守住。
+单列行两端未显式定义的左右目标指向自身（URL `EditText` 例外，左右键留给光标移动），
+避免系统按几何邻近把焦点甩到相邻行；行按钮 `WRAP_CONTENT` + 44dp 最小高度，兼容系统大字模式。
+源码结构由 `tests/layout_contract.py` 的 40 条断言在构建门禁里守住，
+`build.sh` 另在签名后强制比对发布证书指纹。
 
 ## 主流程
 

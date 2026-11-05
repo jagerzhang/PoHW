@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""PoHW UI 布局契约：源码级静态断言，零 Android 依赖，可由构建门禁直接执行。
+"""PoHW UI / 发布契约：源码级静态断言，零 Android 依赖，可由构建门禁直接执行。
 
-首页 3 列 × 2 排与家长设置单列卡片流是 TV 遥控器可用性的硬约束，
-纯 JVM 单测无法实例化 android.view.*，因此用源码符号契约守住结构，
-再配合 build.sh 的 javac/apksigner 保证符号真的被编译进 dex。
+首页 3 列 × 2 排、家长设置单列卡片流与发布证书连续性是 TV 遥控器可用性
+与覆盖安装的硬约束；纯 JVM 单测无法实例化 android.view.*，因此用源码符号
+契约守住结构，再配合 build.sh 的 javac/apksigner 保证符号真的被编译进 dex。
 
-注意：调用次数类断言必须基于「去注释代码行」，否则把调用注释掉也会被计数放行；
-而三栏残留这类负向断言仍基于原始文件，注释里的旧符号同样视为残留。
+注意：调用次数类断言必须基于「去注释代码行」（含 /* */ 块注释状态机），
+否则把调用注释掉也会被计数放行；三栏残留这类负向断言仍基于原始文件。
 """
 import io
 import os
@@ -17,6 +17,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MAIN = os.path.join(ROOT, "app/src/com/jager/tvquiz/MainActivity.java")
 SET = os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsActivity.java")
+BUILD = os.path.join(ROOT, "app/build.sh")
 
 TOTAL = 0
 
@@ -27,10 +28,31 @@ def read(path):
 
 
 def strip_comments(text):
-    return "\n".join(
-        line for line in text.splitlines()
-        if not line.lstrip().startswith(("//", "*", "/*"))
-    )
+    """丢弃 // 整行注释与 /* ... */ 块注释（含跨行块），保留行内代码。"""
+    out = []
+    in_block = False
+    for line in text.splitlines():
+        cur = line
+        if in_block:
+            end = cur.find("*/")
+            if end < 0:
+                continue
+            cur = cur[end + 2:]
+            in_block = False
+        while True:
+            start = cur.find("/*")
+            if start < 0:
+                break
+            end = cur.find("*/", start + 2)
+            if end < 0:
+                cur = cur[:start]
+                in_block = True
+                break
+            cur = cur[:start] + cur[end + 2:]
+        if cur.lstrip().startswith("//"):
+            continue
+        out.append(cur)
+    return "\n".join(out)
 
 
 def check(ok, msg):
@@ -44,6 +66,7 @@ def check(ok, msg):
 
 raw_m = read(MAIN)
 raw_s = read(SET)
+b = read(BUILD)
 m = strip_comments(raw_m)
 s = strip_comments(raw_s)
 
@@ -80,7 +103,35 @@ check("track(urlEdit)" in s, "URL field participates in the focus chain")
 check("setMinHeight(Ui.dp(this, 72))" in s,
       "bank status uses min-height instead of a clipping fixed height")
 check("Ui.dp(this, GUTTER_DP)" in s, "cards and footer share one centred gutter")
-check("new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f)" in s,
-      "row values fill the narrow column by weight")
+check("ViewGroup.LayoutParams.WRAP_CONTENT, 1f" in s,
+      "row values fill the narrow column by weight and wrap by content")
+
+# 复审加固：滚动容器参数与左右焦点边界
+check("sv.setFillViewport(true)" in s, "scroll view uses fillViewport for short content")
+check("root.addView(sv, Ui.fill(1))" in s, "scroll area takes remaining height by weight")
+check("shell.addView(col" in s and "ViewGroup.LayoutParams.WRAP_CONTENT" in s,
+      "scroll child is wrap_content so long forms can scroll")
+check(s.count("Ui.fill(1)") == 1, "exactly one weighted scroll area, footer stays fixed")
+check("root.addView(sv, Ui.fixed(" not in s and "setFillViewport(false)" not in s,
+      "no fixed-height / non-fill scroll regression")
+check(s.count("setMinHeight(Ui.dp(this, 44))") >= 4,
+      "row buttons keep a 44dp minimum but grow with font scale")
+check("getNextFocusLeftId() == View.NO_ID" in s
+      and "getNextFocusRightId() == View.NO_ID" in s,
+      "undefined left/right targets are pinned to self, not geometric search")
+check("!(v instanceof EditText)" in s,
+      "URL EditText keeps left/right keys for cursor movement")
+
+# ---- 发布证书门禁：防止 dev 随机密钥产出可发布 APK ----
+check("RELEASE_CERT_SHA256" in b and "ACTUAL_CERT_SHA256" in b,
+      "build compares actual APK certificate to the release certificate")
+check("apksigner verify --print-certs" in b,
+      "certificate is read from the signed APK, not from the keystore alone")
+check("76eb6063b574d6df1cd52ac490d82185793bf48abe0185687f4d977e49626172" in b,
+      "pinned release certificate SHA-256 is present")
+check("POHW_ALLOW_DEV_SIGN" in b,
+      "dev-sign override is explicit and opt-in")
+check("versionCode='$VERSION_CODE'" in b,
+      "artifact check verifies versionCode as well as versionName")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

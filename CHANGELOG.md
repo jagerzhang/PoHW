@@ -27,15 +27,26 @@ keystore (SHA-256 `76eb6063b574…26172`).
   nested cards; `wireSubjectRows()` still handles edition <-> weight, and the
   URL field plus footer buttons join the chain. `wireColumns()` / `addColumn()`
   are removed.
-- **Gates.** `tests/layout_contract.py` adds 27 source-level assertions wired
-  into `[0/9] static guards`; call-count assertions run on comment-stripped
-  code so commenting out a call cannot slip through. Three negative mutations
-  (2-column regression, legacy column helper, removed vertical chain) were all
-  rejected by both the contract and `build.sh`.
-- Verification: `LAYOUT_CONTRACT_OK total=27`, `JVM_TESTS_OK total=178`, bank
+- **Independent review hardening.** A read-only review found no P0 and one
+  P1: `build.sh` verified signature validity but not signer identity, so a
+  default build silently produced an APK that cannot upgrade an installed
+  release. `[8/9]` now pins and compares the APK certificate SHA-256
+  (`76eb6063b574…26172`) and exits on mismatch; local experiments must opt in
+  with `POHW_ALLOW_DEV_SIGN=1`. Additional fixes: undefined left/right focus
+  targets are pinned to self (EditText keeps cursor keys), row buttons use
+  `WRAP_CONTENT` + 44dp min-height for large font scales, and the contract now
+  covers `setFillViewport`, `Ui.fill(1)` and wrap-content scroll children.
+- **Gates.** `tests/layout_contract.py` adds 40 source-level assertions wired
+  into `[0/9] static guards`; call counts run on code stripped of both `//`
+  and `/* */` comments via a block state machine. Eight negative mutations
+  (2-column regression, legacy column helper, line/block-commented focus
+  chains, removed fillViewport, fixed-height scroll area, wrong cert pin,
+  dev-signed build) were all rejected by the contract or `build.sh`.
+- Verification: `LAYOUT_CONTRACT_OK total=40`, `JVM_TESTS_OK total=178`, bank
   verifier PASS, full `aapt2 -> javac -> d8 -> zipalign -> apksigner` build,
-  v1/v2/v3 signatures valid, `versionCode='14' versionName='1.0.1'`.
-  TV DPAD behaviour on a real Mi TV still needs an on-device pass.
+  v1/v2/v3 signatures valid, `versionCode='14' versionName='1.0.1'`,
+  `MUTATION_SUITE2_OK 8/8`. TV DPAD behaviour, font scale 1.5 and the URL
+  field IME still need an on-device pass.
 
 ## v1.0.1 (versionCode 13) — console & settings UI consolidation
 

@@ -95,18 +95,22 @@ Gradle Wrapper、联网拉依赖和一套额外的构建缓存。命令行链路
 `EXTRA_STOP_VERIFIED`。另外确认 `QuickBootReceiver` 已注册、
 `KeyRouter` / `QuizFlow` / `BehaviorV601Test` 真的被编译与执行。
 
-`[0/9]` 还会执行 `python3 tests/layout_contract.py`：27 条源码级布局契约断言，
-覆盖首页 3×2 网格、设置页单列卡片流、等宽 weight 布局与四向 DPAD 焦点链。
-调用次数类断言基于去注释代码行，注释掉 `wireVerticalFocus()` 调用也会被拦下；
+`[0/9]` 还会执行 `python3 tests/layout_contract.py`：40 条源码级布局与发布契约断言，
+覆盖首页 3×2 网格、设置页单列卡片流、等宽 weight 布局、四向 DPAD 焦点链、
+滚动容器参数（`setFillViewport` / `Ui.fill(1)` / wrap-content 子容器）以及证书门禁本身。
+调用次数类断言基于带 `/* */` 块注释状态机的去注释代码行，行注释与块注释掉调用都会被拦下；
 负向门禁同时禁止 `wireColumns` / `addColumn` 三栏旧助手残留。
+8 组负向变异（含不带发布密钥构建）全部被拦下。
 
 `[2/9]` 现在跑 7 组共 **178** 个 JVM 单测（新增 `BehaviorV601Test` 51 项，
 覆盖按键 ACTION_DOWN/UP 与 repeat、2x2 高亮邻接、答题状态机、令牌 TTL/重放/进程重启）；
 `[6/9]` 仍检查 dex 中含「错题库」字符串。
 
-覆盖安装保持签名一致（**必须**显式指定与已发布版本相同的 keystore，
-否则 `build.sh` 会在 `.build/` 用随机开发密钥重签，设备安装会因签名不匹配被拒绝；
-已发布 v1.0.0 / v1.0.1 的证书 SHA-256 为 `76eb6063b574…26172`）：
+覆盖安装保持签名一致：**`[8/9]` 会用 `apksigner verify --print-certs` 读取成品 APK 的
+证书 SHA-256，与钉死的 `76eb6063b574…26172` 比对，不一致直接 `exit 1`**。
+`apksigner verify --verbose` 只证明签名有效、不证明签名者相同，所以这层门禁不能省。
+仅本地实验构建可显式 `POHW_ALLOW_DEV_SIGN=1` 跳过并接受醒目警告；
+正常发布必须显式指定与已发布版本相同的 keystore：
 
 ```bash
 JAVA_HOME=/opt/jdk17 ANDROID_HOME=/path/to/sdk POHW_KEYSTORE=/path/to/debug.keystore POHW_KEYSTORE_PASS=android bash app/build.sh

@@ -235,12 +235,15 @@ public class SettingsActivity extends Activity {
         b.setSingleLine(false);
         b.setMaxLines(2);
         b.setEllipsize(null);
+        b.setMinHeight(Ui.dp(this, 44));
         b.setPadding(Ui.dp(this, 10), Ui.dp(this, 2), Ui.dp(this, 10), Ui.dp(this, 2));
         b.setOnClickListener(l);
         Ui.focus(b, this, Ui.BTN_BG, 0xFFF5F7FA);
-        row.addView(b, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
+        // 高度随系统字体缩放自适应，避免大字模式下两行文案被固定 44dp 裁切。
+        row.addView(b, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         parent.addView(row, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 50)));
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         track(b);
         return b;
     }
@@ -249,8 +252,9 @@ public class SettingsActivity extends Activity {
         Button b = Ui.button(this, label, bg, 0xFFFFFFFF, 15);
         b.setOnClickListener(l);
         Ui.focus(b, this, bg, 0xFFFFFFFF);
+        b.setMinHeight(Ui.dp(this, 44));
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 44));
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         p.setMargins(0, Ui.dp(this, 3), 0, Ui.dp(this, 3));
         parent.addView(b, p);
         track(b);
@@ -467,6 +471,14 @@ public class SettingsActivity extends Activity {
                 if (v == null || !v.isEnabled() || !v.isFocusable()) continue;
                 if (up != null) v.setNextFocusUpId(ensureId(up));
                 if (down != null) v.setNextFocusDownId(ensureId(down));
+                // 单列布局没有横向邻居：把未显式定义的左右目标指向自身，
+                // 阻止系统按几何邻近把焦点甩到上一行 / 下一行。
+                // EditText 例外：左右键留给光标移动（输入在线源 URL）。
+                if (!(v instanceof EditText)) {
+                    int self = ensureId(v);
+                    if (v.getNextFocusLeftId() == View.NO_ID) v.setNextFocusLeftId(self);
+                    if (v.getNextFocusRightId() == View.NO_ID) v.setNextFocusRightId(self);
+                }
             }
         }
     }
@@ -493,6 +505,7 @@ public class SettingsActivity extends Activity {
         ed.setSingleLine(false);
         ed.setMaxLines(2);
         ed.setEllipsize(null);
+        ed.setMinHeight(Ui.dp(this, 44));
         ed.setPadding(Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2));
         ed.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -502,12 +515,14 @@ public class SettingsActivity extends Activity {
             }
         });
         Ui.focus(ed, this, Ui.BTN_BG, 0xFFF5F7FA);
-        row.addView(ed, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 2f));
+        row.addView(ed, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 2f));
 
         Button wt = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 14);
         wt.setSingleLine(false);
         wt.setMaxLines(2);
         wt.setEllipsize(null);
+        wt.setMinHeight(Ui.dp(this, 44));
         wt.setPadding(Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2));
         if (subj < 3) {
             wt.setOnClickListener(new View.OnClickListener() {
@@ -517,7 +532,8 @@ public class SettingsActivity extends Activity {
                 }
             });
             Ui.focus(wt, this, Ui.BTN_BG, 0xFFF5F7FA);
-            row.addView(wt, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
+            row.addView(wt, new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             track(ed, wt);
         } else {
             wt.setText("—");
@@ -525,12 +541,13 @@ public class SettingsActivity extends Activity {
             wt.setFocusable(false);
             wt.setTextColor(0xFF7C8AA3);
             wt.setBackground(Ui.round(0xFF1B2432, 10, this));
-            row.addView(wt, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
+            row.addView(wt, new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             track(ed);
         }
 
         parent.addView(row, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 50)));
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         rowEd[subj] = ed;
         rowWt[subj] = wt;
         subjectPairs.add(new Button[]{ed, wt});

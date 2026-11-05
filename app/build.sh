@@ -187,8 +187,22 @@ apksigner sign --ks "$KS" --ks-pass "pass:$KS_PASS" --key-pass "pass:$KS_PASS" \
   --out "$DIST/$APK_NAME" "$BUILD/out/aligned.apk"
 apksigner verify --verbose "$DIST/$APK_NAME"
 
+# 发布证书连续性门禁：apksigner verify 只证明签名有效，不证明签名者相同。
+# 指纹不一致时 adb install -r 会因 signature mismatch 拒绝覆盖安装，
+# 因此默认强制比对已发布 v1.0.0 / v1.0.1 的证书；仅本地实验构建可显式跳过。
+RELEASE_CERT_SHA256="76eb6063b574d6df1cd52ac490d82185793bf48abe0185687f4d977e49626172"
+ACTUAL_CERT_SHA256="$(apksigner verify --print-certs "$DIST/$APK_NAME"   | sed -n 's/.*SHA-256 digest: //p' | tr -d '[:space:]')"
+if [ "${POHW_ALLOW_DEV_SIGN:-0}" = "1" ]; then
+  echo "WARNING: dev-sign override; certificate NOT checked: $ACTUAL_CERT_SHA256"
+elif [ "$ACTUAL_CERT_SHA256" != "$RELEASE_CERT_SHA256" ]; then
+  echo "FORBIDDEN: APK certificate $ACTUAL_CERT_SHA256 != release cert $RELEASE_CERT_SHA256"
+  echo "Point POHW_KEYSTORE at the release keystore, or use POHW_ALLOW_DEV_SIGN=1 for a local dev build."
+  exit 1
+fi
+
 echo "[9/9] artifact checks"
 aapt dump badging "$DIST/$APK_NAME" 2>/dev/null | grep -q "versionName='$VERSION_NAME'"
+aapt dump badging "$DIST/$APK_NAME" 2>/dev/null | grep -q "versionCode='$VERSION_CODE'"
 unzip -l "$DIST/$APK_NAME" | grep -q 'assets/quiz.db'
 unzip -l "$DIST/$APK_NAME" | grep -q 'assets/quiz.db.version'
 (cd "$ROOT" && zip -q -r "$DIST/PoHW-src.zip" \

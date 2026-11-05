@@ -25,14 +25,15 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-/** 控制台：悬浮窗授权、守护开关、立即出题、错题库、开机自启设置与题库状态。 */
+/** 控制台：悬浮窗授权、守护开关、立即出题、错题库、开机自启设置与题库状态。
+ *  在线题库的检查更新入口统一放在「家长设置」，首页只保留只读状态信息。 */
 public class MainActivity extends Activity {
 
     private static final String NL = "\n";
     private SettingsStore st;
     private TextView status;
     private FrameLayout rootView;
-    private Button btnStart, btnStop, btnWrong, btnBoot;
+    private Button btnGuard, btnWrong, btnBoot;
     private PinVerifyView verifyView;
     private Boolean paintedRunning = null;
     private String appVersion = "?";
@@ -208,25 +209,12 @@ public class MainActivity extends Activity {
         l.addView(status, Ui.fill(1));
 
         LinearLayout row1 = Ui.hbox(this);
-        btnStart = actionButton(row1, "开启守护", GuardState.startColor(false),
+        // 单一守护开关：文案与底色都由 GuardState.toggle* 按当前状态给出，
+        // 运行中点击先过就地 PIN 验证层，界面不退出、不跳转。
+        btnGuard = actionButton(row1, GuardState.toggleLabel(false),
+                GuardState.toggleColor(false),
                 new View.OnClickListener() {
-                    @Override public void onClick(View v) {
-                        if (!canDraw()) { openOverlaySettings(); return; }
-                        send(QuizOverlayService.ACTION_START);
-                        handler.postDelayed(renderOnce, 300);
-                    }
-                });
-        btnStop = actionButton(row1, "关闭守护", GuardState.stopColor(true),
-                new View.OnClickListener() {
-                    @Override public void onClick(View v) {
-                        if (!QuizOverlayService.isRunning()) {
-                            Toast.makeText(MainActivity.this, "守护已经是关闭状态", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-                        // 已设密码：在当前界面叠加验证层，不跳转、不退出
-                        if (GuardPolicy.requiresPinToStop(st.hasPin())) showVerify();
-                        else doStop();
-                    }
+                    @Override public void onClick(View v) { toggleGuard(); }
                 });
         actionButton(row1, "立即出题", 0xFFEF6C4D, new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -242,23 +230,6 @@ public class MainActivity extends Activity {
         });
         actionButton(row2, "授权悬浮窗", 0xFF243044, new View.OnClickListener() {
             @Override public void onClick(View v) { openOverlaySettings(); }
-        });
-        actionButton(row2, "检查题库更新", 0xFF6C4F9E, new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                if (st.bankUrl().isEmpty()) {
-                    Toast.makeText(MainActivity.this,
-                            "当前使用内置离线题库；如需在线源请在「家长设置」自行配置地址",
-                            Toast.LENGTH_LONG).show();
-                    return;
-                }
-                BankRepository.sync(getApplicationContext(), st, st.bankUrl(), true, new BankRepository.Callback() {
-                    @Override public void onDone(BankRepository.SyncResult r) {
-                        Toast.makeText(MainActivity.this, r.message, Toast.LENGTH_LONG).show();
-                        if (QuizOverlayService.isRunning()) send(QuizOverlayService.ACTION_RELOAD);
-                        render();
-                    }
-                });
-            }
         });
         l.addView(row2, Ui.fixed(this, 62));
 
@@ -300,7 +271,7 @@ public class MainActivity extends Activity {
             }
         });
         // 浮层与控制台在同一 View 树里：显式 block 底层后代焦点，
-        // DPAD/确认键才不会穿透到被遮住的「开启守护 / 立即出题」等按钮。
+        // DPAD/确认键才不会穿透到被遮住的「守护开关 / 立即出题」等按钮。
         View base = rootView.getChildAt(0);
         if (base instanceof ViewGroup) {
             ((ViewGroup) base).setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
@@ -331,9 +302,21 @@ public class MainActivity extends Activity {
         handler.postDelayed(renderOnce, 350);
     }
 
-    private void paintToggleButtons(boolean running) {
-        paintButton(btnStart, GuardState.startColor(running), GuardState.startLabel(running));
-        paintButton(btnStop, GuardState.stopColor(running), GuardState.stopLabel(running));
+    /** 单一开关：未运行则开启，运行中则先过密码验证再关闭。 */
+    private void toggleGuard() {
+        if (QuizOverlayService.isRunning()) {
+            // 已设密码：在当前界面叠加验证层，不跳转、不退出
+            if (GuardPolicy.requiresPinToStop(st.hasPin())) showVerify();
+            else doStop();
+            return;
+        }
+        if (!canDraw()) { openOverlaySettings(); return; }
+        send(QuizOverlayService.ACTION_START);
+        handler.postDelayed(renderOnce, 300);
+    }
+
+    private void paintGuardButton(boolean running) {
+        paintButton(btnGuard, GuardState.toggleColor(running), GuardState.toggleLabel(running));
     }
 
     private static void setButtonText(Button b, String label) {
@@ -341,7 +324,7 @@ public class MainActivity extends Activity {
     }
 
     private void paintButton(Button b, int bg, String label) {
-        b.setText(label);
+        setButtonText(b, label);
         Ui.focus(b, this, bg, Ui.BLUE, 0xFFFFFFFF);
         b.setBackground(Ui.round(bg, 10, this));
         b.setTextColor(0xFFFFFFFF);
@@ -413,7 +396,7 @@ public class MainActivity extends Activity {
 
         if (paintedRunning == null || paintedRunning.booleanValue() != running) {
             paintedRunning = Boolean.valueOf(running);
-            paintToggleButtons(running);
+            paintGuardButton(running);
         }
     }
 }

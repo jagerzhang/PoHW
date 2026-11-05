@@ -34,6 +34,14 @@ public class StopStateTest {
                         && "开启守护".equals(GuardState.startLabel(false))
                         && "关闭守护".equals(GuardState.stopLabel(true))
                         && "已关闭".equals(GuardState.stopLabel(false)));
+        ok("合并开关：未运行为绿色 + 开启守护",
+                GuardState.toggleColor(false) == GuardState.ON_GREEN
+                        && "开启守护".equals(GuardState.toggleLabel(false)));
+        ok("合并开关：运行中转为红色 + 关闭守护",
+                GuardState.toggleColor(true) == GuardState.STOP_RED
+                        && "关闭守护".equals(GuardState.toggleLabel(true)));
+        ok("合并开关两态颜色与文案均可辨", GuardState.toggleDistinct());
+        ok("合并开关任何时刻都无灰色停用态", GuardState.toggleAlwaysAccented());
 
         Context.resetAll();
         SettingsStore st = new SettingsStore(new Context());

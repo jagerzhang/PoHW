@@ -7,8 +7,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
-VERSION_NAME="1.0.0"
-VERSION_CODE="12"
+VERSION_NAME="1.0.1"
+VERSION_CODE="13"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -47,6 +47,17 @@ grep -q 'BootPolicy.shouldStartGuard' "$APP/src/com/jager/tvquiz/BootReceiver.ja
 grep -q 'new OverlayQuizView' "$SVC"             # 每次弹题不复用 View
 grep -q 'setFocusable(false)' "$VIEW"            # 子按钮不参与焦点树
 grep -q 'WrongBookActivity' "$APP/AndroidManifest.xml"
+# v1.0.1 UI consolidation: one toggle, subject rows, bank entry only in settings
+MAIN="$APP/src/com/jager/tvquiz/MainActivity.java"
+SET="$APP/src/com/jager/tvquiz/SettingsActivity.java"
+grep -q 'GuardState.toggleColor' "$MAIN"
+grep -q 'GuardState.toggleLabel' "$MAIN"
+grep -q 'toggleGuard()' "$MAIN"
+grep -q 'addSubjectRow' "$SET"
+grep -q 'wireSubjectRows' "$SET"
+if grep -q '检查题库更新' "$MAIN"; then
+  echo 'FORBIDDEN: bank-update entry must live in SettingsActivity only'; exit 1
+fi
 # P0: FGS 契约覆盖所有分支（startForeground 必须在 onStartCommand 入口）
 grep -q 'fgReady = enterForeground()' "$SVC"
 grep -q 'startForeground(NOTIF_ID' "$SVC"
@@ -90,7 +101,7 @@ fi
 echo "[1/9] verify built-in question bank"
 python3 tools/quizbank/verify.py "$APP/assets/quiz.db"
 
-echo "[2/9] JVM unit tests (174 assertions incl. behaviour regressions)"
+echo "[2/9] JVM unit tests (178 assertions incl. behaviour regressions)"
 bash tests/run.sh
 
 STAMP="$(date +%s)"

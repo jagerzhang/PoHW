@@ -8,6 +8,37 @@
 > 标识，同样不代表发布版本。Android `versionCode` 是单调技术计数，不随展示版本
 > 重置：v1.0.0 为 12（前值 11），因此可直接 `adb install -r` 覆盖安装。
 
+## v1.0.1 (versionCode 13) — console & settings UI consolidation
+
+- **Merged guard toggle.** `btnStart`/`btnStop` replaced by a single `btnGuard`.
+  `GuardState.toggleColor()` / `toggleLabel()` drive the state: idle = ON_GREEN
+  `#1D9E75` + "开启守护", running = STOP_RED `#A32D2D` + "关闭守护"; focus
+  highlight stays BLUE. Colour now expresses the *action currently available*
+  instead of a disabled state. The four legacy methods and `mutuallyExclusive()`
+  are kept for the existing JVM suite; `toggleDistinct()` and
+  `toggleAlwaysAccented()` are new. Stopping still passes through the in-place
+  PIN overlay and never leaves the page.
+- **Bank update entry moved.** The duplicate home-screen "检查题库更新" button is
+  gone. `SettingsActivity` already had the same action ("立即检查更新"); it is
+  renamed "检查题库更新", sits with the online-source URL/status card, and now
+  inherits the empty-URL hint from the removed home button. The console keeps
+  only read-only bank status lines.
+- **Subject rows consolidated.** `addSubjectRow()` renders one row per subject as
+  `name | edition | weight` with two independently focusable buttons. The three
+  weight rows in column 1 and four edition rows in column 2 (7 rows) become 4.
+  "其他学科" has no independent weight and shows a disabled dash. Columns are now
+  "quiz basics + subjects" / "boot, playback + wrong-book" / "online source +
+  account".
+- **TV focus chain.** `wireColumns()` still links columns; `wireSubjectRows()`
+  then overrides intra-row left/right so DPAD moves between edition and weight,
+  while the row's outer edges still cross columns.
+- **Gates & tests.** New semantic build guards assert `GuardState.toggleColor`,
+  `GuardState.toggleLabel`, `toggleGuard()`, `addSubjectRow`, `wireSubjectRows`,
+  and forbid a home-screen bank-update button. `StopStateTest` gains 4
+  assertions: **178/178 total** across 7 suites.
+- Version 1.0.1 / versionCode 13 (PATCH: UI consolidation, no new capability).
+  Same externally-supplied keystore, so `adb install -r` works.
+
 ## v1.0.0 (versionCode 12) — first stable release
 
 Two independent reviews of the dev build labelled v6.0.0 (feature acceptance + Android/AOSP compliance)

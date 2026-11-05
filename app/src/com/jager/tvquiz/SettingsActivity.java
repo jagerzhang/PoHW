@@ -20,7 +20,8 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * 家长设置：密码门禁 + 三栏（出题 / 教材版本与自启 / 播放与题库）。
+ * 家长设置：密码门禁 + 三栏（出题与学科设置 / 开机播放与错题库 / 在线源与账户）。
+ * 教材版本与题目配比按学科合并为同一行的左右两个可选值，减少 TV 界面占用。
  * 每栏独立滚动，避免新增设置项在 540dp 高的电视屏上被裁掉。
  */
 public class SettingsActivity extends Activity {
@@ -41,8 +42,11 @@ public class SettingsActivity extends Activity {
     private TextView gateTitle, gateMask, gateMsg, gateState, bankStatus, pinState;
     private Button firstGateBtn;
     private EditText urlEdit;
-    private Button rowGrade, rowInterval, rowW0, rowW1, rowW2, rowScope, rowSync;
+    private Button rowGrade, rowInterval, rowScope, rowSync;
+    /** 学科设置复合行：左按钮切教材版本，右按钮切题目配比。 */
     private Button[] rowEd = new Button[Subjects.COUNT];
+    private Button[] rowWt = new Button[Subjects.COUNT];
+    private final java.util.List<Button[]> subjectPairs = new java.util.ArrayList<Button[]>();
     private Button rowBoot, rowAutoGuard, rowPause, rowResume;
 
     @Override protected void onCreate(Bundle b) {
@@ -234,7 +238,7 @@ public class SettingsActivity extends Activity {
         LinearLayout mid = addColumn(content, 16);
         LinearLayout right = addColumn(content, 0);
 
-        // ---- 栏 1：出题 ----
+        // ---- 栏 1：出题基础 + 学科设置 ----
         section(left, "出题");
         rowGrade = addRow(left, "所在年级", new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -248,15 +252,6 @@ public class SettingsActivity extends Activity {
                 refreshRows();
             }
         });
-        rowW0 = addRow(left, "数学配比", new View.OnClickListener() {
-            @Override public void onClick(View v) { st.weight(0, (st.weight(0) + 1) % 6); refreshRows(); }
-        });
-        rowW1 = addRow(left, "语文配比", new View.OnClickListener() {
-            @Override public void onClick(View v) { st.weight(1, (st.weight(1) + 1) % 6); refreshRows(); }
-        });
-        rowW2 = addRow(left, "英语配比", new View.OnClickListener() {
-            @Override public void onClick(View v) { st.weight(2, (st.weight(2) + 1) % 6); refreshRows(); }
-        });
         rowScope = addRow(left, "出题范围", new View.OnClickListener() {
             @Override public void onClick(View v) { st.allSubjects(!st.allSubjects()); refreshRows(); }
         });
@@ -266,22 +261,14 @@ public class SettingsActivity extends Activity {
                 refreshRows();
             }
         });
-        note(left, "点击每一行的值即可循环切换；配比 0 表示该科不出题。");
+        note(left, "点击每一行的值即可循环切换。");
 
-        // ---- 栏 2：分学科教材版本 + 开机自启 + 播放 ----
-        section(mid, "分学科教材版本");
-        for (int s = 0; s < Subjects.COUNT; s++) {
-            final int subj = s;
-            rowEd[s] = addRow(mid, Subjects.name(s) + "教材", new View.OnClickListener() {
-                @Override public void onClick(View v) {
-                    st.setEditionIndexFor(subj,
-                            (st.editionIndexFor(subj) + 1) % SettingsStore.EDITIONS.length);
-                    refreshRows();
-                }
-            });
-        }
-        note(mid, "内置离线题库按课标纲目组织，不含出版社版本；本设置用于在线题包筛选、题面标注与错题标记。");
+        section(left, "学科设置 · 左：教材版本 / 右：题目配比");
+        for (int s = 0; s < Subjects.COUNT; s++) addSubjectRow(left, s);
+        note(left, "配比 0 表示该科不出题；「其他学科」由全学科开关控制，不单独配比。"
+                + "内置离线题库按课标纲目组织，不含出版社版本，本设置用于在线题包筛选、题面标注与错题标记。");
 
+        // ---- 栏 2：开机与播放 + 错题库 ----
         section(mid, "开机与播放");
         rowBoot = addRow(mid, "开机自启", new View.OnClickListener() {
             @Override public void onClick(View v) { st.bootAutostart(!st.bootAutostart()); refreshRows(); }
@@ -305,15 +292,15 @@ public class SettingsActivity extends Activity {
         });
         note(mid, "暂停视频是 best-effort：靠音频焦点 + 媒体键请求播放器暂停，不保证所有视频 App 响应。");
 
-        // ---- 栏 3：错题库 + 在线题库源 + 账户 ----
-        section(right, "错题库");
-        addButton(right, "查看错题库", 0xFFB06A2C, new View.OnClickListener() {
+        section(mid, "错题库");
+        addButton(mid, "查看错题库", 0xFFB06A2C, new View.OnClickListener() {
             @Override public void onClick(View v) {
                 startActivity(new Intent(SettingsActivity.this, WrongBookActivity.class));
             }
         });
-        note(right, "同一题答错 " + AnswerPolicy.WRONG_LIMIT + " 次自动换题并记录。");
+        note(mid, "同一题答错 " + AnswerPolicy.WRONG_LIMIT + " 次自动换题并记录。");
 
+        // ---- 栏 3：在线题库源 + 账户 ----
         section(right, "在线题库源（可选 · 需自行配置）");
         urlEdit = new EditText(this);
         urlEdit.setSingleLine(true);
@@ -347,12 +334,19 @@ public class SettingsActivity extends Activity {
         right.addView(bankStatus, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 88)));
 
-        addButton(right, "立即检查更新", 0xFF6C4F9E, new View.OnClickListener() {
+        addButton(right, "检查题库更新", 0xFF6C4F9E, new View.OnClickListener() {
             @Override public void onClick(View v) {
-                st.bankUrl(urlEdit.getText().toString().trim());
+                String url = urlEdit.getText().toString().trim();
+                if (url.isEmpty()) {
+                    Toast.makeText(SettingsActivity.this,
+                            "当前使用内置离线题库；如需在线源请先填写地址",
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
+                st.bankUrl(url);
                 urlDirty = false;
                 bankStatus.setText("正在同步题库…");
-                BankRepository.sync(getApplicationContext(), st, st.bankUrl(), true,
+                BankRepository.sync(getApplicationContext(), st, url, true,
                         new BankRepository.Callback() {
                             @Override public void onDone(BankRepository.SyncResult r) {
                                 updateBankStatus();
@@ -376,6 +370,8 @@ public class SettingsActivity extends Activity {
         // 三个独立 ScrollView 里的按钮默认不会被系统自动横向串起来，
         // 显式连左右邻居，保证 TV 遥控器在任意一行都能跨栏移动焦点。
         wireColumns(left, mid, right);
+        // 跨栏链建好后再覆盖同一行内部的左右关系，保证「教材 ↔ 配比」可切换。
+        wireSubjectRows();
         root.addView(content, Ui.fill(1));
         return root;
     }
@@ -444,6 +440,79 @@ public class SettingsActivity extends Activity {
         }
     }
 
+    /**
+     * 学科设置复合行：学科名 + 教材版本 + 题目配比共占一行。
+     * 原来分散在两栏的 7 行（3 配比 + 4 教材）压成 4 行。
+     * 「其他学科」没有独立配比，右位显示「—」并禁用焦点。
+     */
+    private void addSubjectRow(LinearLayout parent, final int subj) {
+        LinearLayout row = Ui.hbox(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.addView(Ui.tv(this, Subjects.name(subj), 14, 0xFFC7D2E2, Gravity.LEFT),
+                new LinearLayout.LayoutParams(
+                        Ui.dp(this, 62), ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        Button ed = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 13);
+        ed.setSingleLine(false);
+        ed.setMaxLines(2);
+        ed.setEllipsize(null);
+        ed.setPadding(Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2));
+        ed.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                st.setEditionIndexFor(subj,
+                        (st.editionIndexFor(subj) + 1) % SettingsStore.EDITIONS.length);
+                refreshRows();
+            }
+        });
+        Ui.focus(ed, this, Ui.BTN_BG, 0xFFF5F7FA);
+        row.addView(ed, new LinearLayout.LayoutParams(Ui.dp(this, 158), Ui.dp(this, 46)));
+
+        Button wt = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 13);
+        wt.setSingleLine(false);
+        wt.setMaxLines(2);
+        wt.setEllipsize(null);
+        wt.setPadding(Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2));
+        if (subj < 3) {
+            wt.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    st.weight(subj, (st.weight(subj) + 1) % 6);
+                    refreshRows();
+                }
+            });
+            Ui.focus(wt, this, Ui.BTN_BG, 0xFFF5F7FA);
+        } else {
+            wt.setText("—");
+            wt.setEnabled(false);
+            wt.setFocusable(false);
+            wt.setTextColor(0xFF7C8AA3);
+            wt.setBackground(Ui.round(0xFF1B2432, 10, this));
+        }
+        row.addView(wt, new LinearLayout.LayoutParams(Ui.dp(this, 78), Ui.dp(this, 46)));
+
+        parent.addView(row, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 50)));
+        rowEd[subj] = ed;
+        rowWt[subj] = wt;
+        subjectPairs.add(new Button[]{ed, wt});
+    }
+
+    /**
+     * wireColumns 已把每行按钮的左右焦点连到相邻栏；这里再覆盖同一行内部的
+     * 左右关系，让 DPAD 在「教材 / 配比」两个值之间切换，行的两端仍能跨栏。
+     */
+    private void wireSubjectRows() {
+        for (Button[] pair : subjectPairs) {
+            Button ed = pair[0], wt = pair[1];
+            if (ed == null || wt == null) continue;
+            int edId = ensureId(ed);
+            if (wt.isEnabled()) {
+                int wtId = ensureId(wt);
+                ed.setNextFocusRightId(wtId);
+                wt.setNextFocusLeftId(edId);
+            }
+        }
+    }
+
     private static int ensureId(View v) {
         if (v.getId() == View.NO_ID) v.setId(View.generateViewId());
         return v.getId();
@@ -452,13 +521,11 @@ public class SettingsActivity extends Activity {
     private void refreshRows() {
         rowGrade.setText(st.gradeLabel());
         rowInterval.setText(intervalLabel());
-        rowW0.setText("数学  " + st.weight(0));
-        rowW1.setText("语文  " + st.weight(1));
-        rowW2.setText("英语  " + st.weight(2));
         rowScope.setText(st.allSubjects() ? "全学科（含物理/历史等）" : "仅数 / 语 / 英");
         rowSync.setText(SettingsStore.SYNC_LABELS[st.syncIndex()]);
         for (int s = 0; s < Subjects.COUNT; s++) {
             rowEd[s].setText(st.editionFor(s));
+            if (s < 3) rowWt[s].setText("配比 " + st.weight(s));
         }
         rowBoot.setText(st.bootAutostart() ? "开启（响应开机广播）" : "关闭");
         rowAutoGuard.setText(st.autoGuardOnBoot() ? "开启（开机即守护）" : "关闭（仅恢复上次）");

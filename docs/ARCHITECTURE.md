@@ -4,8 +4,8 @@
 
 | 类 | 职责 |
 | --- | --- |
-| `MainActivity` | 控制台：授权入口、守护开关、就地验证浮层、运行状态与题库统计 |
-| `SettingsActivity` | 家长设置：PIN 门禁 + 年级/教材/频率/配比/出题范围/在线源 |
+| `MainActivity` | 控制台：授权入口、单一守护切换开关、就地验证浮层、运行状态与题库统计（题库更新入口不在此） |
+| `SettingsActivity` | 家长设置：PIN 门禁 + 三栏（出题+学科设置 / 开机播放+错题库 / 在线源+账户），学科行左教材右配比 |
 | `QuizOverlayService` | 前台服务：1 秒计时、WindowManager 全屏遮罩、答题判定、可选在线同步 |
 | `BootReceiver` | 开机恢复守护（校验 action + 守护开关 + 悬浮窗授权） |
 | `QuizDb` | 内置 SQLite：版本化原子复制、只读、本地随机抽题、全学科 fallback |
@@ -13,9 +13,14 @@
 | `BankRepository` | 可选在线题库：版本比对、分块下载、SHA-256、原子缓存 |
 | `PinGate` | 纯 Java PIN 状态机（首次设置 / 验证 / 修改），可 JVM 单测 |
 | `PinVerifyView` | 首页就地验证浮层（不跳 Activity、不 finish 宿主） |
-| `GuardPolicy` / `GuardState` | 关闭守护的授权规则 / 按钮颜色文字规则，单一规则源 |
+| `GuardPolicy` / `GuardState` | 关闭守护的授权规则 / 守护开关配色文案规则（`toggleColor` 绿=GO / 红=STOP），单一规则源 |
 | `OverlayQuizView` / `QuizTextSizer` | 题目 UI 与自适应字号 |
 | `SettingsStore` | SharedPreferences 封装 + PIN 哈希 |
+
+v1.0.1 起控制台只有一个守护开关：`GuardState.toggleColor(running)` 给绿/红，
+`toggleLabel(running)` 给「开启守护 / 关闭守护」；运行中点击先过 `PinVerifyView`，
+界面不跳转。家长设置的学科行由 `addSubjectRow()` 生成，`wireSubjectRows()` 在
+跨栏焦点链之上覆盖行内左右关系，保证 TV 遥控器能在教材版本与题目配比之间移动。
 
 ## 主流程
 

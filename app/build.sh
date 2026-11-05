@@ -7,8 +7,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
-VERSION_NAME="1.0.1"
-VERSION_CODE="20"
+VERSION_NAME="1.0.2"
+VERSION_CODE="21"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -30,6 +30,13 @@ cd "$ROOT"
 echo "[0/9] static guards"
 grep -q "versionCode=\"$VERSION_CODE\"" "$APP/AndroidManifest.xml"
 grep -q "versionName=\"$VERSION_NAME\"" "$APP/AndroidManifest.xml"
+# code21：只发布 3 个语义化版本；feature 分支的自动审核工作流必须随仓库分发。
+[ -f "$ROOT/.github/workflows/ci.yml" ] || { echo "FORBIDDEN: missing auto-review workflow"; exit 1; }
+grep -qF 'VERSION_NAME="1.0.2"' "$APP/build.sh"
+grep -qF 'version: "v1.0.2"' "$ROOT/site/script.js"
+grep -qF 'version: "v1.0.1"' "$ROOT/site/script.js"
+grep -qF 'version: "v1.0.0"' "$ROOT/site/script.js"
+grep -qF '## v0.9.0-re' "$ROOT/CHANGELOG.md"
 # 品牌口号统一（code19）：官网与 TV 横幅生成脚本必须同口径，旧「续租 30 分钟」禁止回流。
 SITE="$ROOT/site/index.html"
 ICON_GEN="$ROOT/tools/branding/make_icons.py"
@@ -252,7 +259,7 @@ apksigner verify --verbose "$DIST/$APK_NAME"
 
 # 发布证书连续性门禁：apksigner verify 只证明签名有效，不证明签名者相同。
 # 指纹不一致时覆盖安装会因 signature mismatch 被系统拒绝，
-# 因此默认强制比对已发布 v1.0.0 / v1.0.1 的证书；仅本地实验构建可显式跳过。
+# 因此默认强制比对已发布 v1.0.0 / v1.0.1 / v1.0.2 的证书；仅本地实验构建可显式跳过。
 RELEASE_CERT_SHA256="76eb6063b574d6df1cd52ac490d82185793bf48abe0185687f4d977e49626172"
 ACTUAL_CERT_SHA256="$(apksigner verify --print-certs "$DIST/$APK_NAME"   | sed -n 's/.*SHA-256 digest: //p' | tr -d '[:space:]')"
 if [ "${POHW_ALLOW_DEV_SIGN:-0}" = "1" ]; then
@@ -275,7 +282,7 @@ rm -f "$DIST/PoHW-src.zip"
 ZIP_EXTRA=""
 if [ -d "$ROOT/site" ]; then ZIP_EXTRA="site"; fi
 (cd "$ROOT" && zip -q -r "$DIST/PoHW-src.zip" \
-  README.md LICENSE .gitignore CHANGELOG.md \
+  README.md LICENSE .gitignore CHANGELOG.md .github \
   app/AndroidManifest.xml app/build.sh app/src app/res app/assets \
   tests docs tools $ZIP_EXTRA -x '*/__pycache__/*' '*.pyc')
 

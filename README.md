@@ -5,14 +5,14 @@
 
 | | |
 | --- | --- |
-| 当前版本 | **v1.0.1**（`versionCode 20`，展示版本不再随构建滚动） |
+| 当前版本 | **v1.0.2**（`versionCode 21`） |
 | 运行平台 | Android TV / 电视盒子，`minSdk 21`，遥控器操作 |
-| 分发方式 | 自行侧载 APK，**不在任何应用商店上架** |
-| 签名证书 | SHA-256 `76eb6063…6172`，历次构建连续，U 盘安装时可直接覆盖 |
+| 分发方式 | 自行侧载 APK（U 盘直装），**不在任何应用商店上架** |
+| 签名证书 | SHA-256 `76eb6063…6172`，历次构建连续，旧版可直接覆盖安装 |
 | 仓库 | https://github.com/jagerzhang/PoHW |
-| 官网 | 腾讯云 EdgeOne Makers（见下方「官网与部署」） |
+| 发布方式 | feature 分支 → Pull Request → 自动审核 → 合入 `main`；tag / Release 由维护者指定 |
 
-![PoHW 图标](site/assets/ic_launcher.png)
+![PoHW 图标](app/res/drawable-xhdpi/ic_launcher.png)
 
 ---
 
@@ -39,7 +39,7 @@
 
 ## 快速开始（U 盘安装，不需要电脑连电视）
 
-1. **拿到 APK**：到 Releases 下载，或按下方「构建」自行出包。
+1. **拿到 APK**：到 [Releases](https://github.com/jagerzhang/PoHW/releases/latest) 下载，或按下方「构建」自行出包。
 2. **拷进 U 盘**：把 APK 文件复制到 U 盘（FAT32 / exFAT 均可）。
 3. **电视上安装**：U 盘插到电视 USB 口 → 打开电视自带的「文件管理器」→ 找到 APK 点击安装；首次安装若提示「未知来源」，按系统提示允许即可。
 4. **授权悬浮窗**：打开 APP，点「授权悬浮窗」，在系统设置里允许「显示在其他应用上层」。
@@ -116,8 +116,8 @@ bash app/build.sh
 所以这一步不依赖人记得传环境变量。本地实验构建须显式 `POHW_ALLOW_DEV_SIGN=1`。
 完整说明见 `docs/BUILD.md`。
 
-版本策略：`versionName` 语义化（当前 1.0.1），`versionCode` 单调递增（当前 20）且**不随展示版本重置**，
-否则已安装旧版的设备会报 `INSTALL_FAILED_VERSION_DOWNGRADE`。
+版本策略：`versionName` 语义化（当前 1.0.2），`versionCode` 单调递增（当前 21）且**不随展示版本重置**，
+否则已安装旧版的设备会报 `INSTALL_FAILED_VERSION_DOWNGRADE`。同一版本线内的内部构建不单独发 Release。
 
 ## 验证与门禁
 
@@ -125,14 +125,27 @@ bash app/build.sh
 
 | 检查 | 当前结果 | 守什么 |
 | --- | --- | --- |
-| `tests/layout_contract.py` | **161** 条 | 3×2 首页、单列设置、焦点链、证书门禁、方案 B 全链路，以及官网收敛 / U 盘侧载 / 页脚 / 并排行 |
+| `tests/layout_contract.py` | **170** 条 | 3×2 首页、单列设置、焦点链、证书门禁、方案 B 全链路，以及发布版本口径 / 官网三版本 / CHANGELOG 归档 / CI |
 | `tests/bank_distribution_check.py` | `BANK_DISTRIBUTION_OK` | 用真实 SQL 复刻四槽配比、池隔离与池保持兜底 |
 | `tools/quizbank/build_syllabus.py --check` | `SYLLABUS_CHECK_OK books=12` | 进度表与题库同源、无遗漏别名 |
 | `tests/study_scope_check.py` | `STUDY_SCOPE_OK` | 学期/单元范围不外溢、空池逐层放宽顺序、默认行为兼容 |
 | `tests/run.sh` | **245** 项 JVM 单测（9 组） | PIN、按键时序、启动策略、权重、JSON / Syllabus、设置默认值 |
 
-发布前另跑 `python3 tests/mutation_suite.py`：故意回退 43 处实现，再加 1 次不带发布密钥构建（44/44），
+发布前另跑 `python3 tests/mutation_suite.py`：故意回退 49 处实现，再加 1 次不带发布密钥构建（50/50），
 确认门禁每一处都能拦下，最后校验源码哈希完全恢复并用发布密钥重建 `dist/`。
+
+## 发布流程
+
+所有改动都走分支与审核，不再直接推 `main`：
+
+1. 从 `main` 拉 `feat/*` 或 `feature/*` 分支，改动与门禁脚本一起提交。
+2. 推分支并开 **Pull Request** 到 `main`。
+3. `.github/workflows/ci.yml` 作为「自动审核」：跑源码契约、JVM 单测、题库/进度/配比回归，并用开发密钥完整构建一次 APK（CI 不持有发布密钥）。
+4. `auto-review` 检查通过后才能合入 `main`；分支保护要求 PR + 该检查。
+5. **tag 与 Release 由维护者另行指定**：确认后再用同一 release keystore 出包、打 tag、上传 APK 与 `PoHW-src.zip`。
+
+对外只保留 3 个正式 Release：`v1.0.0`（versionCode 12）、`v1.0.1`（13–17）、`v1.0.2`（18–21）；
+`v1`–`v6` 开发期迭代归档为 `v0.9.0-re`，不对应任何可下载资产。
 
 ## 权限
 
@@ -161,47 +174,20 @@ tests/                    # JVM 单测 + 4 组 Python 契约 / 回归 / 变异�
 docs/                     # ARCHITECTURE / BUILD / QUESTION_BANK / BANK_STATS
 tools/quizbank/           # 题库生成、校验、进度表生成
 tools/branding/           # 可复现图标生成脚本
-site/                     # 纯静态宣传首页（直接上传 EdgeOne Makers）
-CHANGELOG.md              # 逐次构建的完整变更与验证证据
+.github/workflows/        # PR 自动审核（CI）
+CHANGELOG.md              # 3 个正式版本 + 开发期归档的完整变更与验证证据
 ```
-
-## 官网与部署
-
-宣传首页在 `site/`（`index.html` + `style.css` + `script.js` + 本地图片），纯静态、零构建依赖，
-包含产品介绍、功能亮点、U 盘侧载步骤、下载入口、版本更新记录与 FAQ；官网不展示打赏收款码（APP 内的静态打赏页仍保留）。
-
-已部署到**腾讯云 EdgeOne Makers**：项目 `pohw-home`，`ProjectId: makers-optiyqkj3jjq`，
-稳定域名 `https://pohw-home-qxpdwxk6.edgeone.cool`。国内默认域名直访需带控制台签发的
-`eo_token` 鉴权参数（有时效），当前可分享链接形如：
-
-```
-https://pohw-home-qxpdwxk6.edgeone.cool?eo_token=<控制台签发>&eo_time=<时间戳>
-```
-
-绑定自定义域名后可免鉴权直接访问。重新部署（`.edgeone/project.json` 记录项目绑定）：
-
-```bash
-edgeone makers deploy ./site -n pohw-home --json
-```
-
-`src.zip` 也会带上 `site/`，便于从源码包复现官网。
 
 ## 变更记录
 
-逐次构建的改动、验证数据与已知边界以 [CHANGELOG.md](CHANGELOG.md) 为准；官网「版本更新记录」
-区块是同一份内容的可视化摘要。最近的几次构建：
+逐次构建的改动、验证数据与已知边界以 [CHANGELOG.md](CHANGELOG.md) 为准：
 
-| versionCode | 内容 |
-| --- | --- |
-| 20 | 官网撤下打赏宣传、全面改 U 盘侧载、页脚版权、设置页自动更新并排 |
-| 19 | 品牌口号统一「答对题目，无限续租！」 |
-| 18 | 学习进度（学期 + 单元，方案 B）、静态官网 |
-| 17 | 离线说明归位；题库粒度只读调研 |
-| 16 | 12dp 行间距、启动即守护、打赏页、APP 图标 |
-| 15 | 四槽配比修订与独立复审加固 |
-| 14 | 3×2 首页、单列卡片设置页 |
-| 13 | 守护开关合并、设置项聚合 |
-| 12 | v1.0.0 首个正式版，版本口径重置 |
+| 版本 | versionCode | 内容 |
+| --- | --- | --- |
+| v1.0.2 | 18–21 | 学习进度（方案 B）、静态首页、口号统一、官网收敛 / U 盘侧载、发布规范化与 MR 流程 |
+| v1.0.1 | 13–17 | 守护开关合并、3×2 首页、单列设置、四槽配比修订、启动即守护、打赏页与图标 |
+| v1.0.0 | 12 | 首个正式版，纠正版本口径并修复 P0/P1 |
+| v0.9.0-re | 1–11 | 开发期归档（v1–v6），不对应可下载 Release |
 
 ## 已知边界 / FAQ
 

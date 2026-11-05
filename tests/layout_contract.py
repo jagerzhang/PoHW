@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="20"' in _mf, "manifest versionCode advances to 20")
-check('VERSION_CODE="20"' in b, "build script versionCode advances to 20")
+check('android:versionCode="21"' in _mf, "manifest versionCode advances to 21")
+check('VERSION_CODE="21"' in b, "build script versionCode advances to 21")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -354,8 +354,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="20"' in _mf, "manifest versionCode advances to 20")
-check('VERSION_CODE="20"' in b, "build script versionCode advances to 20")
+check('android:versionCode="21"' in _mf, "manifest versionCode advances to 21")
+check('VERSION_CODE="21"' in b, "build script versionCode advances to 21")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -405,8 +405,8 @@ check("保留所有权利 · Proof of Homework" in _site and "jagerzhang · PoHW
       "footer copyright uses the new wording")
 check('id="year"' not in _site and 'getElementById("year")' not in _site_js,
       "footer year is fixed in HTML, not overwritten by JS")
-check("versionCode 20" in _site and "versionCode 20" in _site_js,
-      "site and release notes report build 20")
+check("versionCode 21" in _site and "versionCode 21" in _site_js,
+      "site and release notes report build 21")
 check("addView(bankRow, rowLp())" in s,
       "bank update and auto-update share one side-by-side row")
 check("track(btnCheck, rowSync)" in s,
@@ -422,5 +422,49 @@ check(raw_s.find('"检查题库更新"') < raw_s.find('"自动更新"'),
       "auto-update sits to the right of the bank-update button")
 check('"自动更新 · "' in s,
       "auto-update value button keeps its label in refreshRows")
+
+# ---- code21：3 个发布版本 / CHANGELOG 归档 / README / CI / 收款码 ----
+import hashlib
+import struct
+
+_mf21 = read(os.path.join(ROOT, "app/AndroidManifest.xml"))
+_b21 = read(os.path.join(ROOT, "app/build.sh"))
+_ch21 = read(os.path.join(ROOT, "CHANGELOG.md"))
+_rm21 = read(os.path.join(ROOT, "README.md"))
+_ci21 = os.path.join(ROOT, ".github/workflows/ci.yml")
+_ci_text = read(_ci21) if os.path.isfile(_ci21) else ""
+check('android:versionName="1.0.2"' in _mf21
+      and 'VERSION_NAME="1.0.2"' in _b21,
+      "display version is 1.0.2 in both manifest and build script")
+check(_site_js.count('version: "v1.0.2"') == 1
+      and _site_js.count('version: "v1.0.1"') == 1
+      and _site_js.count('version: "v1.0.0"') == 1
+      and _site_js.count('version: "') == 3,
+      "site release notes expose exactly three distinct release versions")
+check(_ch21.count("\n## v1.0.2") == 1 and _ch21.count("\n## v1.0.1") == 1
+      and _ch21.count("\n## v1.0.0") == 1 and _ch21.count("\n## v0.9.0-re") == 1,
+      "changelog groups builds into three releases plus one dev archive")
+check("## Dev build v6.0.0" not in _ch21 and "## Dev build v5.0.0" not in _ch21
+      and "## v4.1.0" not in _ch21 and "## v1 - v3" not in _ch21,
+      "pre-1.0 dev-build sections are collapsed into the 0.9.0-re archive")
+check("## 官网与部署" not in _rm21 and "EdgeOne" not in _rm21
+      and "site/index.html" not in _rm21,
+      "README no longer documents the static promo site")
+check("## 发布流程" in _rm21 and "Pull Request" in _rm21 and "auto-review" in _rm21,
+      "README documents feature branch / PR / auto review / maintainer tags")
+check(os.path.isfile(_ci21) and "pull_request" in _ci_text
+      and "tests/layout_contract.py" in _ci_text
+      and "POHW_ALLOW_DEV_SIGN" in _ci_text,
+      "GitHub Actions auto-review gates every PR into main")
+_png21 = os.path.join(ROOT, "app/res/drawable-nodpi/donate_alipay.png")
+with open(_png21, "rb") as _fh:
+    _png_head = _fh.read(24)
+_png_wh = struct.unpack(">II", _png_head[16:24]) if len(_png_head) >= 24 else (0, 0)
+check(_png_head[:8] == bytes([137, 80, 78, 71, 13, 10, 26, 10])
+      and _png_wh[0] >= 900 and _png_wh[1] >= 1000,
+      "alipay QR crop keeps the full code and its white quiet zone")
+check(hashlib.sha256(open(_png21, "rb").read()).hexdigest()
+      == "992ed91fb5d92e1014673b65a369470421ee72d34b8269b607ff1bbe0646517b",
+      "alipay QR asset is pinned to the freshly supplied poster crop")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

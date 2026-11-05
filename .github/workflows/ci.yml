@@ -1,0 +1,89 @@
+name: PoHW auto review
+
+# 发布流程：所有改动先推 feature 分支并开 PR，本工作流作为「自动审核」，
+# 检查通过后才允许合入 main。tag / Release 一律由维护者另行指定。
+# CI 不持有发布密钥，构建阶段用 POHW_ALLOW_DEV_SIGN=1 跳过证书连续性比对；
+# 真正对外发布的 APK 仍在受控构建机上用同一 release keystore 出包。
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, 'feat/**', 'feature/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auto-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  auto-review:
+    name: auto-review
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      # ubuntu-latest 已预装 Android SDK cmdline-tools。不要加 setup-android：
+      # 它会尝试安装早已废弃的 `tools` 包并直接失败。
+      - name: Prepare Android SDK 34
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+          SDKMANAGER=$(find "$SDK/cmdline-tools" -type f -name sdkmanager | head -1)
+          test -n "$SDKMANAGER" || { echo "sdkmanager not found under $SDK"; exit 1; }
+          echo "sdkmanager=$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platforms;android-34" "build-tools;34.0.0" > /dev/null
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          echo "$SDK/build-tools/34.0.0" >> "$GITHUB_PATH"
+          echo "$SDK/platform-tools" >> "$GITHUB_PATH"
+
+      - name: Source contracts and runtime gates
+        run: |
+          python3 tests/layout_contract.py
+          bash tests/run.sh
+          python3 tools/quizbank/build_syllabus.py --check
+          python3 tests/study_scope_check.py
+          python3 tests/bank_distribution_check.py
+
+      - name: Full APK build (dev-signed on CI)
+        env:
+          POHW_ALLOW_DEV_SIGN: '1'
+        run: bash app/build.sh
+
+      - name: Release metadata consistency
+        run: |
+          python3 - <<'PY'
+          import io, re, os
+          js = io.open('site/script.js', encoding='utf-8').read()
+          ch = io.open('CHANGELOG.md', encoding='utf-8').read()
+          mf = io.open('app/AndroidManifest.xml', encoding='utf-8').read()
+          versions = re.findall(r'version: "(v[0-9.]+)"', js)
+          groups = re.findall(r'^## (v[0-9][^ ]*)', ch, re.M)
+          name = re.search(r'versionName="([^"]+)"', mf).group(1)
+          print('site versions   :', versions)
+          print('CHANGELOG groups:', groups)
+          print('manifest version:', name)
+          assert versions == ['v1.0.2', 'v1.0.1', 'v1.0.0'], versions
+          assert groups[:3] == versions, groups
+          assert name == versions[0][1:], name
+          assert os.path.isfile('.github/workflows/ci.yml')
+          print('RELEASE_METADATA_OK')
+          PY

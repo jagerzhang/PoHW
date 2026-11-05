@@ -118,3 +118,11 @@ v6 的分学科教材版本设置会：
 现在改为四槽权重（默认 5:3:2:2）+ 两条 SQL 池：三科按 `grade + subject`，其他学科按
 `grade + subject NOT IN (数/语/英)`；`q.subject` 由题目真实学科反推，错题库不再串科。
 `tests/bank_distribution_check.py` 会用源码里的真实 SQL 复验池隔离与配比分布。
+
+**复审加固（同 code15 定版）**：兜底改为池保持 —— 先只放宽年级
+（`POOL_CORE_ALL` / `POOL_OTHER_ALL`），最后才全库，避免空池时静默退回跨科抽样；
+随机 OFFSET 用 `MAX(1, (SELECT COUNT(*) ...))`，空池返回 0 行而不是抛
+`datatype mismatch` 被 catch 吞掉；`QuizDb.hasOtherQuestions()` 在其他学科池为空时
+让第 4 槽直接失效，不会选中 OTHER 后只能回退成数学题。分布校验脚本先去注释、
+再从 `QuizDb.java` 的 `POOL_*` 命名常量取同源 SQL，并新增 `FALLBACK_POOL_OK`：
+模拟三年级英语池和其他学科池都为空，验证兜底仍然保持学科约束、不串池。

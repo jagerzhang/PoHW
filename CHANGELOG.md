@@ -8,10 +8,61 @@
 > 标识，同样不代表发布版本。Android `versionCode` 是单调技术计数，不随展示版本
 > 重置：v1.0.0 为 12（前值 11），因此可直接 `adb install -r` 覆盖安装。
 
-## v1.0.1 (versionCode 15) — four-slot subject weighting
+## v1.0.1 (versionCode 15, final) - review-driven hardening
+
+Display version and `versionCode` are unchanged; this is the final hardened
+build of the four-slot weighting change, signed with the same release keystore
+(SHA-256 `76eb6063b574...26172`) and shipped under the same artifact names.
+An independent read-only review (`weighting-reviewer`) returned CONDITIONAL PASS
+with no P0, 4 x P1 and 6 x P2. All code findings are fixed here.
+
+- **P1-1 route gate.** `boolean other = s == Subjects.OTHER && allSubjects;`
+  had no assertion anywhere: breaking it left every test green. The literal is
+  now pinned by `app/build.sh`, `tests/layout_contract.py` and
+  `tests/bank_distribution_check.py`; mutation Q covers it.
+- **P1-2 double binding.** The main query and its `COUNT(*)` OFFSET subquery
+  each need the WHERE args. A single binding throws inside `rawQuery`, was
+  caught silently and degraded to an arbitrary full-bank question. Both
+  `new String[args.length * 2]` and the two `System.arraycopy` calls are now
+  asserted; mutation R covers it.
+- **P1-3 comment decoy.** `bank_distribution_check.py` used `re.search` over
+  raw source including comments, so a commented fake SQL could pass. It now
+  strips comments (line + block state machine) and extracts the same
+  `POOL_*` named constants used by `QuizDb.java`; mutation S covers it.
+- **P1-4 pool-preserving fallback.** Empty pools used to fall back to
+  `WHERE grade=?` / `pick("", null)`, silently restoring the original bug.
+  Fallback now drops only the grade (`POOL_CORE_ALL` / `POOL_OTHER_ALL`) and
+  only then the whole bank. Empty pools use `MAX(1, (SELECT COUNT(*) ...))`
+  so `OFFSET` is never NULL, and `QuizDb.hasOtherQuestions()` disables the
+  fourth slot when no non-core questions exist. `FALLBACK_POOL_OK` plus
+  mutations T/U cover it.
+- **P2.** `SubjectWeights.otherAvailable` now defaults to `false` and is set
+  only after `QuizEngine` confirms a real non-core pool; `setBank(null)` also
+  refreshes availability; the two-arg `random(grade, subject)` overload that
+  silently drew math is deleted; SQL failures are logged via `Log.e`; stale
+  197/178 counts, the fourth-row UI comment and the settings note are fixed.
+- **Gates.** `tests/layout_contract.py` grows 69 -> **88** assertions.
+  `tests/bank_distribution_check.py` is rewritten to share the Java SQL
+  constants, strip comments, verify double binding and replay the three-tier
+  fallback (new `FALLBACK_POOL_OK`: grade-3 english pool and the non-core pool
+  emptied, fallback still keeps the subject constraint).
+  `tests/mutation_suite.py` is now committed and reproducible (**21/21**),
+  including the dev-signed build rejected by the certificate gate.
+- Verification: `LAYOUT_CONTRACT_OK total=88`, `JVM_TESTS_OK total=198`
+  (`SubjectWeightsTest` 20 assertions, new B20), `POOL_ISOLATION_OK grades=9
+  pools=4 draws=2160`, `DISTRIBUTION_OK` grade 3
+  42.54/24.60/16.06/16.80 and grade 9 42.26/24.76/15.26/17.72
+  (expected 41.67/25.00/16.67/16.67), `CORE_ONLY_OK other=0 draws=5000`,
+  `FALLBACK_POOL_OK`, `BANK_DISTRIBUTION_OK`, `MUTATION_SUITE_OK 21/21`,
+  `BUILD_OK version=1.0.1 code=15`, v1/v2/v3 signatures valid.
+  TV DPAD, IME, font-scale and 640dp narrow-screen checks still need a
+  physical Xiaomi TV pass.
+
+## v1.0.1 (versionCode 15) — four-slot subject weighting (initial)
 
 Display version stays **1.0.1**; `versionCode` moves 14 -> 15 with the same
-release keystore (SHA-256 `76eb6063b574…26172`).
+release keystore (SHA-256 `76eb6063b574…26172`). Initial implementation
+(commit `ceae012`); final hardened numbers are in the entry above.
 
 - **Bug fixed: weights were bypassed in all-subjects mode.** `QuizDb.random()`
   previously switched to `WHERE grade=?` (gradeWide) whenever `allSubjects`

@@ -20,7 +20,8 @@ import java.io.OutputStream;
  * <p>表结构由 tools/quizbank/build_bank.py 生成：
  * questions(grade,grade_label,subject,subject_group,chapter,topic,text,opt_a..opt_d,
  *           answer_index,explain,source,qhash)、knowledge(全量纲目)、chapters、meta。
- * 出题只需一条本地随机查询；任何异常都返回 null，由 QuizEngine 回退到参数化生成器。
+ * 抽题按学科池查一次；该年级该池为空时退到「同学科跨年级」，再退全库（最多三次）。
+ * 任何异常都返回 null，由 QuizEngine 回退到参数化生成器。
  */
 public final class QuizDb {
 
@@ -30,6 +31,16 @@ public final class QuizDb {
     private static final String SELECT =
             "SELECT topic,text,opt_a,opt_b,opt_c,opt_d,answer_index,explain,subject "
                     + "FROM questions ";
+
+    // 四个池谓词集中定义：主查询带年级，兜底去掉年级但保留学科约束，
+    // 避免池为空时悄悄抽到别的学科、破坏配比。tests/bank_distribution_check.py
+    // 会直接从这些常量读取 SQL，改坏源码会立刻被测出来。
+    private static final String POOL_OTHER_GRADE =
+            "WHERE grade=? AND subject NOT IN ('数学','语文','英语')";
+    private static final String POOL_OTHER_ALL =
+            "WHERE subject NOT IN ('数学','语文','英语')";
+    private static final String POOL_CORE_GRADE = "WHERE grade=? AND subject=?";
+    private static final String POOL_CORE_ALL = "WHERE subject=?";
 
     private static QuizDb instance;
     private final SQLiteDatabase db;
@@ -252,35 +263,49 @@ public final class QuizDb {
         return result;
     }
 
-    /** 兼容旧调用：仅在三科内抽题。 */
-    public QuizEngine.Question random(int grade, int subject) {
-        return random(grade, subject, false);
+    /** 全库是否存在非三科题；QuizEngine 据此决定 OTHER 槽是否参与轮盘赌。 */
+    public boolean hasOtherQuestions() {
+        synchronized (countCache) {
+            Integer v = countCache.get("other_pool");
+            if (v != null) return v.intValue() > 0;
+        }
+        int n = scalar(db, "SELECT COUNT(*) FROM questions "
+                + "WHERE subject NOT IN ('数学','语文','英语')");
+        synchronized (countCache) { countCache.put("other_pool", Integer.valueOf(n)); }
+        return n > 0;
     }
 
     /**
      * 本地随机挑一题：三科按 grade + subject 精确抽，
      * 「其他学科」按 grade + subject NOT IN (三科) 抽，
      * 由 SubjectWeights 决定进哪个池，配比不再被全学科开关旁路。
-     * 取不到时先退到该年级任意题、再退到全库，保证「一定能出题」。
+     * 三层兜底：同年级同池 -> 同池跨年级 -> 全库（仅题库本身缺该科时），
+     * 前两层都保留学科约束，最后一层仍按题目真实学科贴标签。
      * 用 OFFSET 采样避免整表排序；COUNT 子查询走 grade/subject 索引。
      */
     public QuizEngine.Question random(int grade, int subject, boolean allSubjects) {
         int s = Subjects.norm(subject);
+        // 路由条件必须与此字面量一致：只有「选中 OTHER 且开启全学科」才进其他池。
+        // tests/layout_contract.py 与 build.sh 都钉死了这一行。
         boolean other = s == Subjects.OTHER && allSubjects;
         String g = Integer.toString(grade);
-        String where;
-        String[] args;
+        String where, poolWhere;
+        String[] args, poolArgs;
         if (other) {
-            where = "WHERE grade=? AND subject NOT IN ('数学','语文','英语')";
+            where = POOL_OTHER_GRADE;
             args = new String[]{g};
+            poolWhere = POOL_OTHER_ALL;
+            poolArgs = null;
         } else {
             String name = subjectName(s);
             if (name == null) name = "数学";
-            where = "WHERE grade=? AND subject=?";
+            where = POOL_CORE_GRADE;
             args = new String[]{g, name};
+            poolWhere = POOL_CORE_ALL;
+            poolArgs = new String[]{name};
         }
         QuizEngine.Question q = pick(where, args);
-        if (q == null) q = pick("WHERE grade=?", new String[]{g});
+        if (q == null) q = pick(poolWhere, poolArgs);
         if (q == null) q = pick("", null);
         return q;
     }
@@ -293,9 +318,11 @@ public final class QuizDb {
             System.arraycopy(args, 0, bind, 0, args.length);
             System.arraycopy(args, 0, bind, args.length, args.length);
         }
+        // 空池时 COUNT=0 会让 OFFSET 变成 NULL（SQLite 报 datatype mismatch），
+        // MAX(1, COUNT) 让主查询正常返回「无行」，由调用方走下一层兜底，不靠吞异常。
         String sql = SELECT + where
-                + " LIMIT 1 OFFSET (ABS(RANDOM()) % (SELECT COUNT(*) FROM questions "
-                + where + "))";
+                + " LIMIT 1 OFFSET (ABS(RANDOM()) % MAX(1, (SELECT COUNT(*) FROM questions "
+                + where + ")))";
         try (Cursor c = db.rawQuery(sql, bind)) {
             if (!c.moveToFirst()) return null;
             String bankSubject = c.getString(8);
@@ -311,6 +338,7 @@ public final class QuizDb {
             return QuizEngine.Question.fromBank(subjectFromBank(bankSubject), topic,
                     c.getString(1), opts, c.getInt(6), c.getString(7));
         } catch (Exception e) {
+            Log.e(TAG, "抽题查询失败，回退下一层兜底", e);
             return null;
         }
     }

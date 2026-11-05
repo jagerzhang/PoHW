@@ -23,7 +23,8 @@ public final class SubjectWeights {
 
     private final int[] w = new int[Subjects.COUNT];
     private boolean allSubjects;
-    private boolean otherAvailable = true;
+    // 默认不可用：只有 QuizEngine 确认题库/题包里真有非三科题后才显式置位。
+    private boolean otherAvailable = false;
 
     public SubjectWeights(int math, int chinese, int english, int other) {
         w[Subjects.MATH] = clampWeight(math);

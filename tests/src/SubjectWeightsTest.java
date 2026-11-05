@@ -31,6 +31,8 @@ public class SubjectWeightsTest {
     public static void main(String[] args) {
         int n = 100000;
         SubjectWeights w = new SubjectWeights(5, 3, 2, 2);
+        // QuizEngine 确认题库有非三科题后会显式置位；单测直接模拟这一已就绪状态。
+        w.setOtherAvailable(true);
 
         ok("B01 四槽原始权重 5/3/2/2",
                 w.raw(Subjects.MATH) == 5 && w.raw(Subjects.CHINESE) == 3
@@ -73,6 +75,7 @@ public class SubjectWeightsTest {
 
         SubjectWeights single = new SubjectWeights(0, 0, 0, 4);
         single.setAllSubjects(true);
+        single.setOtherAvailable(true);
         ok("B14 只有第 4 槽非零时 100% 抽其他学科",
                 sample(single, 1000)[Subjects.OTHER] == 1000);
 
@@ -97,6 +100,11 @@ public class SubjectWeightsTest {
                 new SettingsStore(new Context()).weight(Subjects.OTHER) == 4);
         st.weight(Subjects.OTHER, 99);
         ok("B19 第 4 槽配比上限仍为 5", st.weight(Subjects.OTHER) == 5);
+
+        SubjectWeights cold = new SubjectWeights(5, 3, 2, 2);
+        cold.setAllSubjects(true);
+        ok("B20 未经 QuizEngine 置位时 OTHER 默认不参与轮盘赌",
+                !cold.isOtherAvailable() && cold.effective(Subjects.OTHER) == 0);
 
         System.out.println("VERIFY=" + (fail == 0 ? "PASS" : "FAIL") + " total=" + pass);
     }

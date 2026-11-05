@@ -117,20 +117,22 @@ public final class QuizEngine {
         syncOtherAvailable();
     }
 
-    /** 内置题库或其他学科在线题包至少有一个可用时，OTHER 才参与轮盘赌。 */
+    /** 内置题库确实有非三科题、或存在其他学科在线题包时，OTHER 才参与轮盘赌。 */
     private void syncOtherAvailable() {
-        weights.setOtherAvailable(db != null || !bankOther.isEmpty());
+        weights.setOtherAvailable((db != null && db.hasOtherQuestions())
+                || !bankOther.isEmpty());
     }
 
     public void setBank(List<Question> qs) {
         bankMath.clear(); bankChinese.clear(); bankEnglish.clear(); bankOther.clear();
-        if (qs == null) return;
-        for (Question q : qs) {
-            if (q == null) continue;
-            if (q.subject == MATH) bankMath.add(q);
-            else if (q.subject == CHINESE) bankChinese.add(q);
-            else if (q.subject == ENGLISH) bankEnglish.add(q);
-            else if (q.subject == Subjects.OTHER) bankOther.add(q);
+        if (qs != null) {
+            for (Question q : qs) {
+                if (q == null) continue;
+                if (q.subject == MATH) bankMath.add(q);
+                else if (q.subject == CHINESE) bankChinese.add(q);
+                else if (q.subject == ENGLISH) bankEnglish.add(q);
+                else if (q.subject == Subjects.OTHER) bankOther.add(q);
+            }
         }
         syncOtherAvailable();
     }
@@ -142,7 +144,7 @@ public final class QuizEngine {
 
     public boolean hasDb() { return db != null; }
 
-    /** true: draw from every subject of the grade (full K12 catalog). */
+    /** true: allow the other-subject pool; the ratio still comes from SubjectWeights. */
     public void setAllSubjects(boolean v) {
         this.allSubjects = v;
         weights.setAllSubjects(v);

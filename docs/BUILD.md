@@ -20,7 +20,7 @@ command -v aapt2 javac d8 zipalign apksigner   # 应全部能找到
 ## 2. 完整构建
 
 ```bash
-bash tests/run.sh                                   # 197 个 JVM 单测（8 组）
+bash tests/run.sh                                   # 198 个 JVM 单测（8 组）
 python3 tools/quizbank/verify.py app/assets/quiz.db  # 题库独立校验
 bash app/build.sh                                    # 产出 dist/PoHW-v1.0.1.apk
 ```
@@ -31,7 +31,7 @@ bash app/build.sh                                    # 产出 dist/PoHW-v1.0.1.a
 | --- | --- |
 | 0 | 静态守卫：版本一致性、禁止写死 `v4.1 控制台`、禁止 DeviceAdmin / 防卸载 API、禁止第三方题包残留、`allowBackup=false` |
 | 1 | 题库校验：表结构、每题选项合法性、9 年级 × 3 科 × 40 次 + 全学科 360 次随机抽题、答案重算、篡改检测 |
-| 2 | JVM 单测：PinGate / QuizLayout / StopGuard / StopState / GradeScope |
+| 2 | JVM 单测 8 组 198 项：PinGate / QuizLayout / StopGuard / StopState / GradeScope / FeatureV6 / BehaviorV601 / SubjectWeights |
 | 3 | `aapt2 compile --dir res` |
 | 4 | `aapt2 link`（生成 `R.java`，打包 `assets/`） |
 | 5 | `javac -source 8 -target 8 -classpath android.jar` |
@@ -95,18 +95,26 @@ Gradle Wrapper、联网拉依赖和一套额外的构建缓存。命令行链路
 `EXTRA_STOP_VERIFIED`。另外确认 `QuickBootReceiver` 已注册、
 `KeyRouter` / `QuizFlow` / `BehaviorV601Test` 真的被编译与执行。
 
-`[0/9]` 还会执行 `python3 tests/layout_contract.py`：**69 条**源码级布局与发布契约断言，
+`[0/9]` 还会执行 `python3 tests/layout_contract.py`：**88 条**源码级布局与发布契约断言，
 覆盖首页 3×2 网格、设置页单列卡片流、等宽 weight 布局、四向 DPAD 焦点链、
 滚动容器参数（`setFillViewport` / `Ui.fill(1)` / wrap-content 子容器）、
-四槽学科权重、双路径 SQL、题目学科标签反推以及证书门禁本身。
+四槽学科权重、双路径 SQL、题目学科标签反推以及证书门禁本身；复审加固后还钉死
+OTHER 池路由字面量、SQL 双份参数绑定、池保持兜底常量、`hasOtherQuestions()`、
+空池安全 `MAX(1, COUNT(*))` OFFSET、注释诱饵防护与 mutation harness 的存在性。
 调用次数类断言基于带 `/* */` 块注释状态机的去注释代码行，行注释与块注释掉调用都会被拦下；
 负向门禁同时禁止 `wireColumns` / `addColumn` 三栏助手与 `gradeWide` / 15% / `int[3]` 旧抽题残留。
-另执行 `python3 tests/bank_distribution_check.py`：从 `QuizDb.java` 提取真实 SQL，
-对内置题库做 9 年级 × 4 池 × 60 次池隔离、两次 5000 次配比分布、全学科关闭 0 题校验。
-**16 组负向变异**（含不带发布密钥构建、恢复 gradeWide SQL）全部被契约 / 构建 / 运行时校验拦下。
+另执行 `python3 tests/bank_distribution_check.py`：先 `strip_comments()` 去注释，再从
+`QuizDb.java` 的 `POOL_*` 命名常量提取与 Java 同源的真实 SQL，校验双份绑定与三层兜底，
+对内置题库做 9 年级 × 4 池 × 60 次池隔离、两次 5000 次配比分布、全学科关闭 0 题校验，
+以及 `FALLBACK_POOL_OK`（模拟三年级英语池 / 其他池为空，兜底仍保持学科约束、不串池）。
+`tests/mutation_suite.py` 落仓库可复核：**21 组负向变异**（含注释诱饵、破坏绑定、
+去掉池保持兜底、不带发布密钥构建、恢复 gradeWide SQL）全部被契约 / 运行时分布 / 构建门禁拦下，
+末尾自动恢复源码哈希并用发布密钥重建 `dist/`。
 注意 `grep -q 'new int[Subjects.COUNT]'` 会把方括号当正则字符类；必须用 `grep -qF`。
+`[9/9]` 打包源码前会先删除旧的 `PoHW-src.zip`（`zip -r` 对已存在归档只做增量更新，
+旧条目不会消失），并硬性拒绝 `__pycache__` / `*.pyc` 混进交付源码包。
 
-`[2/9]` 现在跑 8 组共 **197** 个 JVM 单测（新增 `BehaviorV601Test` 51 项与 `SubjectWeightsTest` 19 项，
+`[2/9]` 现在跑 8 组共 **198** 个 JVM 单测（`BehaviorV601Test` 51 项与 `SubjectWeightsTest` 20 项，
 覆盖按键 ACTION_DOWN/UP 与 repeat、2x2 高亮邻接、答题状态机、令牌 TTL/重放/进程重启）；
 `[6/9]` 仍检查 dex 中含「错题库」字符串。
 

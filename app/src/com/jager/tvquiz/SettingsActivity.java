@@ -310,8 +310,8 @@ public class SettingsActivity extends Activity {
         // ---- 02 学科设置 ----
         LinearLayout subjects = addCard(col, "02  学科设置 · 教材版本 / 题目配比");
         for (int s = 0; s < Subjects.COUNT; s++) addSubjectRow(subjects, s);
-        note(subjects, "配比按四科权重随机抽题，0 表示该科不出题；「其他学科」配比仅在「出题范围 = 全学科」时生效，"
-                + "关闭时显示「未启用」但可预先设置。内置离线题库按课标纲目组织，不含出版社版本，"
+        note(subjects, "配比按四科权重随机抽题，0 表示该科不出题；「其他学科」配比仅在「出题范围 = 全学科」且题库确有其他学科题时生效，"
+                + "关闭或题库不可用时显示「未启用」/ 自动跳过，但仍可预先设置。内置离线题库按课标纲目组织，不含出版社版本，"
                 + "教材版本用于在线题包筛选、题面标注与错题标记。");
 
         // ---- 03 开机与播放 ----
@@ -493,7 +493,7 @@ public class SettingsActivity extends Activity {
 
     /**
      * 学科设置复合行：学科名 + 教材版本 + 题目配比共占一行。
-     * 教材与配比按 2:1 分配窄栏宽度，「其他学科」右位显示「—」并禁用焦点。
+     * 教材与配比按 2:1 分配窄栏宽度；四科都可配权，第 4 槽在全学科关闭时标注「未启用」。
      */
     private void addSubjectRow(LinearLayout parent, final int subj) {
         LinearLayout row = Ui.hbox(this);

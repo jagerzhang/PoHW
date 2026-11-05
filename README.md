@@ -125,7 +125,7 @@ GET <base>/packs/<file>      { schema, id, grade, edition, subject, questions:[{
 ```bash
 export JAVA_HOME=/path/to/jdk-17
 export ANDROID_HOME=/path/to/android-sdk
-bash tests/run.sh          # 197 个 JVM 单测（8 组，含四槽权重分布回归）
+bash tests/run.sh          # 198 个 JVM 单测（8 组，含四槽权重分布回归）
 python3 tools/quizbank/verify.py app/assets/quiz.db
 bash app/build.sh          # -> dist/PoHW-v1.0.1.apk + dist/PoHW-src.zip
 ```
@@ -181,12 +181,12 @@ PoHW/
 ├── app/
 │   ├── AndroidManifest.xml
 │   ├── build.sh                 # 零 Gradle 构建链
-│   ├── src/com/jager/tvquiz/    # 27 个 Java 源文件
+│   ├── src/com/jager/tvquiz/    # 28 个 Java 源文件
 │   ├── res/                     # 图标 / TV banner / strings / network_security_config
 │   └── assets/quiz.db(.version) # 内置离线题库
 ├── tests/
 │   ├── run.sh                   # JVM 单测入口
-│   └── src/                     # 7 组测试 + Android 轻量 stub
+│   └── src/                     # 8 组测试 + Android 轻量 stub
 ├── tools/quizbank/
 │   ├── build_bank.py            # 全量纲目 -> SQLite
 │   └── verify.py                # 独立校验
@@ -196,9 +196,44 @@ PoHW/
 
 ---
 
-## v1.0.1 学科配比修订（versionCode 15）：四槽权重 + 标签修正
+## v1.0.1 定版（versionCode 15）：独立复审加固
+
+> 展示版本与 `versionCode` 都不变（1.0.1 / 15），签名证书 `76eb6063…6172` 连续；
+> 本节是 code15 的最终定版，覆盖同名交付物。下一节记录的是同一 code 的初版实现。
+
+独立只读复审（`weighting-reviewer`）结论为**有条件通过、无 P0**，但指出 4 个 P1 都落在
+「门禁自己没守住、最易回归的代码点」，另有 6 个 P2。全部已在代码层面修掉：
+
+| 复审项 | 修复 |
+| --- | --- |
+| P1-1 OTHER 池路由条件没有门禁，改坏后所有测试仍然全绿 | `build.sh`、布局契约、运行时分布校验三处同时钉死 `boolean other = s == Subjects.OTHER && allSubjects;`；变异 Q 覆盖 |
+| P1-2 SQL 参数绑定次数没有断言；绑错时 `rawQuery` 抛异常被 catch 吞掉，静默退化成全库任意题 | 钉死 `new String[args.length * 2]` 与两次 `System.arraycopy`（主查询与 COUNT 子查询各绑一次）；变异 R 覆盖 |
+| P1-3 分布校验从含注释的源码里 `re.search` 取首个 SQL，注释诱饵可绕过 | 新增 `strip_comments()`；SQL 改为从 `POOL_*` 命名常量同源提取，Java 与校验脚本共享同一批常量；变异 S 覆盖 |
+| P1-4 池为空时 `WHERE grade=?` / `pick("", null)` 兜底会静默恢复「配比失效 + 标签串科」 | 兜底改为**池保持**：先 `POOL_CORE_ALL` / `POOL_OTHER_ALL`（只放宽年级、保留学科约束），最后才全库；空池用 `MAX(1, (SELECT COUNT(*) ...))` 保证 OFFSET 不为 NULL；`QuizDb.hasOtherQuestions()` 在其他池为空时直接禁用第 4 槽；`FALLBACK_POOL_OK` 与变异 T/U 覆盖 |
+| P2 状态 / 默认值 / 文案 | `SubjectWeights.otherAvailable` 默认改为 `false`（只有 `QuizEngine` 确认题库真的有非三科题才置位）；`setBank(null)` 也刷新可用性；删除会静默抽数学题的 2 参 `random()` 重载；SQL 异常改 `Log.e` 而非静默吞掉；修正 197/178 过期计数、设置页第 4 行注释与说明文案 |
+
+**回归护栏**：布局 / 发布契约 69 → **88 条**；`tests/bank_distribution_check.py` 重写为
+去注释 + 同源 SQL 常量 + 双份绑定校验 + 复刻 Java 三层兜底，新增 `FALLBACK_POOL_OK`
+（模拟三年级英语池 / 其他学科池为空，验证兜底仍不串池）；新增落仓库、可复核的
+`tests/mutation_suite.py`（**21 组**变异，含不带发布密钥构建被证书门禁拒绝）。
+
+**验证**：`LAYOUT_CONTRACT_OK total=88`、`JVM_TESTS_OK total=198`
+（`SubjectWeightsTest` 20 项，新增 B20「未经 QuizEngine 置位时 OTHER 默认不参与轮盘赌」）、
+`POOL_ISOLATION_OK grades=9 pools=4 draws=2160`、
+`DISTRIBUTION_OK` 三年级 42.54/24.60/16.06/16.80%、九年级 42.26/24.76/15.26/17.72%
+（期望 41.67/25.00/16.67/16.67）、`CORE_ONLY_OK other=0 draws=5000`、
+`FALLBACK_POOL_OK`、`BANK_DISTRIBUTION_OK`、`MUTATION_SUITE_OK 21/21`、
+`BUILD_OK version=1.0.1 code=15`，v1/v2/v3 签名与证书一致。
+
+**仍待真机确认**：3×2 DPAD 路径、长列表滚动跟随焦点、系统字体 150% 行高、640dp 窄屏余量、
+URL 输入框 TV IME 上下键、第三方视频 App 暂停/恢复、通知栏抢焦点后的重抢。
+
+---
+
+## v1.0.1 学科配比修订（versionCode 15）：四槽权重 + 标签修正（初版）
 
 > 展示版本仍是 **v1.0.1**；只把 `versionCode` 14 → 15，签名证书 `76eb6063…6172` 不变，可直接覆盖安装。
+> **本节记录初版（commit `ceae012`）；最终定版的门禁与验证数据见上一节。**
 
 **修的是什么**：此前打开「出题范围 = 全学科」后，`QuizDb.random()` 会把 SQL 换成 `WHERE grade=?`（gradeWide），
 忽略配比选出的学科。家长设置的 5:3:2 因此完全不决定题目内容，其他学科占比由题库题量决定
@@ -208,12 +243,12 @@ PoHW/
 | 改动 | 说明 |
 | --- | --- |
 | **四槽权重** | 新增纯 Java `SubjectWeights`：数 / 语 / 英 / 其他共 4 槽，默认 **5:3:2:2**（0-5 可调）。全学科关闭时第 4 槽有效权重为 0；内置题库与其他学科在线题包都不可用时也自动失效，避免选中 OTHER 后只能回退成数学题。旧的 15% 硬编码删除。 |
-| **配比真正生效** | `QuizDb.random()` 拆成两条 SQL：三科 `WHERE grade=? AND subject=?`，其他学科 `WHERE grade=? AND subject NOT IN ('数学','语文','英语')`；`gradeWide` 全年级跨科抽样删除。取不到时先同年级兜底、再全库兜底。 |
+| **配比真正生效** | `QuizDb.random()` 拆成两条 SQL：三科 `WHERE grade=? AND subject=?`，其他学科 `WHERE grade=? AND subject NOT IN ('数学','语文','英语')`；`gradeWide` 全年级跨科抽样删除。取不到时先同年级兜底、再全库兜底（初版行为；定版改为池保持兜底，见上一节）。 |
 | **学科标签修正** | `QuizDb.pick()` 用题目真实 `subject` 反推 `q.subject`（`subjectFromBank`），不再沿用选中的池编号；错题库、统计与题面学科名的错标问题消除。 |
 | **设置页** | 「其他学科」那格从「—」变成可点的「配比 N」，关闭全学科时显示「配比 N · 未启用」（仍可预先设置）；首页状态行显示四科配比。 |
-| **回归护栏** | 布局 / 发布契约 40 → **69 条**（禁止 `gradeWide` / 15% / `int[3]` / 旧标签路径回归）；新增 `tests/bank_distribution_check.py`，从 `QuizDb.java` 提取真实 SQL 实跑题库：9 年级 × 4 池 × 60 次隔离校验、5000 次配比分布校验、全学科关闭 0 题校验，并纳入 `[0/9]` 门禁。 |
+| **回归护栏** | 布局 / 发布契约 40 → **69 条**，复审加固后 88 条（见上一节）；禁止 `gradeWide` / 15% / `int[3]` / 旧标签路径回归；新增 `tests/bank_distribution_check.py`，从 `QuizDb.java` 提取真实 SQL 实跑题库：9 年级 × 4 池 × 60 次隔离校验、5000 次配比分布校验、全学科关闭 0 题校验，并纳入 `[0/9]` 门禁。 |
 
-**验证**：`LAYOUT_CONTRACT_OK total=69`、`JVM_TESTS_OK total=197`（新增 `SubjectWeightsTest` 19 项）、
+**验证（初版）**：`LAYOUT_CONTRACT_OK total=69`、`JVM_TESTS_OK total=197`（新增 `SubjectWeightsTest` 19 项）、
 `BANK_DISTRIBUTION_OK`（三年级 42.54/24.60/16.06/16.80%、九年级 42.26/24.76/15.26/17.72%，
 期望 41.67/25.00/16.67/16.67）、`MUTATION_SUITE3_OK 16/16`；
 `BUILD_OK version=1.0.1 code=15`，v1/v2/v3 签名与证书一致。

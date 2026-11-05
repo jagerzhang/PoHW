@@ -153,17 +153,19 @@ check("setOtherAvailable" in _w, "other slot can be disabled when no question ba
 check("public int pick(Random r)" in _w and "MAX_WEIGHT" in _w,
       "weighted roulette is pure Java and clamped")
 check("private final SubjectWeights weights;" in _e, "engine delegates to SubjectWeights")
-check("int[3]" not in _rw_e, "legacy three-slot weight array is gone")
+check("int[3]" not in _e, "legacy three-slot weight array is gone")
 check("return weights.pick(r);" in _e, "engine draws from the four-slot roulette")
 check("syncOtherAvailable()" in _e, "engine refreshes OTHER availability on db/bank changes")
-check("r.nextInt(100) < 15" not in _rw_e, "hardcoded 15 percent branch is gone")
-check("s == Subjects.OTHER) s = MATH" not in _rw_e,
+check("r.nextInt(100) < 15" not in _e, "hardcoded 15 percent branch is gone")
+check("s == Subjects.OTHER) s = MATH" not in _e,
       "OTHER is no longer downgraded to a math question")
-check("gradeWide" not in _rw_d, "grade-wide cross-subject SQL is gone")
+check("gradeWide" not in _d, "grade-wide cross-subject SQL is gone")
 check("NOT IN ('数学','语文','英语')" in _d, "other-subject pool uses its own SQL predicate")
 check("WHERE grade=? AND subject=?" in _d, "core subjects keep their own SQL predicate")
-check('new String[]{g}' in _d and 'WHERE grade=?' in _d,
-      "same-grade fallback exists before the full-bank fallback")
+check("POOL_OTHER_ALL" in _d and "POOL_CORE_ALL" in _d,
+      "pool-preserving fallback predicates are declared as constants")
+check("pick(poolWhere, poolArgs)" in _d,
+      "first fallback keeps the subject constraint and only drops the grade")
 check("subjectFromBank(bankSubject)" in _d, "question label is derived from the real bank subject")
 check("fromBank(subject," not in _d, "legacy label from the chosen pool is gone")
 check("st.weight(Subjects.OTHER)" in _o, "service passes the fourth weight to the engine")
@@ -184,5 +186,42 @@ check("bank_distribution_check.py" in b,
       "runtime SQL distribution regression is wired into the build")
 check("grep -qF 'new int[Subjects.COUNT]'" in b,
       "build gate matches the four-slot declaration literally, not as a regex")
+
+
+# ---- 独立复审加固：路由 / 绑定 / 兜底 / 状态的源码级护栏 ----
+_rw_w = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SubjectWeights.java"))
+_chk = read(os.path.join(ROOT, "tests/bank_distribution_check.py"))
+_mut = os.path.join(ROOT, "tests/mutation_suite.py")
+
+check("private boolean otherAvailable = false;" in _rw_w,
+      "OTHER defaults to unavailable without an explicit bank readiness signal")
+check("boolean other = s == Subjects.OTHER && allSubjects;" in _d,
+      "OTHER pool routing condition is pinned")
+check("boolean other = s == Subjects.OTHER && allSubjects;" in _chk,
+      "runtime distribution check also pins the routing condition")
+check("new String[args.length * 2]" in _d and _d.count("System.arraycopy") >= 2,
+      "WHERE params are bound twice for main query and COUNT subquery")
+check("new String[args.length * 2]" in _chk,
+      "runtime distribution check also pins the double binding")
+check("POOL_OTHER_GRADE" in _d and "POOL_CORE_GRADE" in _d,
+      "both main-query predicates are named constants")
+check("db.hasOtherQuestions()" in _e,
+      "engine disables OTHER when the bank has no non-core questions")
+check("hasOtherQuestions()" in _d, "QuizDb exposes the non-core pool count check")
+check("if (qs != null)" in _e, "setBank(null) still refreshes bank availability")
+check("random(int grade, int subject)" not in _d,
+      "deprecated two-arg random overload that silently drew math is gone")
+check("Log.e(TAG, " in _d, "SQL failures are logged instead of silently swallowed")
+check("strip_comments" in _chk and "FALLBACK_POOL_OK" in _chk,
+      "distribution check strips comments and verifies pool-preserving fallbacks")
+check("MAX(1, (SELECT COUNT(*) FROM questions " in _d
+      and "MAX(1, (SELECT COUNT(*) FROM questions " in _chk,
+      "empty-pool-safe OFFSET template is shared by Java and the runtime check")
+check("POOL_OTHER_ALL" in _chk and "POOL_CORE_ALL" in _chk,
+      "distribution check reads the same named SQL constants")
+check(os.path.isfile(_mut), "mutation harness is committed and reproducible")
+check("198 assertions" in b, "build log states the actual JVM assertion count")
+check("显示「—」并禁用焦点" not in raw_s, "stale UI comment about the fourth row is gone")
+check("题库不可用" in raw_s, "settings note explains the bank-unavailable case")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

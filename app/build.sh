@@ -84,7 +84,14 @@ grep -q 'SubjectWeights' "$ENG"
 grep -q 'st.weight(Subjects.OTHER)' "$SVC"
 grep -q 'NOT IN (' "$DB"
 grep -q 'subjectFromBank' "$DB"
-if grep -q -e 'gradeWide' -e 'nextInt(100) < 15' -e 'fromBank(subject,' "$ENG" "$DB"; then
+# 钉死最易回归的三处：OTHER 路由、参数绑定两次、保持学科约束的兜底。
+grep -qF 'boolean other = s == Subjects.OTHER && allSubjects;' "$DB"
+grep -qF 'new String[args.length * 2]' "$DB"
+grep -qF 'pick(poolWhere, poolArgs)' "$DB"
+grep -qF 'db.hasOtherQuestions()' "$ENG"
+# 负向禁词只看代码行，注释里提到旧实现不应误拦构建。
+if grep -v -e '^[[:space:]]*//' -e '^[[:space:]]*\*' -e '^[[:space:]]*/\*' "$ENG" "$DB" \
+    | grep -q -e 'gradeWide' -e 'nextInt(100) < 15' -e 'fromBank(subject,'; then
   echo 'FORBIDDEN: legacy gradeWide / 15 percent / wrong subject label'; exit 1
 fi
 # P0: FGS 契约覆盖所有分支（startForeground 必须在 onStartCommand 入口）
@@ -130,7 +137,7 @@ fi
 echo "[1/9] verify built-in question bank"
 python3 tools/quizbank/verify.py "$APP/assets/quiz.db"
 
-echo "[2/9] JVM unit tests (178 assertions incl. behaviour regressions)"
+echo "[2/9] JVM unit tests (198 assertions incl. behaviour regressions)"
 bash tests/run.sh
 
 STAMP="$(date +%s)"
@@ -220,10 +227,18 @@ aapt dump badging "$DIST/$APK_NAME" 2>/dev/null | grep -q "versionName='$VERSION
 aapt dump badging "$DIST/$APK_NAME" 2>/dev/null | grep -q "versionCode='$VERSION_CODE'"
 unzip -l "$DIST/$APK_NAME" | grep -q 'assets/quiz.db'
 unzip -l "$DIST/$APK_NAME" | grep -q 'assets/quiz.db.version'
+# zip -r 对已存在的归档只做增量更新，旧条目不会消失；先删旧包再重建。
+rm -f "$DIST/PoHW-src.zip"
 (cd "$ROOT" && zip -q -r "$DIST/PoHW-src.zip" \
   README.md LICENSE .gitignore CHANGELOG.md \
   app/AndroidManifest.xml app/build.sh app/src app/res app/assets \
-  tests docs tools)
+  tests docs tools -x '*/__pycache__/*' '*.pyc')
+
+# 源码包只允许源码与文档：Python 字节码和缓存目录属于本机运行产物，不得外发。
+if unzip -l "$DIST/PoHW-src.zip" | grep -qE '__pycache__|\.pyc$'; then
+  echo "FORBIDDEN: python bytecode leaked into the source archive"
+  exit 1
+fi
 
 echo "=== RESULT ==="
 ls -lh "$DIST/$APK_NAME" "$DIST/PoHW-src.zip"

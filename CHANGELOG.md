@@ -40,6 +40,17 @@ keystore (SHA-256 `76eb6063b574...26172`). Fifth published release.
   `PracticeConfigTest` 15), `MUTATION_SUITE_OK 73/73`,
   `BUILD_OK version=1.2.1 code=29`; site release notes now list five versions.
 
+### versionCode 32 — console button reshuffle on the legacy branch
+
+Mirrors main's code-31 change: row1[1] "立即出题" -> "练习模式" (opens
+`PracticeActivity`), row2[0] "练习模式" -> **"授权悬浮窗" restored**. The
+legacy `openOverlaySettings()` shows a manual-permission hint below API 23
+and uses the system settings page above it; parent-settings card 03 keeps its
+own entry. `versionCode` 30 -> **32**, `versionName` stays **1.2.1**.
+No tag / Release yet. Gates: `LAYOUT_CONTRACT_OK 209`, `JVM_TESTS_OK 308`,
+`MUTATION_SUITE_OK 74/74`, `BUILD_OK version=1.2.1 code=32`, dex scan still
+clear of API 21+ symbols, `apksigner verify --min-sdk-version 14` passes.
+
 ### versionCode 30 — legacy Android 4.0 variant (branch feat/android4-legacy-v121)
 
 Standalone branch build rebuilt from `main` at v1.2.1, **not merged into main**.

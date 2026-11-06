@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="29"' in _mf, "manifest versionCode advances to 29")
-check('VERSION_CODE="29"' in b, "build script versionCode advances to 29")
+check('android:versionCode="31"' in _mf, "manifest versionCode advances to 31")
+check('VERSION_CODE="31"' in b, "build script versionCode advances to 31")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -354,8 +354,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="29"' in _mf, "manifest versionCode advances to 29")
-check('VERSION_CODE="29"' in b, "build script versionCode advances to 29")
+check('android:versionCode="31"' in _mf, "manifest versionCode advances to 31")
+check('VERSION_CODE="31"' in b, "build script versionCode advances to 31")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -587,10 +587,14 @@ _o121 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizOve
 _e121 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizEngine.java")))
 _c121 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/PracticeConfig.java")))
 _mf121 = read(os.path.join(ROOT, "app/AndroidManifest.xml"))
-check('"练习模式"' in _m121 and 'PracticeActivity.class' in _m121,
-      "home grid exposes practice mode instead of overlay authorization")
-check('"授权悬浮窗"' not in _m121,
-      "console no longer carries the overlay authorization entry")
+check('actionButton(row1, "练习模式"' in _m121
+      and 'PracticeActivity.class' in _m121
+      and 'actionButton(row2, "授权悬浮窗"' in _m121,
+      "practice mode takes the former quiz-now slot and overlay authorization is restored")
+check('"立即出题"' not in _m121 and 'ACTION_QUIZ_NOW' not in _m121,
+      "the old immediate-quiz button is gone from the console")
+check('ACTION_MANAGE_OVERLAY_PERMISSION' in _m121,
+      "restored console button opens the system overlay settings")
 check('"授权悬浮窗"' in _s121 and 'ACTION_MANAGE_OVERLAY_PERMISSION' in _s121,
       "overlay authorization moved into the boot/playback settings card")
 check('android:name=".PracticeActivity"' in _mf121,

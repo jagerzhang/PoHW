@@ -8,7 +8,7 @@ APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
 VERSION_NAME="1.2.1"
-VERSION_CODE="29"
+VERSION_CODE="31"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"

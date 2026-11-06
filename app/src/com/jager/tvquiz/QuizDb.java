@@ -296,7 +296,7 @@ public final class QuizDb {
         return random(grade, subject, allSubjects, syllabus, termIndex, unitLimit, false);
     }
 
-    /** knowledgeOnly=true 时先查程序出题池；池空则完整走原兜底链，门禁零影响。 */
+    /** knowledgeOnly=true 走独立的带约束链；默认 false 时原五层兜底逐字不变。 */
     public QuizEngine.Question random(int grade, int subject, boolean allSubjects,
                                       Syllabus syllabus, int termIndex, int unitLimit,
                                       boolean knowledgeOnly) {
@@ -321,6 +321,16 @@ public final class QuizDb {
             poolArgs = new String[]{name};
         }
 
+        if (knowledgeOnly) {
+            // 810 道程序出题全部 term=''、topic 是题型名，学期/单元条件会把它们全部排除。
+            // 所以偏好模式不用 termW/unitW；且每一层兜底都必须保留 source 约束。
+            // 两层都空时返回 null，交给 QuizEngine 的参数化生成器出真计算 / 词库题，
+            // 绝不回退到含 4319 道纲目定位题的全库。
+            QuizEngine.Question kq = pick(where + KNOWLEDGE_ONLY_SQL, args);
+            if (kq == null) kq = pick(poolWhere + KNOWLEDGE_ONLY_SQL, poolArgs);
+            return kq;
+        }
+
         String termW = Syllabus.termWhere(termIndex);
         // 其他学科池与未覆盖的册没有有序单元表：只做学期过滤，绝不假装精确。
         String[] names = (syllabus != null && unitLimit > 0 && !other)
@@ -331,10 +341,6 @@ public final class QuizDb {
         QuizEngine.Question q;
         String strict = where + termW + unitW;
         String tried = strict;
-        if (knowledgeOnly) {
-            QuizEngine.Question pref = pick(strict + KNOWLEDGE_ONLY_SQL, concat(args, unitA));
-            if (pref != null) return pref;
-        }
         q = pick(strict, concat(args, unitA));
         if (q == null) {
             String termOnly = where + termW;

@@ -316,6 +316,12 @@ public class SettingsActivity extends Activity {
         });
         rowTerm = addRow(quiz, "学习学期", new View.OnClickListener() {
             @Override public void onClick(View v) {
+                if (st.questionSource() == SettingsStore.SOURCE_KNOWLEDGE_ONLY) {
+                    Toast.makeText(SettingsActivity.this,
+                            "仅知识/计算题模式不受学习进度限制，请先切回「全部题目」",
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 st.termIndex((st.termIndex() + 1) % Syllabus.TERM_LABELS.length);
                 // 换册后单元数可能变少，把已选序号收敛到新册的最大单元数。
                 st.unitLimit(Math.min(st.unitLimit(),
@@ -325,6 +331,12 @@ public class SettingsActivity extends Activity {
         });
         rowUnit = addRow(quiz, "已学单元", new View.OnClickListener() {
             @Override public void onClick(View v) {
+                if (st.questionSource() == SettingsStore.SOURCE_KNOWLEDGE_ONLY) {
+                    Toast.makeText(SettingsActivity.this,
+                            "仅知识/计算题模式不受学习进度限制，请先切回「全部题目」",
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 int max = syllabus.maxUnits(st.grade(), st.termIndex());
                 if (max == 0) {
                     Toast.makeText(SettingsActivity.this,
@@ -361,7 +373,7 @@ public class SettingsActivity extends Activity {
         });
         note(quiz, "点击右侧取值即可循环切换，离开设置页时统一保存。");
         note(quiz, "默认：答对 1 题即过关、严格模式关、无冷却惩罚、全部题目。上面四项都是可选加固，不开就和旧版一样。");
-        note(quiz, "出题偏好＝仅知识/计算题时，学习进度与全学科模式会退化为仅按年级过滤（这类题没有学期与教材单元信息）。");
+        note(quiz, "出题偏好＝仅知识/计算题时，只抽 810 道真知识/计算题（数学算式、语文古诗/词语、英语词汇/句型）；这类题没有学期与单元信息，学习学期/已学单元显示「不适用」，全学科模式的其他学科池交给参数化生成器。");
         note(quiz, "学习进度：学期按题库 term 过滤（上 / 下册含「全一册」，排除无学期的综合练习）；"
                 + "「已学单元」按 1–6 年级数学教材顺序只抽已学单元。语文 / 英语 / 其他学科与 7–9 年级暂无可靠单元顺序，仅按学期过滤。"
                 + "选不到题时依次放宽单元 → 学期 → 年级，始终不换学科。默认全学年 / 不限，覆盖安装不改变原有范围。");
@@ -686,10 +698,13 @@ public class SettingsActivity extends Activity {
                 ? "仅知识/计算题" : "全部题目");
         rowScope.setText(st.allSubjects() ? "全学科（含物理/历史等）" : "仅数 / 语 / 英");
         rowSync.setText("自动更新 · " + SettingsStore.SYNC_LABELS[st.syncIndex()]);
-        rowTerm.setText(Syllabus.TERM_LABELS[st.termIndex()]);
+        boolean prefOnly = st.questionSource() == SettingsStore.SOURCE_KNOWLEDGE_ONLY;
+        rowTerm.setText(prefOnly ? "不适用（仅知识题模式）" : Syllabus.TERM_LABELS[st.termIndex()]);
         int maxUnit = syllabus.maxUnits(st.grade(), st.termIndex());
         int lim = st.unitLimit();
-        if (maxUnit == 0) {
+        if (prefOnly) {
+            rowUnit.setText("不适用（仅知识题模式）");
+        } else if (maxUnit == 0) {
             rowUnit.setText("本册暂无进度表 · 仅学期过滤");
         } else if (lim == 0) {
             rowUnit.setText("不限（整册 " + maxUnit + " 单元）");

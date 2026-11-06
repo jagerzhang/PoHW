@@ -60,6 +60,35 @@ release notes are updated at that point.
 - `BUILD_OK version=1.1.0 code=22`; v1/v2/v3 signatures valid, certificate
   continuous; `src.zip` clean and contains `.github/workflows/ci.yml`.
 
+### versionCode 23 — question preference no longer leaks catalog questions
+
+Bug report: with "仅知识/计算题" selected, the TV still showed
+"知识点「几何：时分秒」是哪一个年级段的学习内容？" (a catalog-location
+question). Real SQL reproduction:
+
+- The 810 real knowledge questions all have `term=''` and topic names like
+  `乘法` / `词汇` / `古诗名句`, not textbook unit names. Adding the term or
+  unit predicate (`term IN ('上','全')`, `topic LIKE '%：...'`) to the
+  preference predicate returns **0 rows**.
+- The old code tried the preference predicate only on the strictest layer and
+  then fell through to the original five-tier fallback with **no** `source`
+  constraint, so it drew from all 5129 rows — 84.2% of which (4319) are
+  catalog-location questions.
+
+Fix: `QuizDb.random()` now returns from a dedicated two-layer chain when
+`knowledgeOnly` is true — `where + KNOWLEDGE_ONLY_SQL`, then
+`poolWhere + KNOWLEDGE_ONLY_SQL` — with the `source='程序出题'` predicate on
+**every** layer and no term/unit filtering (they do not apply to these rows).
+If both layers are empty (e.g. the OTHER subject pool has no non-core
+knowledge questions) it returns null and `QuizEngine.next()` falls back to
+the parametric math / word generators, which are also real questions.
+The default path (`knowledgeOnly=false`) is byte-for-byte unchanged.
+
+Settings now show "不适用（仅知识题模式）" for 学习学期 / 已学单元 and block
+their click handlers with a hint while the preference is on. Gates: contract
+180 -> **183**, mutations 57/57 -> **59/59** (two new cases: dropping the
+source constraint from the fallback, and disabling the knowledge-only chain).
+
 ### Honest boundaries
 
 - Restart still resets `remainSec` (a persisted cooldown is converted back

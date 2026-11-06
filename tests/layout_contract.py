@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="22"' in _mf, "manifest versionCode advances to 22")
-check('VERSION_CODE="22"' in b, "build script versionCode advances to 22")
+check('android:versionCode="23"' in _mf, "manifest versionCode advances to 23")
+check('VERSION_CODE="23"' in b, "build script versionCode advances to 23")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -354,8 +354,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="22"' in _mf, "manifest versionCode advances to 22")
-check('VERSION_CODE="22"' in b, "build script versionCode advances to 22")
+check('android:versionCode="23"' in _mf, "manifest versionCode advances to 23")
+check('VERSION_CODE="23"' in b, "build script versionCode advances to 23")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -507,5 +507,17 @@ check('return streak >= required;' in _u,
       "UnlockPolicy requires the configured streak before unlocking")
 check('unlock.onWrong();' in _o_code,
       "wrong answer resets the streak in live code")
+
+
+# ---- versionCode 23：出题偏好不得回退到含纲目题的全库 ----
+_qd_code = strip_comments(_qd)
+check('if (knowledgeOnly) {' in _qd_code and 'return kq;' in _qd_code
+      and _qd_code.count('KNOWLEDGE_ONLY_SQL') >= 3,
+      "knowledge-only chain keeps the source constraint on every fallback")
+check(_qd_code.index('if (knowledgeOnly) {') < _qd_code.index('String termW ='),
+      "knowledge-only chain runs before term/unit filtering")
+check('不适用（仅知识题模式）' in _act
+      and '仅知识/计算题模式不受学习进度限制' in _act,
+      "settings mark study scope as not applicable under the preference")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

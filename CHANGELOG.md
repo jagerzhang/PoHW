@@ -40,6 +40,24 @@ keystore (SHA-256 `76eb6063b574...26172`). Fifth published release.
   `PracticeConfigTest` 15), `MUTATION_SUITE_OK 73/73`,
   `BUILD_OK version=1.2.1 code=29`; site release notes now list five versions.
 
+### versionCode 31 — console button reshuffle (not yet released)
+
+User follow-up: practice mode should take the old "立即出题" slot instead of
+replacing the overlay authorization button.
+
+- `MainActivity` row1[1]: "立即出题" -> "练习模式", opening `PracticeActivity`.
+  The old `ACTION_QUIZ_NOW` console entry is gone (service handling kept).
+- row2[0]: "练习模式" -> **"授权悬浮窗" restored**, with `openOverlaySettings()`
+  back in `MainActivity`; the parent-settings card 03 keeps its own entry too.
+  The status line again points at the console button.
+- Contracts now pin both slots, the absence of "立即出题", and the restored
+  system-settings intent; two mutations cover both buttons.
+- `versionCode` 29 -> **31** (30 belongs to the v1.2.1-legacy branch); display
+  version stays **1.2.1**. No tag / Release yet — awaiting maintainer.
+  Site release notes still describe the released code-29 build.
+- Gates: `LAYOUT_CONTRACT_OK 209`, `JVM_TESTS_OK 308`,
+  `MUTATION_SUITE_OK 74/74`, `BUILD_OK version=1.2.1 code=31`.
+
 ## v1.2.0 (versionCode 25–28) — new bank, difficulty preference and release
 
 Display version 1.1.0 -> **1.2.0**, `versionCode` 24 -> **25–26**, same release

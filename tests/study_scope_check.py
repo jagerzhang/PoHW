@@ -135,11 +135,11 @@ def layers(pools, term_where, grade, subject, all_subjects, term, limit, syl,
     g = str(grade)
     if other:
         where, args = pools["POOL_OTHER_GRADE"], [g]
-        pool_where, pool_args = pools["POOL_OTHER_ALL"], []
+        pool_where, pool_args = pools["POOL_OTHER_ALL"], [g]
     else:
         name = NAMES[subject] if subject < 3 else "数学"
         where, args = pools["POOL_CORE_GRADE"], [g, name]
-        pool_where, pool_args = pools["POOL_CORE_ALL"], [name]
+        pool_where, pool_args = pools["POOL_CORE_ALL"], [g, name]
     tw = term_where.get(term, "")
     names = forced_names if forced_names is not None else (
         [] if other else match_names(syl, grade, term, subject, limit))
@@ -156,7 +156,7 @@ def layers(pools, term_where, grade, subject, all_subjects, term, limit, syl,
         out.append((where, args))
         tried = where
     out.append((pool_where, pool_args))
-    out.append(("", []))
+    out.append(("WHERE grade<=?", [g]))
     return out
 
 
@@ -201,7 +201,7 @@ def main():
         if tagged: fail('bank-v2 unexpectedly has term-tagged rows %d' % tagged)
         for g in (1,2,3,4,5,6):
             for sub in NAMES:
-                r = conn.execute('SELECT subject FROM questions WHERE grade=? AND subject=? '
+                r = conn.execute('SELECT subject FROM questions WHERE grade<=? AND subject=? '
                                  'ORDER BY RANDOM() LIMIT 1',(g,sub)).fetchone()
                 if r is None:
                     r = conn.execute('SELECT subject FROM questions WHERE subject=? '
@@ -215,7 +215,7 @@ def main():
     random.seed(20261105)
 
     # ---- 池谓词与学期谓词本身必须来自源码且语义正确 ----
-    if "NOT IN" not in pools["POOL_OTHER_GRADE"] or "grade=?" not in pools["POOL_CORE_GRADE"]:
+    if "NOT IN" not in pools["POOL_OTHER_GRADE"] or "grade<=?" not in pools["POOL_CORE_GRADE"]:
         fail("pool predicates lost subject/grade constraints")
     if "'上','全'" not in term_where[1] or "'下','全'" not in term_where[2]:
         fail("term predicate must include 全一册 and exclude empty-term practice")

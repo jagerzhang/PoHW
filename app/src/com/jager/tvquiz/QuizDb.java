@@ -20,8 +20,8 @@ import java.io.OutputStream;
  * <p>表结构由 tools/quizbank/build_bank.py 生成：
  * questions(grade,grade_label,term,subject,subject_group,chapter,topic,text,opt_a..opt_d,
  *           answer_index,explain,source,qhash)、knowledge(全量纲目)、chapters、meta。
- * 抽题按学科池查一次，可叠加 term / topic 学习进度；空池时逐级放宽学期、单元、年级，
- * 但前几层始终保留学科约束，最后才退全库。任何异常返回 null，由 QuizEngine 回退生成器。
+ * 抽题按学科池查一次，可叠加 term / topic 学习进度；空池时逐级放宽学期与单元，
+ * 但任何一层都不放宽年级上限（grade<=用户年级），也不换学科。任何异常返回 null，由 QuizEngine 回退生成器。
  */
 public final class QuizDb {
 
@@ -32,15 +32,15 @@ public final class QuizDb {
             "SELECT topic,text,opt_a,opt_b,opt_c,opt_d,answer_index,explain,subject "
                     + "FROM questions ";
 
-    // 四个池谓词集中定义：主查询带年级，兜底去掉年级但保留学科约束，
-    // 避免池为空时悄悄抽到别的学科、破坏配比。tests/bank_distribution_check.py
+    // 四个池谓词集中定义：所有层都带 grade<=? 年级上限，绝不为了凑题放出高年级内容；
+    // 学科约束也贯穿始终，避免池为空时悄悄抽到别的学科、破坏配比。tests/bank_distribution_check.py
     // 会直接从这些常量读取 SQL，改坏源码会立刻被测出来。
     private static final String POOL_OTHER_GRADE =
-            "WHERE grade=? AND subject NOT IN ('数学','语文','英语')";
+            "WHERE grade<=? AND subject NOT IN ('数学','语文','英语')";
     private static final String POOL_OTHER_ALL =
-            "WHERE subject NOT IN ('数学','语文','英语')";
-    private static final String POOL_CORE_GRADE = "WHERE grade=? AND subject=?";
-    private static final String POOL_CORE_ALL = "WHERE subject=?";
+            "WHERE grade<=? AND subject NOT IN ('数学','语文','英语')";
+    private static final String POOL_CORE_GRADE = "WHERE grade<=? AND subject=?";
+    private static final String POOL_CORE_ALL = "WHERE grade<=? AND subject=?";
     /** 可选出题偏好：只优先抽真知识 / 计算题；空池时仍按原有五层兜底回退全库。 */
     private static final String KNOWLEDGE_ONLY_SQL = " AND source='程序出题'";
 
@@ -237,7 +237,7 @@ public final class QuizDb {
         }
         int result;
         try (Cursor c = db.rawQuery(
-                "SELECT COUNT(*) FROM questions WHERE grade=? AND subject=?",
+                "SELECT COUNT(*) FROM questions WHERE grade<=? AND subject=?",
                 new String[]{Integer.toString(grade), subjectName(subject)})) {
             result = c.moveToFirst() ? c.getInt(0) : 0;
         } catch (Exception e) {
@@ -255,7 +255,7 @@ public final class QuizDb {
             if (v != null) return v.intValue();
         }
         int result;
-        try (Cursor c = db.rawQuery("SELECT COUNT(*) FROM questions WHERE grade=?",
+        try (Cursor c = db.rawQuery("SELECT COUNT(*) FROM questions WHERE grade<=?",
                 new String[]{Integer.toString(grade)})) {
             result = c.moveToFirst() ? c.getInt(0) : 0;
         } catch (Exception e) {
@@ -322,14 +322,14 @@ public final class QuizDb {
             where = POOL_OTHER_GRADE;
             args = new String[]{g};
             poolWhere = POOL_OTHER_ALL;
-            poolArgs = null;
+            poolArgs = new String[]{g};
         } else {
             String name = subjectName(s);
             if (name == null) name = "数学";
             where = POOL_CORE_GRADE;
             args = new String[]{g, name};
             poolWhere = POOL_CORE_ALL;
-            poolArgs = new String[]{name};
+            poolArgs = new String[]{g, name};
         }
 
         if (knowledgeOnly) {
@@ -362,7 +362,11 @@ public final class QuizDb {
         }
         if (q == null) q = pick(where + diffW, args);
         if (q == null) q = pick(poolWhere + diffW, poolArgs);
-        if (q == null) q = pick(diffRoot, null);
+        if (q == null) {
+            // 最后一层保底也必须带年级上限：绝不为了「有题可出」放出高年级内容。
+            String rootW = diffRoot.isEmpty() ? "WHERE grade<=?" : diffRoot + " AND grade<=?";
+            q = pick(rootW, new String[]{g});
+        }
         return q;
     }
 

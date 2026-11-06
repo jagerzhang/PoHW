@@ -7,8 +7,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
-VERSION_NAME="1.2.2"
-VERSION_CODE="33"
+VERSION_NAME="1.2.3"
+VERSION_CODE="35"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -30,9 +30,10 @@ cd "$ROOT"
 echo "[0/9] static guards"
 grep -q "versionCode=\"$VERSION_CODE\"" "$APP/AndroidManifest.xml"
 grep -q "versionName=\"$VERSION_NAME\"" "$APP/AndroidManifest.xml"
-# 只发布 6 个语义化版本；feature 分支的自动审核工作流必须随仓库分发。
+# 只发布 7 个语义化版本；feature 分支的自动审核工作流必须随仓库分发。
 [ -f "$ROOT/.github/workflows/ci.yml" ] || { echo "FORBIDDEN: missing auto-review workflow"; exit 1; }
-grep -qF 'VERSION_NAME="1.2.2"' "$APP/build.sh"
+grep -qF 'VERSION_NAME="1.2.3"' "$APP/build.sh"
+grep -qF 'version: "v1.2.3"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.2.2"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.2.1"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.2.0"' "$ROOT/site/script.js"
@@ -55,7 +56,8 @@ grep -qF 'getInt("difficultyLevel", 0)' "$SRC/SettingsStore.java"
 grep -qF 'MATCH_RATE = 80' "$SRC/DifficultyPolicy.java"
 grep -qF 'setDifficultyLevel(difficultyLevel)' "$SRC/QuizOverlayService.java"
 grep -qF 'rowDifficulty = addRow' "$SRC/SettingsActivity.java"
-grep -qF 'pick(diffRoot, null)' "$SRC/QuizDb.java"
+grep -qF 'String rootW = diffRoot.isEmpty()' "$SRC/QuizDb.java"
+grep -qF 'WHERE grade<=?' "$SRC/QuizDb.java"
 # 品牌口号统一（code19）：官网与 TV 横幅生成脚本必须同口径，旧「续租 30 分钟」禁止回流。
 SITE="$ROOT/site/index.html"
 ICON_GEN="$ROOT/tools/branding/make_icons.py"
@@ -127,6 +129,8 @@ python3 tests/bank_distribution_check.py
 [ -f "$APP/assets/syllabus.json" ] || { echo "MISSING syllabus.json"; exit 1; }
 python3 tools/quizbank/build_syllabus.py --check
 python3 tests/study_scope_check.py
+# 题库质量：年级标签、英文空格、重复题、超纲词与累积池题量。
+python3 tests/bank_quality_check.py
 # 方案 B：配比必须真的进入抽题链路，禁止退回 gradeWide / 15% / 旧标签路径。
 W="$APP/src/com/jager/tvquiz/SubjectWeights.java"
 DB="$APP/src/com/jager/tvquiz/QuizDb.java"

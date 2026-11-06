@@ -87,14 +87,14 @@ def extract_sql():
     other_grade = const("POOL_OTHER_GRADE")
     core_all = const("POOL_CORE_ALL")
     other_all = const("POOL_OTHER_ALL")
-    if "grade=?" not in core_grade or "subject=?" not in core_grade:
-        fail("POOL_CORE_GRADE lost its grade/subject predicate")
+    if "grade<=?" not in core_grade or "subject=?" not in core_grade:
+        fail("POOL_CORE_GRADE lost its grade cap/subject predicate")
     if "NOT IN ('数学','语文','英语')" not in other_grade:
         fail("POOL_OTHER_GRADE lost its NOT IN predicate")
-    if "grade=?" in core_all or "subject=?" not in core_all:
-        fail("POOL_CORE_ALL must drop only the grade")
-    if "grade=?" in other_all or "NOT IN ('数学','语文','英语')" not in other_all:
-        fail("POOL_OTHER_ALL must drop only the grade")
+    if "grade<=?" not in core_all or "subject=?" not in core_all:
+        fail("POOL_CORE_ALL must keep both the grade cap and subject")
+    if "grade<=?" not in other_all or "NOT IN ('数学','语文','英语')" not in other_all:
+        fail("POOL_OTHER_ALL must keep both the grade cap and the other-subject predicate")
     return core_grade, other_grade, core_all, other_all
 
 
@@ -104,8 +104,8 @@ CORE_WHERE, OTHER_WHERE, CORE_ALL, OTHER_ALL = extract_sql()
 def pool_sql(pool, grade):
     """返回 (主查询谓词, 主查询参数, 兜底谓词, 兜底参数)，与 QuizDb.random 一致。"""
     if pool == 3:
-        return OTHER_WHERE, (str(grade),), OTHER_ALL, None
-    return (CORE_WHERE, (str(grade), CORE[pool]), CORE_ALL, (CORE[pool],))
+        return OTHER_WHERE, (str(grade),), OTHER_ALL, (str(grade),)
+    return (CORE_WHERE, (str(grade), CORE[pool]), CORE_ALL, (str(grade), CORE[pool]))
 
 
 def run(conn, where, args):
@@ -122,12 +122,12 @@ def run(conn, where, args):
 
 
 def draw(conn, where, args, pool_where, pool_args):
-    """三层兜底：同年级同池 -> 同池跨年级 -> 全库（仅题库本身缺该科时）。"""
+    """三层兜底：同学科且不超过本年级 -> 同池放宽学期/单元 -> 仍带年级上限的保底。"""
     row = run(conn, where, args)
     if row is None:
         row = run(conn, pool_where, pool_args)
     if row is None:
-        row = run(conn, "", None)
+        row = run(conn, "WHERE grade<=?", (args[0],))
     return None if row is None else row[0]
 
 

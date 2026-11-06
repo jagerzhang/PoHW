@@ -14,6 +14,8 @@ public final class QuizFlow {
 
     private int wrongAttempts = 0;
     private int selected = 0;
+    /** 严格模式由家长设置，跨题保持，reset() 不清它。 */
+    private boolean strict = false;
     private boolean answered = false;
     private final boolean[] disabled = new boolean[4];
 
@@ -36,8 +38,12 @@ public final class QuizFlow {
         wrongAttempts++;
         disabled[idx] = true;
         selectEnabled();
-        return AnswerPolicy.shouldSwap(wrongAttempts) ? SWAP : KEEP;
+        return AnswerPolicy.shouldSwap(wrongAttempts, wrongLimit()) ? SWAP : KEEP;
     }
+
+    /** 严格模式：每题只给 1 次机会，答错即换题。默认关闭，行为不变。 */
+    public void setStrict(boolean v) { strict = v; }
+    public int wrongLimit() { return strict ? 1 : AnswerPolicy.WRONG_LIMIT; }
 
     public int move(int dir) {
         selected = KeyRouter.move(selected, dir, disabled);

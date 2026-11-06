@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
@@ -85,6 +86,20 @@ public class QuizOverlayService extends Service {
     private String lastKey = "";
     private long nextSyncAt = 0L;
     private final Handler handler = new Handler(Looper.getMainLooper());
+
+    // ---- v1.1.0 可选加固：四个开关默认全关，默认路径与 v1.0.2 逐字等价 ----
+    private UnlockPolicy unlock = new UnlockPolicy(UnlockPolicy.DEFAULT_STREAK);
+    private final CooldownPolicy cooldown = new CooldownPolicy();
+    private boolean strictOneShot = false;
+    private boolean cooldownEnabled = false;
+    private boolean knowledgeOnly = false;
+    private boolean pendingSwap = false;
+    private final Runnable pendingSwapTask = new Runnable() {
+        @Override public void run() {
+            pendingSwap = false;
+            if (quizShowing && quizView != null) swapQuestion(null);
+        }
+    };
 
     // 窗口焦点重抢状态机
     private int focusRetry = 0;
@@ -203,6 +218,7 @@ public class QuizOverlayService extends Service {
     @Override public void onDestroy() {
         handler.removeCallbacks(tick);
         handler.removeCallbacks(focusCheck);
+        handler.removeCallbacks(pendingSwapTask);
         hideQuiz();
         if (media != null) media.release();
         running = false;
@@ -240,7 +256,10 @@ public class QuizOverlayService extends Service {
         running = true;
         st.guardEnabled(true);
         reload(true);
-        remainSec = interval;
+        // 冷却截止时间戳在进程重启后仍生效：把剩余秒数接回倒计时，
+        // 不让 force-stop / 重启直接洗掉惩罚（仅当家长开启冷却）。
+        int pendingCooldown = restoreCooldown();
+        remainSec = Math.max(interval, pendingCooldown);
         handler.removeCallbacks(tick);
         handler.postDelayed(tick, 1000);
         Toast.makeText(this, "答题守护已开启，切到其他应用也会按时弹题", Toast.LENGTH_SHORT).show();
@@ -285,10 +304,16 @@ public class QuizOverlayService extends Service {
     private void reload(boolean first) {
         if (first) BankRepository.installBuiltin(this, st);
         interval = st.intervalSec();
+        unlock = new UnlockPolicy(st.unlockStreak());
+        strictOneShot = st.strictOneShot();
+        cooldownEnabled = st.cooldownEnabled();
+        knowledgeOnly = st.questionSource() == SettingsStore.SOURCE_KNOWLEDGE_ONLY;
+        cooldown.reset();
         engine = new QuizEngine(st.grade(), st.edition(),
                 st.weight(Subjects.MATH), st.weight(Subjects.CHINESE),
                 st.weight(Subjects.ENGLISH), st.weight(Subjects.OTHER));
         engine.setAllSubjects(st.allSubjects());
+        engine.setKnowledgeOnly(knowledgeOnly);
         engine.setStudyScope(SyllabusAssets.get(this), st.termIndex(), st.unitLimit());
         QuizDb cached = QuizDb.peek();
         if (cached != null) {
@@ -340,8 +365,11 @@ public class QuizOverlayService extends Service {
     }
 
     private String metaFor(QuizEngine.Question q) {
+        int n = unlock.required();
+        String gate = n > 1 ? ("连续答对 " + n + " 题解锁 " + interval + " 秒")
+                            : ("答对解锁 " + interval + " 秒");
         return st.gradeLabel() + " · " + Subjects.name(q.subject) + " "
-                + st.editionFor(q.subject) + " · 答对解锁 " + interval + " 秒";
+                + st.editionFor(q.subject) + " · " + gate;
     }
 
     private void showQuiz() {
@@ -358,6 +386,9 @@ public class QuizOverlayService extends Service {
 
         // 不复用 View：反复 add/remove 会让窗口焦点状态不可预测。
         final OverlayQuizView view = new OverlayQuizView(this, listener);
+        view.setStrict(strictOneShot);
+        unlock.reset();
+        cancelPendingSwap();
         view.bind(current, metaFor(current));
         quizView = view;
         focusRetry = 0;
@@ -446,26 +477,80 @@ public class QuizOverlayService extends Service {
         if (outcome == QuizFlow.IGNORE) return;
         if (outcome == QuizFlow.CORRECT) {
             st.bumpCorrect();
+            cancelPendingSwap();
+            cooldown.reset();
+            st.clearCooldown();
+            // 默认 required=1：第一次答对即解锁，与 v1.0.2 逐字等价。
+            if (!unlock.onCorrect()) {
+                swapQuestion(unlock.progress());
+                return;
+            }
             quizView.correct("✓ 答对啦！继续观看 " + interval + " 秒", current.explain);
             return;
         }
         recordWrong(idx);
-        if (outcome == QuizFlow.SWAP) {
-            QuizEngine.Question next = drawFresh();
-            if (next != null && !next.key().equals(current.key())) {
-                current = next;
-                st.bumpQuestioned();
-                // 原地换题，窗口不 remove/add，避免再次触发窗口焦点问题
-                quizView.bind(current, metaFor(current));
-                quizView.hint(AnswerPolicy.wrongHint(AnswerPolicy.WRONG_LIMIT));
-                return;
-            }
-            // 题库只有一题时无法换题：重置状态机，避免永远卡在 SWAP / 全部选项禁用。
-            quizView.bind(current, metaFor(current));
-            quizView.hint("题库只有这一题，继续作答吧");
+        unlock.onWrong();
+        int wait = applyCooldown();
+        boolean needSwap = (outcome == QuizFlow.SWAP);
+        if (needSwap && wait > 0) {
+            // 冷却只延迟「换题」，不拦截「答对」：遮罩仍在，答对通道始终开放。
+            pendingSwap = true;
+            quizView.cooldown("✗ 答错了，" + wait + " 秒后换新题（答对可直接继续）");
+            handler.removeCallbacks(pendingSwapTask);
+            handler.postDelayed(pendingSwapTask, wait * 1000L);
             return;
         }
-        quizView.wrong(idx, AnswerPolicy.wrongHint(flow.wrongAttempts()));
+        if (needSwap) {
+            swapQuestion(AnswerPolicy.wrongHint(flow.wrongAttempts(), flow.wrongLimit()));
+            return;
+        }
+        quizView.wrong(idx, AnswerPolicy.wrongHint(flow.wrongAttempts(), flow.wrongLimit()));
+    }
+
+    /** 原地换题：窗口不 remove/add，避免再次触发窗口焦点状态机。 */
+    private void swapQuestion(String hintMsg) {
+        cancelPendingSwap();
+        QuizEngine.Question next = drawFresh();
+        if (next != null && !next.key().equals(current.key())) {
+            current = next;
+            st.bumpQuestioned();
+            quizView.bind(current, metaFor(current));
+            if (hintMsg != null) quizView.hint(hintMsg);
+            return;
+        }
+        // 题库只有一题时无法换题：重置状态机，避免永远卡在 SWAP / 全部选项禁用。
+        quizView.bind(current, metaFor(current));
+        quizView.hint(hintMsg != null ? hintMsg : "题库只有这一题，继续作答吧");
+    }
+
+    /** 答错按档位递增冷却并持久化；返回需要等待的秒数（0 = 不延迟换题）。 */
+    private int applyCooldown() {
+        if (!cooldownEnabled) return 0;
+        long nowWall = System.currentTimeMillis();
+        long nowElapsed = SystemClock.elapsedRealtime();
+        long deadline = cooldown.onWrong(nowWall);
+        st.saveCooldown(deadline, nowWall, nowElapsed, cooldown.wrongCount());
+        return cooldown.remainingSec(nowWall);
+    }
+
+    /** 进程重启后恢复冷却：墙钟回拨或 elapsed 归零时按当前档位重计，既不锁死也不放行。 */
+    private int restoreCooldown() {
+        if (!cooldownEnabled) return 0;
+        long deadline = st.cooldownDeadline();
+        if (deadline <= 0L) return 0;
+        long nowWall = System.currentTimeMillis();
+        long nowElapsed = SystemClock.elapsedRealtime();
+        int sec = CooldownPolicy.safeRemaining(deadline, nowWall,
+                st.cooldownSavedWall(), st.cooldownSavedElapsed(), nowElapsed,
+                st.cooldownWrongCount());
+        cooldown.reset();
+        st.clearCooldown();
+        return sec;
+    }
+
+    private void cancelPendingSwap() {
+        pendingSwap = false;
+        handler.removeCallbacks(pendingSwapTask);
     }
 
     private void recordWrong(int picked) {
@@ -477,12 +562,17 @@ public class QuizOverlayService extends Service {
 
     private void finishQuiz() {
         if (!quizShowing) return;
+        cancelPendingSwap();
+        cooldown.reset();
+        st.clearCooldown();
+        unlock.reset();
         hideQuiz();
         if (media != null) media.quizFinished(st);
         remainSec = interval;
     }
 
     private void hideQuiz() {
+        cancelPendingSwap();
         handler.removeCallbacks(focusCheck);
         focusRecovering = false;
         quizShowing = false;

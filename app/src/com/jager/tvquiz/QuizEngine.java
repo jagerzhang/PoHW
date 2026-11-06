@@ -174,6 +174,11 @@ public final class QuizEngine {
         return bankMath;
     }
 
+    private boolean knowledgeOnly = false;
+
+    /** 出题偏好，默认 false：全部题目（与 v1.0.2 一致）。 */
+    public void setKnowledgeOnly(boolean v) { knowledgeOnly = v; }
+
     public Question next() {
         int s = pickSubject();
         List<Question> list = bankFor(s);
@@ -183,7 +188,8 @@ public final class QuizEngine {
             return list.get(r.nextInt(list.size()));
         }
         if (hasDb) {
-            Question q = db.random(grade, s, allSubjects, syllabus, termIndex, unitLimit);
+            Question q = db.random(grade, s, allSubjects, syllabus, termIndex, unitLimit,
+                    knowledgeOnly);
             if (q != null) return q;
         }
         if (hasBank) return list.get(r.nextInt(list.size()));

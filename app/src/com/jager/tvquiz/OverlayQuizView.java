@@ -196,6 +196,24 @@ public final class OverlayQuizView {
         paint();
     }
 
+    /** 连对未达门槛时的绿色进度提示；必须在 bind() 之后调用（bind 会清 result）。 */
+    public void progress(String msg) {
+        result.setTextColor(Ui.GREEN);
+        result.setText(msg);
+        explain.setText("");
+        paint();
+    }
+
+    /** 冷却中只延迟换题，答对通道始终开放。 */
+    public void cooldown(String msg) {
+        result.setTextColor(Ui.AMBER);
+        result.setText(msg);
+        explain.setText("");
+        paint();
+    }
+
+    public void setStrict(boolean v) { flow.setStrict(v); }
+
     public void correct(String msg, String exp) {
         result.setTextColor(Ui.GREEN);
         result.setText(msg);

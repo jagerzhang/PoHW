@@ -2,12 +2,73 @@
 
 > **版本口径**：对外只保留 3 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）。
+> 当前开发版本 **v1.1.0**（versionCode 22）尚未打 tag / 发 Release。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
 > 已合并归档为末尾的 `v0.9.0-re`，不对应任何可下载的 Release。
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.1.0 (versionCode 22) — optional hardening for issue #1
+
+Display version 1.0.2 -> **1.1.0**, `versionCode` 21 -> **22**, same release
+keystore (SHA-256 `76eb6063b574...26172`). **All four hardening options are
+off by default**: an over-the-top install behaves exactly like v1.0.2.
+The tag and GitHub Release are cut only when the maintainer says so; the site
+release notes are updated at that point.
+
+### Four optional switches (SettingsStore, all commit())
+
+| key | default | effect when enabled |
+| --- | --- | --- |
+| `unlockStreak` | `1` | require N consecutive correct answers (1-5) before unlocking |
+| `strictOneShot` | `false` | one attempt per question; a wrong answer swaps immediately |
+| `cooldownEnabled` | `false` | escalating 30s / 1m / 2m / 5m cooldown after wrong answers |
+| `questionSource` | `SOURCE_ALL` | prefer the 810 real knowledge / arithmetic questions |
+
+- **`UnlockPolicy`** (pure Java) owns the cross-question streak; `QuizFlow`
+  stays a single-question state machine. An unmet streak calls
+  `swapQuestion()` which uses `bind()` in place (no add/remove of the overlay
+  window, avoiding the focus bug fixed in v1.0.1). `correct()` is only called
+  when the streak reaches N.
+- **`CooldownPolicy`** (pure Java) stores a **deadline**, not a remaining
+  seconds counter. `safeRemaining()` combines wall-clock and
+  `elapsedRealtime` snapshots so changing the system clock or rebooting
+  re-arms the current tier instead of bypassing or locking forever.
+  Cooldown only delays *swapping the question*; the correct-answer path stays
+  open, as noted in the issue discussion.
+- **Strict mode** flows through `QuizFlow.setStrict()` ->
+  `AnswerPolicy.shouldSwap(wrongAttempts, limit)`; with the default off,
+  `WRONG_LIMIT` is still 2 and all existing tests are unchanged.
+- **Question preference** adds one optional SQL predicate
+  (`source='程序出题'`) tried before the existing five-tier fallback. The
+  bank file, `quiz.db.version`, `syllabus.json`, `BANK_STATS.md` and the
+  distribution / study-scope regressions are untouched. Enabling it makes
+  term/unit filtering degrade to grade-only (those 810 rows have `term=''`),
+  which the settings screen states explicitly.
+
+### Gates and verification
+
+- `LAYOUT_CONTRACT_OK 180` (10 new assertions pin the four defaults, the
+  policy symbols and the live-code streak reset), `JVM_TESTS_OK 280`
+  (new `UnlockPolicyTest` 16 + `CooldownPolicyTest` 19).
+- `SYLLABUS_CHECK_OK books=12` / `STUDY_SCOPE_OK` / `BANK_DISTRIBUTION_OK`.
+- `MUTATION_SUITE_OK 57/57` (56 negative mutations + 1 dev-sign build gate):
+  all four defaults, `onCorrect()` returning true, a commented-out
+  `unlock.onWrong()`, and a bypassed question preference are all rejected.
+- `BUILD_OK version=1.1.0 code=22`; v1/v2/v3 signatures valid, certificate
+  continuous; `src.zip` clean and contains `.github/workflows/ci.yml`.
+
+### Honest boundaries
+
+- Restart still resets `remainSec` (a persisted cooldown is converted back
+  into the countdown on guard start), and `bootAutostart` remains off by
+  default, so a TV reboot does not immediately restore the overlay.
+- Guessing odds are unchanged by default (50% with two attempts per
+  question); the issue's 25%^N figures require enabling strict mode.
+- Question preference reduces the bank to 810 rows with no term / unit data
+  and no non-core subjects, so study scope and the fourth weight slot degrade.
 
 ## v1.0.2 (versionCode 18–21) — release versioning, assets and MR workflow
 

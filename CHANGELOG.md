@@ -61,6 +61,29 @@ and English questions had missing spaces between words (`Sheisagirl`,
   `BANK_QUALITY_OK questions=3965`, `VERIFY = PASS (bank-v2)`,
   `MUTATION_SUITE_OK 76/76`, `BUILD_OK version=1.2.3 code=35`.
 
+### versionCode 36 — legacy Android 4.0 variant (branch feat/android4-legacy-v123)
+
+Standalone branch rebuilt from `main` at v1.2.3, **not merged into main**.
+Display version stays **1.2.3**; `versionCode` 35 -> **36**; APK
+`PoHW-v1.2.3-legacy.apk`. Published as `v1.2.3-legacy` (non-Latest) alongside
+the main `v1.2.3` release.
+
+- Same feature set and the same rebuilt 3965-question bank as main, including
+  the grade cap on every draw layer and the new bank quality gate.
+- `minSdkVersion` 21 -> **14**, `d8 --min-api 21` -> **14**, theme
+  `Theme.Material` -> `Theme.Holo.Light.NoActionBar`; high-version manifest
+  attributes and `<queries>` removed; `.PracticeActivity` registration kept.
+- API 21/26+ class references removed from the dex: `MediaPauseController`
+  uses only old `requestAudioFocus` / `abandonAudioFocus`, notifications use
+  `Notification.Builder(Context)`, service starts use `startService()`, and
+  overlay-permission checks are replaced by a MIUI settings hint.
+- **Dropped capability**: pausing / resuming background video. The full-screen
+  `TYPE_PHONE` overlay still blocks the picture.
+- Verification is static only (no Android 4.x device or emulator): badging
+  `sdkVersion:'14'` / `versionCode='36'`, dexdump finds no API 21+ symbols,
+  `apksigner verify --min-sdk-version 14` passes, and the full 211-contract /
+  308-JVM / 76-mutation suite plus `BANK_QUALITY_OK questions=3965` passes.
+
 ## v1.2.2 (versionCode 33) — console layout finalised, sixth release
 
 Display version 1.2.1 -> **1.2.2**, `versionCode` 31 -> **33** (32 belongs

@@ -1,8 +1,6 @@
 package com.jager.tvquiz;
 
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -12,7 +10,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemClock;
-import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -69,8 +66,7 @@ public class QuizOverlayService extends Service {
         try {
             // API 26+ 用 startForegroundService，避免 App 处于后台时 startService 被拒；
             // 服务侧任何分支都会先 startForeground()，满足 5 秒契约。
-            if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i);
-            else c.startService(i);
+            c.startService(i);
         } catch (Exception e) {
             Toast.makeText(c, "关闭守护失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
         }
@@ -250,8 +246,8 @@ public class QuizOverlayService extends Service {
     }
 
     private boolean canDraw() {
-        if (Build.VERSION.SDK_INT < 23) return true;
-        return Settings.canDrawOverlays(this);
+        // Android 4.x 没有 canDrawOverlays()；MIUI 需家长手动开启悬浮窗。
+        return true;
     }
 
     private void startGuard() {
@@ -285,16 +281,7 @@ public class QuizOverlayService extends Service {
     }
 
     private Notification buildNotification() {
-        if (Build.VERSION.SDK_INT >= 26) {
-            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            NotificationChannel ch = new NotificationChannel(CHANNEL,
-                    getString(R.string.guard_channel), NotificationManager.IMPORTANCE_LOW);
-            ch.setDescription(getString(R.string.guard_notification_text));
-            nm.createNotificationChannel(ch);
-        }
-        Notification.Builder b = Build.VERSION.SDK_INT >= 26
-                ? new Notification.Builder(this, CHANNEL)
-                : new Notification.Builder(this);
+        Notification.Builder b = new Notification.Builder(this);
         b.setSmallIcon(R.drawable.ic_stat_quiz)
                 .setContentTitle(getString(R.string.guard_notification_title))
                 .setContentText(getString(R.string.guard_notification_text))

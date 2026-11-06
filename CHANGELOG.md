@@ -1,14 +1,44 @@
 # Changelog
 
-> **版本口径**：对外发布 4 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 5 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
-> **v1.2.0**（25–28）。`v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
+> **v1.2.0**（25–28）、**v1.2.1**（29）。`v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
 > 已合并归档为末尾的 `v0.9.0-re`，不对应任何可下载的 Release。
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.2.1 (versionCode 29) — practice mode, console reshuffle and release
+
+Display version 1.2.0 -> **1.2.1**, `versionCode` 28 -> **29**, same release
+keystore (SHA-256 `76eb6063b574...26172`). Fifth published release.
+
+- **Practice mode** (user request): the console's "授权悬浮窗" grid button is
+  replaced by "练习模式", opening a new full-screen `PracticeActivity`. Children
+  pick subject (math / Chinese / English / mixed), grade (1-9) and difficulty,
+  answer four-choice questions with the remote or number keys 1-4, and see a
+  running summary (practiced / correct / streak). Correct answers auto-advance;
+  two wrong attempts swap the question. Parameters live in pure-Java
+  `PracticeConfig` and never touch the parent's guard settings.
+- **Guard suspension, not guard stop**: entering practice calls
+  `QuizOverlayService.setPracticeMode(true)` so `showQuiz()` does not fire.
+  The service keeps running and the static flag disappears on exit or when
+  the process is gone, so practice cannot become a zero-cost bypass of the
+  guard. Exiting resumes the normal countdown automatically.
+- **Overlay authorization moved** into settings card "03 开机与播放", beside
+  boot autostart and the vendor autostart shortcut. When the permission is
+  missing the console now shows a hint pointing there instead of jumping to
+  the system settings page itself.
+- Also included from `versionCode 28`: the mutually-exclusive pause/resume
+  signal fix and the default-on "答对自动继续" setting.
+- `QuizEngine.nextFrom(int)` exposes per-subject draws without changing the
+  guard's weighted roulette (`next()` still delegates to it).
+- A matching Android 4.0 legacy build is published as `v1.2.1-legacy`.
+- Gates: `LAYOUT_CONTRACT_OK 208`, `JVM_TESTS_OK 308` (new
+  `PracticeConfigTest` 15), `MUTATION_SUITE_OK 73/73`,
+  `BUILD_OK version=1.2.1 code=29`; site release notes now list five versions.
 
 ## v1.2.0 (versionCode 25–28) — new bank, difficulty preference and release
 

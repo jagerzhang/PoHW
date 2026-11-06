@@ -1,4 +1,7 @@
 package com.jager.tvquiz;
+import android.os.Build;
+import android.provider.Settings;
+import android.net.Uri;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -420,9 +423,13 @@ public class SettingsActivity extends Activity {
                         Toast.LENGTH_LONG).show();
             }
         });
+        addButton(boot, "授权悬浮窗", 0xFF243044, new View.OnClickListener() {
+            @Override public void onClick(View v) { openOverlaySettings(); }
+        });
         note(boot, "「启动即守护」默认开启：打开 APP 即自动进入守护；「开机自启」默认关闭，"
                 + "需家长自行开启并允许厂商自启动权限后，才会随开机拉起。");
         note(boot, "暂停视频是 best-effort：靠音频焦点 + 媒体键请求播放器暂停，不保证所有视频 App 响应。");
+        note(boot, "「授权悬浮窗」原在控制台，现移至本卡片；未授权时守护与立即出题都不可用。");
 
         // ---- 04 错题库 ----
         LinearLayout wrong = addCard(col, "04  错题库");
@@ -698,6 +705,21 @@ public class SettingsActivity extends Activity {
     private static int ensureId(View v) {
         if (v.getId() == View.NO_ID) v.setId(View.generateViewId());
         return v.getId();
+    }
+
+    /** 悬浮窗授权入口（控制台已让位给练习模式，统一放在本卡片）。 */
+    private void openOverlaySettings() {
+        if (Build.VERSION.SDK_INT < 23) {
+            Toast.makeText(this, "此系统版本请在系统设置中允许悬浮窗",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:" + getPackageName()));
+        try { startActivity(i); }
+        catch (Exception e) {
+            Toast.makeText(this, "该设备没有悬浮窗授权入口", Toast.LENGTH_LONG).show();
+        }
     }
 
     private void refreshRows() {

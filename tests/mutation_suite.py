@@ -42,10 +42,12 @@ CI = os.path.join(ROOT, ".github/workflows/ci.yml")
 APNG = os.path.join(ROOT, "app/res/drawable-nodpi/donate_alipay.png")
 DP = os.path.join(SRC, "DifficultyPolicy.java")
 MP = os.path.join(SRC, "MediaPauseController.java")
+PA = os.path.join(SRC, "PracticeActivity.java")
+PC = os.path.join(SRC, "PracticeConfig.java")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
 for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
-           RM, CH, SJS, CI, APNG, UP, CD, DP, MP):
+           RM, CH, SJS, CI, APNG, UP, CD, DP, MP, PA, PC):
     BK[p] = os.path.join(BK_DIR, os.path.basename(p) + ".bk")
     shutil.copyfile(p, BK[p])
 ORIG = {p: hashlib.sha256(open(p, "rb").read()).hexdigest() for p in BK}
@@ -145,7 +147,7 @@ MUTATIONS = [
     ("O", "service stops passing the fourth weight",
      lambda: replace(O, "st.weight(Subjects.OTHER)", "0"), False, True, False),
     ("P", "versionCode rolled back",
-     lambda: replace(B, 'VERSION_CODE="28"', 'VERSION_CODE="27"'), False, True, False),
+     lambda: replace(B, 'VERSION_CODE="29"', 'VERSION_CODE="28"'), False, True, False),
     ("Q", "OTHER routing disabled",
      lambda: replace(D, "boolean other = s == Subjects.OTHER && allSubjects;", "boolean other = false;"), True, True, False),
     ("R", "single WHERE binding",
@@ -230,7 +232,7 @@ MUTATIONS = [
     ("AV", "auto-review workflow removed",
      lambda: os.remove(CI), False, True, False),
     ("AW", "display version rolled back to 1.0.1",
-     lambda: replace(MF, 'android:versionName="1.2.0"', 'android:versionName="1.0.2"'),
+     lambda: replace(MF, 'android:versionName="1.2.1"', 'android:versionName="1.0.2"'),
      False, True, False),
     ("AX", "alipay QR crop corrupted",
      lambda: open(APNG, "wb").write(bytes([137, 80, 78, 71, 13, 10, 26, 10]) + bytes(16)),
@@ -272,6 +274,16 @@ MUTATIONS = [
      lambda: replace(O, 'if (autoContinue) {', 'if (false) {'), False, True, False),
     ("BP", "pause signals sent unconditionally again",
      lambda: replace(MP, 'if (!focusHeld) {', 'if (true) {'), False, True, False),
+    ("BQ", "practice mode never suspends the guard",
+     lambda: replace(PA, 'QuizOverlayService.setPracticeMode(true);', ''), False, True, False),
+    ("BR", "guard ignores the practice flag",
+     lambda: replace(O, 'if (practiceMode) { remainSec = interval; return; }', ''), False, True, False),
+    ("BS", "console goes back to overlay authorization",
+     lambda: replace(M, 'actionButton(row2, "练习模式",', 'actionButton(row2, "授权悬浮窗",'), False, True, False),
+    ("BT", "practice entry removed from manifest",
+     lambda: replace(MF, 'android:name=".PracticeActivity"', 'android:name=".NoPracticeActivity"'), False, True, False),
+    ("BU", "practice always draws math only",
+     lambda: replace(PC, 'return subject == MIXED ? (asked % 3) : subject;', 'return MATH;'), False, True, False),
 ]
 
 print("--- baseline ---")

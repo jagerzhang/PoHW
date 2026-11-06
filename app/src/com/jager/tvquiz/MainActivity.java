@@ -187,13 +187,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void openOverlaySettings() {
-        if (Build.VERSION.SDK_INT < 23) return;
-        Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
-        try { startActivity(i); }
-        catch (Exception e) { Toast.makeText(this, "该设备没有悬浮窗授权入口", Toast.LENGTH_LONG).show(); }
-    }
-
     private Button actionButton(LinearLayout row, String label, int bg, View.OnClickListener l) {
         Button b = Ui.button(this, label, bg, 0xFFFFFFFF, 17);
         b.setOnClickListener(l);
@@ -252,7 +245,12 @@ public class MainActivity extends Activity {
                 });
         r1[1] = actionButton(row1, "立即出题", 0xFFEF6C4D, new View.OnClickListener() {
             @Override public void onClick(View v) {
-                if (!canDraw()) { openOverlaySettings(); return; }
+                if (!canDraw()) {
+                    Toast.makeText(MainActivity.this,
+                            "请到「家长设置 → 开机与播放」开启悬浮窗权限",
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
                 send(QuizOverlayService.ACTION_QUIZ_NOW);
             }
         });
@@ -266,8 +264,10 @@ public class MainActivity extends Activity {
 
         LinearLayout row2 = Ui.hbox(this);
         Button[] r2 = new Button[GRID_COLS];
-        r2[0] = actionButton(row2, "授权悬浮窗", 0xFF243044, new View.OnClickListener() {
-            @Override public void onClick(View v) { openOverlaySettings(); }
+        r2[0] = actionButton(row2, "练习模式", 0xFF243044, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, PracticeActivity.class));
+            }
         });
         r2[1] = btnWrong = actionButton(row2, "错题库 · 0 题", 0xFFB06A2C, new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -347,7 +347,12 @@ public class MainActivity extends Activity {
             else doStop();
             return;
         }
-        if (!canDraw()) { openOverlaySettings(); return; }
+        if (!canDraw()) {
+                    Toast.makeText(MainActivity.this,
+                            "请到「家长设置 → 开机与播放」开启悬浮窗权限",
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
         send(QuizOverlayService.ACTION_START);
         handler.postDelayed(renderOnce, 300);
     }
@@ -392,7 +397,7 @@ public class MainActivity extends Activity {
         StringBuilder s = new StringBuilder();
         s.append("应用版本：").append(appVersion).append("（build ").append(appVersionCode)
                 .append("）  ·  悬浮窗权限：")
-                .append(canDrawCached ? "已授权 ✓" : "未授权 ✗（点「授权悬浮窗」）").append(NL);
+                .append(canDrawCached ? "已授权 ✓" : "未授权 ✗（家长设置 → 开机与播放）").append(NL);
         boolean running = QuizOverlayService.isRunning();
         s.append("守护服务：").append(running ? "运行中" : "未运行");
         if (running) {

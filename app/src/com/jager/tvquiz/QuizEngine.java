@@ -183,8 +183,10 @@ public final class QuizEngine {
     /** 出题偏好，默认 false：全部题目（与 v1.0.2 一致）。 */
     public void setKnowledgeOnly(boolean v) { knowledgeOnly = v; }
 
-    public Question next() {
-        int s = pickSubject();
+    public Question next() { return nextFrom(pickSubject()); }
+
+    /** 练习模式：按指定学科抽题，绕过四槽配比轮盘赌。守护路径仍走 next()。 */
+    public Question nextFrom(int s) {
         List<Question> list = bankFor(s);
         boolean hasDb = db != null;
         boolean hasBank = list != null && !list.isEmpty();

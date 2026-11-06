@@ -82,6 +82,11 @@ public class QuizOverlayService extends Service {
     private QuizEngine engine;
     private QuizEngine.Question current;
     private SettingsStore st;
+    /** 练习模式挂起标志：练习页可见时不弹题，退出/进程重启自动恢复守护。 */
+    private static volatile boolean practiceMode = false;
+    public static void setPracticeMode(boolean v) { practiceMode = v; }
+    public static boolean isPracticeMode() { return practiceMode; }
+
     private int interval = 30;
     private String lastKey = "";
     private long nextSyncAt = 0L;
@@ -378,6 +383,7 @@ public class QuizOverlayService extends Service {
     }
 
     private void showQuiz() {
+        if (practiceMode) { remainSec = interval; return; }
         if (quizShowing) return;
         if (!canDraw()) { stopAll(); return; }
         if (engine == null) reload(false);

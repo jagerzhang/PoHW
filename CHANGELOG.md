@@ -3,6 +3,7 @@
 > **版本口径**：对外发布 4 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
 > **v1.2.0**（25–26）。`v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
+> 低配变体为 `versionCode 27`，由独立分支 `feat/android4-legacy` 发布，不并入本版本线。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
 > 已合并归档为末尾的 `v0.9.0-re`，不对应任何可下载的 Release。
@@ -10,7 +11,7 @@
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
 
-## v1.2.0 (versionCode 25–26) — new bank, difficulty preference and release
+## v1.2.0 (versionCode 25–27) — new bank, difficulty preference and release
 
 Display version 1.1.0 -> **1.2.0**, `versionCode` 24 -> **25–26**, same release
 keystore (SHA-256 `76eb6063b574...26172`). `1.1.0` was never tagged or released.
@@ -55,6 +56,29 @@ installs from every earlier build valid.
   `versionCode='26' versionName='1.2.0'`, release certificate
   `76eb6063...6172` continuous.
 
+
+### versionCode 27 — legacy Android 4.0 variant (branch feat/android4-legacy)
+
+This is a **separate branch build**, not part of the main release line and not
+merged into `main`. Display version stays **1.2.0**; `versionCode` 26 -> **27**;
+APK name `PoHW-v1.2.0-legacy.apk`. See `docs/LEGACY_ANDROID4.md`.
+
+- `minSdkVersion` 21 -> **14**, `d8 --min-api 21` -> **14**, theme
+  `Theme.Material.Light.NoActionBar` -> `Theme.Holo.Light.NoActionBar`;
+  API 24/30-only manifest attributes and the `<queries>` block removed.
+- All API 21/26+ class references are gone from the shipped dex:
+  `MediaPauseController` now uses only `requestAudioFocus(listener, stream,
+  duration)` / `abandonAudioFocus(listener)`; notifications use the API 11
+  `Notification.Builder(Context)`; service starts use `startService()`.
+- **Dropped capability**: pausing / resuming background video. Android 4.0 has
+  no `dispatchMediaKeyEvent()` (API 19+), so the anti-addiction effect relies on
+  the full-screen `TYPE_PHONE` overlay itself. MIUI floating-window permission
+  must be enabled manually in system settings.
+- **Verification boundary**: only `android-34` platform is installed and no
+  Android 4.x system image is available, so there is no on-device or emulator
+  test. Evidence is static: full contract/JVM/regression suite, release-signed
+  build, `aapt dump badging` showing `sdkVersion:'14'`, and a `dexdump` scan of
+  `classes.dex` for API 21+ symbols. Real-device trial is still required.
 
 ## v1.1.0 (versionCode 22–24) — unreleased development line
 

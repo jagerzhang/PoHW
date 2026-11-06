@@ -68,11 +68,6 @@ public class MainActivity extends Activity {
         st = new SettingsStore(this);
         canDrawCached = canDraw();
         preloadBank();
-        if (Build.VERSION.SDK_INT >= 33
-                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
-                   != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 100);
-        }
         readVersion();
         setContentView(buildView());
         render();
@@ -172,26 +167,24 @@ public class MainActivity extends Activity {
     }
 
     private boolean canDraw() {
-        if (Build.VERSION.SDK_INT < 23) return true;
-        return Settings.canDrawOverlays(this);
+        // Android 4.x 无 canDrawOverlays()；权限由系统授予，MIUI 需家长手动开启悬浮窗。
+        return true;
     }
 
     private void send(String action) {
         Intent i = new Intent(this, QuizOverlayService.class);
         i.setAction(action);
         try {
-            if (!QuizOverlayService.isRunning() && Build.VERSION.SDK_INT >= 26) startForegroundService(i);
-            else startService(i);
+            startService(i);
         } catch (Exception e) {
             Toast.makeText(this, "服务启动失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
     private void openOverlaySettings() {
-        if (Build.VERSION.SDK_INT < 23) return;
-        Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
-        try { startActivity(i); }
-        catch (Exception e) { Toast.makeText(this, "该设备没有悬浮窗授权入口", Toast.LENGTH_LONG).show(); }
+        // Android 4.x 没有 ACTION_MANAGE_OVERLAY_PERMISSION（API 23+）。
+        Toast.makeText(this, "请在系统设置里为答题守护开启「显示悬浮窗」权限",
+                Toast.LENGTH_LONG).show();
     }
 
     private Button actionButton(LinearLayout row, String label, int bg, View.OnClickListener l) {

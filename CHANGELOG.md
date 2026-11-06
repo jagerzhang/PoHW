@@ -1,14 +1,38 @@
 # Changelog
 
-> **版本口径**：对外发布 5 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 6 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
-> **v1.2.0**（25–28）、**v1.2.1**（29）。`v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
+> **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）。
+> `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
 > 已合并归档为末尾的 `v0.9.0-re`，不对应任何可下载的 Release。
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.2.2 (versionCode 33) — console layout finalised, sixth release
+
+Display version 1.2.1 -> **1.2.2**, `versionCode` 31 -> **33** (32 belongs
+to the standalone Android 4.0 legacy branch), same release keystore
+(SHA-256 `76eb6063b574...26172`). Sixth published release; `v1.2.1` and
+its uploaded assets stay untouched.
+
+- Console grid finalised after the maintainer's follow-up: row1[1]
+  "立即出题" -> "练习模式" (opens `PracticeActivity`); row2[0]
+  "练习模式" -> restored "授权悬浮窗" opening the system permission page.
+  The parent settings card 03 keeps its own authorization entry as well.
+- Carries forward everything from v1.2.1: the free-practice page (subject /
+  grade / difficulty, auto-advance on correct answers, running stats),
+  guard suspension while practising (the service is never stopped, so
+  practice cannot become a bypass), mutually exclusive pause/resume
+  signals, and the default-on "答对自动继续" toggle.
+- Site gains a sixth release card; the CI metadata assertion, source
+  contract and mutation anchors now expect six versions. A matching
+  Android 4.0 build is published as `v1.2.2-legacy` (code 34).
+- Gates: `LAYOUT_CONTRACT_OK 209`, `JVM_TESTS_OK 308`,
+  `MUTATION_SUITE_OK 74/74`, `BUILD_OK version=1.2.2 code=33`; badging
+  `versionCode='33' versionName='1.2.2'`, release certificate continuous.
 
 ## v1.2.1 (versionCode 29) — practice mode, console reshuffle and release
 

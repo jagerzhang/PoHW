@@ -68,11 +68,6 @@ public class MainActivity extends Activity {
         st = new SettingsStore(this);
         canDrawCached = canDraw();
         preloadBank();
-        if (Build.VERSION.SDK_INT >= 33
-                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
-                   != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 100);
-        }
         readVersion();
         setContentView(buildView());
         render();
@@ -172,16 +167,15 @@ public class MainActivity extends Activity {
     }
 
     private boolean canDraw() {
-        if (Build.VERSION.SDK_INT < 23) return true;
-        return Settings.canDrawOverlays(this);
+        // Android 4.x 无 canDrawOverlays()；MIUI 需家长手动开启悬浮窗。
+        return true;
     }
 
     private void send(String action) {
         Intent i = new Intent(this, QuizOverlayService.class);
         i.setAction(action);
         try {
-            if (!QuizOverlayService.isRunning() && Build.VERSION.SDK_INT >= 26) startForegroundService(i);
-            else startService(i);
+            startService(i);
         } catch (Exception e) {
             Toast.makeText(this, "服务启动失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
         }

@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="29"' in _mf, "manifest versionCode advances to 29")
-check('VERSION_CODE="29"' in b, "build script versionCode advances to 29")
+check('android:versionCode="30"' in _mf, "manifest versionCode advances to 30")
+check('VERSION_CODE="30"' in b, "build script versionCode advances to 30")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -354,8 +354,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="29"' in _mf, "manifest versionCode advances to 29")
-check('VERSION_CODE="29"' in b, "build script versionCode advances to 29")
+check('android:versionCode="30"' in _mf, "manifest versionCode advances to 30")
+check('VERSION_CODE="30"' in b, "build script versionCode advances to 30")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -572,12 +572,12 @@ check('if (quizShowing) finishQuiz();' in _o28,
 check('correctAuto(String msg, String exp)' in _v28
       and 'cont.setVisibility(View.INVISIBLE)' in _v28,
       "auto-finish hides the continue button")
-check('usedMediaKey' in _mp28 and 'if (!focusHeld) {' in _mp28
-      and _mp28.count('dispatch(KeyEvent.KEYCODE_MEDIA_PAUSE)') == 1,
-      "media pause is only a fallback when audio focus was denied")
-check(_mp28.find('dispatch(KeyEvent.KEYCODE_MEDIA_PLAY)')
-      < _mp28.find('abandonAudioFocus'),
-      "resume key is sent before releasing audio focus")
+check('requestAudioFocus(focusListener' in _mp28
+      and 'am.abandonAudioFocus(focusListener)' in _mp28,
+      "legacy build uses only the pre-API-19 audio focus calls")
+check('dispatchMediaKeyEvent' not in _mp28
+      and 'AudioFocusRequest' not in _mp28,
+      "legacy dex carries no API 21+ media classes")
 
 # ---- v1.2.1：练习模式、控制台改版、守护挂起 ----
 _m121 = strip_comments(read(MAIN))

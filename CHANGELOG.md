@@ -2,7 +2,7 @@
 
 > **版本口径**：对外发布 5 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
-> **v1.2.0**（25–28）、**v1.2.1**（29）。`v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
+> **v1.2.0**（25–28）、**v1.2.1**（29）。本分支低配变体为 `versionCode 30`，独立发布。`v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
 > 已合并归档为末尾的 `v0.9.0-re`，不对应任何可下载的 Release。
@@ -39,6 +39,29 @@ keystore (SHA-256 `76eb6063b574...26172`). Fifth published release.
 - Gates: `LAYOUT_CONTRACT_OK 208`, `JVM_TESTS_OK 308` (new
   `PracticeConfigTest` 15), `MUTATION_SUITE_OK 73/73`,
   `BUILD_OK version=1.2.1 code=29`; site release notes now list five versions.
+
+### versionCode 30 — legacy Android 4.0 variant (branch feat/android4-legacy-v121)
+
+Standalone branch build rebuilt from `main` at v1.2.1, **not merged into main**.
+Display version stays **1.2.1**; `versionCode` 29 -> **30** (27 was the previous
+legacy build); APK `PoHW-v1.2.1-legacy.apk`. Published as `v1.2.1-legacy`
+(non-Latest) alongside the main `v1.2.1` release.
+
+- Same feature set as main, including practice mode, the console reshuffle,
+  the pause/resume signal fix and the default-on auto-continue setting.
+- `minSdkVersion` 21 -> **14**, `d8 --min-api 21` -> **14**, theme
+  `Theme.Material` -> `Theme.Holo.Light.NoActionBar`; high-version manifest
+  attributes and `<queries>` removed; `.PracticeActivity` registration kept.
+- API 21/26+ class references removed from the dex: `MediaPauseController`
+  uses only old `requestAudioFocus` / `abandonAudioFocus`, notifications use
+  `Notification.Builder(Context)`, service starts use `startService()`,
+  and overlay-permission checks are replaced by a MIUI settings hint.
+- **Dropped capability**: pausing / resuming background video. The full-screen
+  `TYPE_PHONE` overlay still blocks the picture.
+- Verification is static only (no Android 4.x device or emulator available):
+  `aapt dump badging` shows `sdkVersion:'14'`, a `dexdump` scan finds no
+  API 21+ symbols, `apksigner verify --min-sdk-version 14` passes, and the
+  full 208-contract / 308-JVM / 73-mutation suite passes.
 
 ## v1.2.0 (versionCode 25–28) — new bank, difficulty preference and release
 

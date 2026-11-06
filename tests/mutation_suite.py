@@ -33,6 +33,8 @@ CHK = os.path.join(ROOT, "tests/bank_distribution_check.py")
 SYL = os.path.join(SRC, "Syllabus.java")
 SYLJ = os.path.join(ROOT, "app/assets/syllabus.json")
 SITE = os.path.join(ROOT, "site/index.html")
+UP = os.path.join(SRC, "UnlockPolicy.java")
+CD = os.path.join(SRC, "CooldownPolicy.java")
 RM = os.path.join(ROOT, "README.md")
 CH = os.path.join(ROOT, "CHANGELOG.md")
 SJS = os.path.join(ROOT, "site/script.js")
@@ -41,7 +43,7 @@ APNG = os.path.join(ROOT, "app/res/drawable-nodpi/donate_alipay.png")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
 for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
-           RM, CH, SJS, CI, APNG):
+           RM, CH, SJS, CI, APNG, UP, CD):
     BK[p] = os.path.join(BK_DIR, os.path.basename(p) + ".bk")
     shutil.copyfile(p, BK[p])
 ORIG = {p: hashlib.sha256(open(p, "rb").read()).hexdigest() for p in BK}
@@ -141,7 +143,7 @@ MUTATIONS = [
     ("O", "service stops passing the fourth weight",
      lambda: replace(O, "st.weight(Subjects.OTHER)", "0"), False, True, False),
     ("P", "versionCode rolled back",
-     lambda: replace(B, 'VERSION_CODE="21"', 'VERSION_CODE="20"'), False, True, False),
+     lambda: replace(B, 'VERSION_CODE="22"', 'VERSION_CODE="21"'), False, True, False),
     ("Q", "OTHER routing disabled",
      lambda: replace(D, "boolean other = s == Subjects.OTHER && allSubjects;", "boolean other = false;"), True, True, False),
     ("R", "single WHERE binding",
@@ -226,11 +228,25 @@ MUTATIONS = [
     ("AV", "auto-review workflow removed",
      lambda: os.remove(CI), False, True, False),
     ("AW", "display version rolled back to 1.0.1",
-     lambda: replace(MF, 'android:versionName="1.0.2"', 'android:versionName="1.0.1"'),
+     lambda: replace(MF, 'android:versionName="1.1.0"', 'android:versionName="1.0.2"'),
      False, True, False),
     ("AX", "alipay QR crop corrupted",
      lambda: open(APNG, "wb").write(bytes([137, 80, 78, 71, 13, 10, 26, 10]) + bytes(16)),
      False, True, False),
+    ("AY", "default streak raised to 2",
+     lambda: replace(ST, 'getInt("unlockStreak", 1)', 'getInt("unlockStreak", 2)'), False, True, False),
+    ("AZ", "cooldown default enabled",
+     lambda: replace(ST, 'getBoolean("cooldownEnabled", false)', 'getBoolean("cooldownEnabled", true)'), False, True, False),
+    ("BA", "strict mode default enabled",
+     lambda: replace(ST, 'getBoolean("strictOneShot", false)', 'getBoolean("strictOneShot", true)'), False, True, False),
+    ("BB", "knowledge-only default enabled",
+     lambda: replace(ST, 'getInt("questionSource", SOURCE_ALL)', 'getInt("questionSource", SOURCE_KNOWLEDGE_ONLY)'), False, True, False),
+    ("BC", "unlock always returns true",
+     lambda: replace(UP, 'return streak >= required;', 'return true;'), False, True, False),
+    ("BD", "wrong answer no longer resets streak",
+     lambda: replace(O, '        unlock.onWrong();\n', '        // unlock.onWrong();\n'), False, True, False),
+    ("BE", "question preference bypassed",
+     lambda: replace(O, 'engine.setKnowledgeOnly(knowledgeOnly);', 'engine.setKnowledgeOnly(false);'), False, True, False),
 ]
 
 print("--- baseline ---")

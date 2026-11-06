@@ -5,7 +5,7 @@
 
 | | |
 | --- | --- |
-| 当前版本 | **v1.0.2**（`versionCode 21`） |
+| 当前版本 | **v1.1.0**（`versionCode 22`） |
 | 运行平台 | Android TV / 电视盒子，`minSdk 21`，遥控器操作 |
 | 分发方式 | 自行侧载 APK（U 盘直装），**不在任何应用商店上架** |
 | 签名证书 | SHA-256 `76eb6063…6172`，历次构建连续，旧版可直接覆盖安装 |
@@ -96,6 +96,11 @@
 | 开机与播放 | 开机自启、自动守护（启动即守护）、暂停视频、恢复播放、厂商自启设置入口 | 关 / 开 / 开 / 开 |
 | 错题库 | 查看错题库（答错 2 次记录） | — |
 | 在线题库源 | 源地址、检查题库更新 / 自动更新（同一行并排）、打赏作者 | 源为空（完全离线） |
+| 可选加固 | 连续答对、严格模式、冷却惩罚、出题偏好 | 答对 1 题 / 关 / 关 / 全部题目 |
+
+**可选加固默认全部关闭**（Issue #1）：覆盖安装后行为与 v1.0.2 完全一致，家长在设置里主动开启才生效。
+「连续答对」可设 1–5 题；「严格模式」每题只给 1 次机会；「冷却惩罚」答错后按 30 秒 / 1 分 / 2 分 / 5 分递增，只延迟换题、不拦截答对，截止时间戳持久化以抗重启；
+「出题偏好」可选仅知识 / 计算题（题库数据不删除，只在抽题时优先），开启后学习进度与全学科模式会退化为仅按年级过滤。
 
 设置页是单列卡片流 + 底部固定「保存并返回」操作条，所有取值行显式串好遥控器上下焦点链。
 
@@ -116,7 +121,7 @@ bash app/build.sh
 所以这一步不依赖人记得传环境变量。本地实验构建须显式 `POHW_ALLOW_DEV_SIGN=1`。
 完整说明见 `docs/BUILD.md`。
 
-版本策略：`versionName` 语义化（当前 1.0.2），`versionCode` 单调递增（当前 21）且**不随展示版本重置**，
+版本策略：`versionName` 语义化（当前 1.1.0），`versionCode` 单调递增（当前 22）且**不随展示版本重置**，
 否则已安装旧版的设备会报 `INSTALL_FAILED_VERSION_DOWNGRADE`。同一版本线内的内部构建不单独发 Release。
 
 ## 验证与门禁
@@ -125,13 +130,13 @@ bash app/build.sh
 
 | 检查 | 当前结果 | 守什么 |
 | --- | --- | --- |
-| `tests/layout_contract.py` | **170** 条 | 3×2 首页、单列设置、焦点链、证书门禁、方案 B 全链路，以及发布版本口径 / 官网三版本 / CHANGELOG 归档 / CI |
+| `tests/layout_contract.py` | **180** 条 | 3×2 首页、单列设置、焦点链、证书门禁、方案 B 全链路，以及发布版本口径 / 四项可选加固默认值 / CI |
 | `tests/bank_distribution_check.py` | `BANK_DISTRIBUTION_OK` | 用真实 SQL 复刻四槽配比、池隔离与池保持兜底 |
 | `tools/quizbank/build_syllabus.py --check` | `SYLLABUS_CHECK_OK books=12` | 进度表与题库同源、无遗漏别名 |
 | `tests/study_scope_check.py` | `STUDY_SCOPE_OK` | 学期/单元范围不外溢、空池逐层放宽顺序、默认行为兼容 |
-| `tests/run.sh` | **245** 项 JVM 单测（9 组） | PIN、按键时序、启动策略、权重、JSON / Syllabus、设置默认值 |
+| `tests/run.sh` | **280** 项 JVM 单测（11 组） | PIN、按键时序、启动策略、权重、JSON / Syllabus、设置默认值 |
 
-发布前另跑 `python3 tests/mutation_suite.py`：故意回退 49 处实现，再加 1 次不带发布密钥构建（50/50），
+发布前另跑 `python3 tests/mutation_suite.py`：故意回退 56 处实现，再加 1 次不带发布密钥构建（57/57），
 确认门禁每一处都能拦下，最后校验源码哈希完全恢复并用发布密钥重建 `dist/`。
 
 ## 发布流程
@@ -144,7 +149,8 @@ bash app/build.sh
 4. `auto-review` 检查通过后才能合入 `main`；分支保护要求 PR + 该检查。
 5. **tag 与 Release 由维护者另行指定**：确认后再用同一 release keystore 出包、打 tag、上传 APK 与 `PoHW-src.zip`。
 
-对外只保留 3 个正式 Release：`v1.0.0`（versionCode 12）、`v1.0.1`（13–17）、`v1.0.2`（18–21）；
+对外只保留 3 个已发布 Release：`v1.0.0`（versionCode 12）、`v1.0.1`（13–17）、`v1.0.2`（18–21）；
+当前开发版本 `v1.1.0`（versionCode 22）已合入代码，tag / Release 由维护者指定后再补官网版本记录。
 `v1`–`v6` 开发期迭代归档为 `v0.9.0-re`，不对应任何可下载资产。
 
 ## 权限
@@ -168,6 +174,7 @@ app/
   src/com/jager/tvquiz/   # 28+ 个 Java 类：守护服务、遮罩、PIN、
                           # QuizEngine / QuizDb / SubjectWeights /
                           # Syllabus + Json + SyllabusAssets
+                          # UnlockPolicy + CooldownPolicy（可选加固）
   res/                    # 5 档图标、TV banner、收款码、布局资源
   assets/                 # quiz.db / quiz.db.version / syllabus.json
 tests/                    # JVM 单测 + 4 组 Python 契约 / 回归 / 变异脚本
@@ -184,6 +191,7 @@ CHANGELOG.md              # 3 个正式版本 + 开发期归档的完整变更�
 
 | 版本 | versionCode | 内容 |
 | --- | --- | --- |
+| v1.1.0 | 22 | 四项可选加固（默认全关，行为不变）、Issue #1 防乱选与题库偏好 |
 | v1.0.2 | 18–21 | 学习进度（方案 B）、静态首页、口号统一、官网收敛 / U 盘侧载、发布规范化与 MR 流程 |
 | v1.0.1 | 13–17 | 守护开关合并、3×2 首页、单列设置、四槽配比修订、启动即守护、打赏页与图标 |
 | v1.0.0 | 12 | 首个正式版，纠正版本口径并修复 P0/P1 |

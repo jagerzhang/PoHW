@@ -55,6 +55,8 @@ public class SettingsActivity extends Activity {
     private Button firstGateBtn;
     private EditText urlEdit;
     private Button rowGrade, rowInterval, rowScope, rowSync, rowTerm, rowUnit;
+    /** v1.1.0 四项可选加固，默认全关。 */
+    private Button rowStreak, rowStrict, rowCooldown, rowSource;
     /** 学科设置复合行：左按钮切教材版本，右按钮切题目配比。 */
     private Button[] rowEd = new Button[Subjects.COUNT];
     /** 在线源并排行：左检查题库更新 / 右自动更新，供行内左右焦点链使用。 */
@@ -334,7 +336,32 @@ public class SettingsActivity extends Activity {
                 refreshRows();
             }
         });
+        rowStreak = addRow(quiz, "连续答对", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                st.unlockStreak(st.unlockStreak() % SettingsStore.STREAK_MAX + 1);
+                refreshRows();
+            }
+        });
+        rowStrict = addRow(quiz, "严格模式", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                st.strictOneShot(!st.strictOneShot()); refreshRows();
+            }
+        });
+        rowCooldown = addRow(quiz, "冷却惩罚", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                st.cooldownEnabled(!st.cooldownEnabled()); refreshRows();
+            }
+        });
+        rowSource = addRow(quiz, "出题偏好", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                st.questionSource(st.questionSource() == SettingsStore.SOURCE_ALL
+                        ? SettingsStore.SOURCE_KNOWLEDGE_ONLY : SettingsStore.SOURCE_ALL);
+                refreshRows();
+            }
+        });
         note(quiz, "点击右侧取值即可循环切换，离开设置页时统一保存。");
+        note(quiz, "默认：答对 1 题即过关、严格模式关、无冷却惩罚、全部题目。上面四项都是可选加固，不开就和旧版一样。");
+        note(quiz, "出题偏好＝仅知识/计算题时，学习进度与全学科模式会退化为仅按年级过滤（这类题没有学期与教材单元信息）。");
         note(quiz, "学习进度：学期按题库 term 过滤（上 / 下册含「全一册」，排除无学期的综合练习）；"
                 + "「已学单元」按 1–6 年级数学教材顺序只抽已学单元。语文 / 英语 / 其他学科与 7–9 年级暂无可靠单元顺序，仅按学期过滤。"
                 + "选不到题时依次放宽单元 → 学期 → 年级，始终不换学科。默认全学年 / 不限，覆盖安装不改变原有范围。");
@@ -651,6 +678,12 @@ public class SettingsActivity extends Activity {
     private void refreshRows() {
         rowGrade.setText(st.gradeLabel());
         rowInterval.setText(intervalLabel());
+        rowStreak.setText(st.unlockStreak() > 1
+                ? ("连续答对 " + st.unlockStreak() + " 题") : "答对 1 题即可");
+        rowStrict.setText(st.strictOneShot() ? "开启（每题 1 次机会）" : "关闭（每题 2 次机会）");
+        rowCooldown.setText(st.cooldownEnabled() ? "开启（答错递增冷却）" : "关闭（默认不惩罚）");
+        rowSource.setText(st.questionSource() == SettingsStore.SOURCE_KNOWLEDGE_ONLY
+                ? "仅知识/计算题" : "全部题目");
         rowScope.setText(st.allSubjects() ? "全学科（含物理/历史等）" : "仅数 / 语 / 英");
         rowSync.setText("自动更新 · " + SettingsStore.SYNC_LABELS[st.syncIndex()]);
         rowTerm.setText(Syllabus.TERM_LABELS[st.termIndex()]);

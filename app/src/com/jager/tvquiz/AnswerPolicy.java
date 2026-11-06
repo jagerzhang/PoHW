@@ -17,13 +17,23 @@ public final class AnswerPolicy {
 
     /** wrongAttempts 是本题已累计的答错次数（含本次）。 */
     public static boolean shouldSwap(int wrongAttempts) {
-        return wrongAttempts >= WRONG_LIMIT;
+        return shouldSwap(wrongAttempts, WRONG_LIMIT);
+    }
+
+    /** 严格模式下每题只给 1 次机会：limit=1。默认 limit=WRONG_LIMIT=2。 */
+    public static boolean shouldSwap(int wrongAttempts, int limit) {
+        return wrongAttempts >= (limit < 1 ? 1 : limit);
     }
 
     public static String wrongHint(int wrongAttempts) {
-        int left = WRONG_LIMIT - wrongAttempts;
+        return wrongHint(wrongAttempts, WRONG_LIMIT);
+    }
+
+    public static String wrongHint(int wrongAttempts, int limit) {
+        int lim = limit < 1 ? 1 : limit;
+        int left = lim - wrongAttempts;
         if (left <= 0) {
-            return "✗ 已答错 " + WRONG_LIMIT + " 次，换一题（原题已记入错题库）";
+            return "✗ 已答错 " + lim + " 次，换一题（原题已记入错题库）";
         }
         return "✗ 再想想 · 本题第 " + wrongAttempts + " 次答错，再错 " + left + " 次就换题";
     }

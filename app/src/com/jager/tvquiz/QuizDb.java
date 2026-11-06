@@ -41,6 +41,8 @@ public final class QuizDb {
             "WHERE subject NOT IN ('数学','语文','英语')";
     private static final String POOL_CORE_GRADE = "WHERE grade=? AND subject=?";
     private static final String POOL_CORE_ALL = "WHERE subject=?";
+    /** 可选出题偏好：只优先抽真知识 / 计算题；空池时仍按原有五层兜底回退全库。 */
+    private static final String KNOWLEDGE_ONLY_SQL = " AND source='程序出题'";
 
     private static QuizDb instance;
     private final SQLiteDatabase db;
@@ -291,6 +293,13 @@ public final class QuizDb {
      */
     public QuizEngine.Question random(int grade, int subject, boolean allSubjects,
                                       Syllabus syllabus, int termIndex, int unitLimit) {
+        return random(grade, subject, allSubjects, syllabus, termIndex, unitLimit, false);
+    }
+
+    /** knowledgeOnly=true 时先查程序出题池；池空则完整走原兜底链，门禁零影响。 */
+    public QuizEngine.Question random(int grade, int subject, boolean allSubjects,
+                                      Syllabus syllabus, int termIndex, int unitLimit,
+                                      boolean knowledgeOnly) {
         int s = Subjects.norm(subject);
         // 路由条件必须与此字面量一致：只有「选中 OTHER 且开启全学科」才进其他池。
         // tests/layout_contract.py 与 build.sh 都钉死了这一行。
@@ -322,6 +331,10 @@ public final class QuizDb {
         QuizEngine.Question q;
         String strict = where + termW + unitW;
         String tried = strict;
+        if (knowledgeOnly) {
+            QuizEngine.Question pref = pick(strict + KNOWLEDGE_ONLY_SQL, concat(args, unitA));
+            if (pref != null) return pref;
+        }
         q = pick(strict, concat(args, unitA));
         if (q == null) {
             String termOnly = where + termW;

@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="21"' in _mf, "manifest versionCode advances to 21")
-check('VERSION_CODE="21"' in b, "build script versionCode advances to 21")
+check('android:versionCode="22"' in _mf, "manifest versionCode advances to 22")
+check('VERSION_CODE="22"' in b, "build script versionCode advances to 22")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -354,8 +354,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="21"' in _mf, "manifest versionCode advances to 21")
-check('VERSION_CODE="21"' in b, "build script versionCode advances to 21")
+check('android:versionCode="22"' in _mf, "manifest versionCode advances to 22")
+check('VERSION_CODE="22"' in b, "build script versionCode advances to 22")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -406,7 +406,7 @@ check("保留所有权利 · Proof of Homework" in _site and "jagerzhang · PoHW
 check('id="year"' not in _site and 'getElementById("year")' not in _site_js,
       "footer year is fixed in HTML, not overwritten by JS")
 check("versionCode 21" in _site and "versionCode 21" in _site_js,
-      "site and release notes report build 21")
+      "site still reports the last published build 21 (v1.1.0 pending release)")
 check("addView(bankRow, rowLp())" in s,
       "bank update and auto-update share one side-by-side row")
 check("track(btnCheck, rowSync)" in s,
@@ -433,9 +433,9 @@ _ch21 = read(os.path.join(ROOT, "CHANGELOG.md"))
 _rm21 = read(os.path.join(ROOT, "README.md"))
 _ci21 = os.path.join(ROOT, ".github/workflows/ci.yml")
 _ci_text = read(_ci21) if os.path.isfile(_ci21) else ""
-check('android:versionName="1.0.2"' in _mf21
-      and 'VERSION_NAME="1.0.2"' in _b21,
-      "display version is 1.0.2 in both manifest and build script")
+check('android:versionName="1.1.0"' in _mf21
+      and 'VERSION_NAME="1.1.0"' in _b21,
+      "display version is 1.1.0 in both manifest and build script")
 check(_site_js.count('version: "v1.0.2"') == 1
       and _site_js.count('version: "v1.0.1"') == 1
       and _site_js.count('version: "v1.0.0"') == 1
@@ -466,5 +466,46 @@ check(_png_head[:8] == bytes([137, 80, 78, 71, 13, 10, 26, 10])
 check(hashlib.sha256(open(_png21, "rb").read()).hexdigest()
       == "992ed91fb5d92e1014673b65a369470421ee72d34b8269b607ff1bbe0646517b",
       "alipay QR asset is pinned to the freshly supplied poster crop")
+
+
+# ---- v1.1.0：四项可选加固的默认值与行为符号 ----
+_u = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/UnlockPolicy.java"))
+_c = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/CooldownPolicy.java"))
+_st = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsStore.java"))
+_o_raw = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizOverlayService.java"))
+_o_code = strip_comments(_o_raw)
+_act = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsActivity.java"))
+_qd = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizDb.java"))
+_qf = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizFlow.java"))
+check('DEFAULT_STREAK = 1' in _u and 'public boolean onCorrect()' in _u
+      and 'public void onWrong()' in _u,
+      "UnlockPolicy keeps the default one-question unlock")
+check('safeRemaining(' in _c and 'STEPS_SEC = {30, 60, 120, 300}' in _c,
+      "CooldownPolicy uses deadlines and detects clock rollback")
+check('getInt("unlockStreak", 1)' in _st
+      and 'getBoolean("strictOneShot", false)' in _st
+      and 'getBoolean("cooldownEnabled", false)' in _st
+      and 'getInt("questionSource", SOURCE_ALL)' in _st,
+      "all four optional defaults preserve v1.0.2 behaviour")
+check('unlock.onCorrect()' in _o_code and 'swapQuestion(unlock.progress())' in _o_code
+      and 'unlock.onWrong()' in _o_code and 'quizView.correct(' in _o_code,
+      "unmet streak swaps in place instead of unlocking")
+check('applyCooldown()' in _o_code and 'quizView.cooldown(' in _o_code
+      and 'restoreCooldown()' in _o_code and 'st.clearCooldown()' in _o_code,
+      "cooldown only delays swapping and survives process restart")
+check('KNOWLEDGE_ONLY_SQL' in _qd and "source='程序出题'" in _qd
+      and 'engine.setKnowledgeOnly(knowledgeOnly)' in _o_code,
+      "question preference filters the bank without deleting rows")
+check('rowStreak = addRow' in _act and 'rowStrict = addRow' in _act
+      and 'rowCooldown = addRow' in _act and 'rowSource = addRow' in _act,
+      "settings expose all four optional hardening switches")
+check('setStrict(strictOneShot)' in _o_code and 'wrongLimit()' in _qf
+      and 'strict ? 1 : AnswerPolicy.WRONG_LIMIT' in _qf,
+      "strict one-shot mode stays off by default")
+
+check('return streak >= required;' in _u,
+      "UnlockPolicy requires the configured streak before unlocking")
+check('unlock.onWrong();' in _o_code,
+      "wrong answer resets the streak in live code")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

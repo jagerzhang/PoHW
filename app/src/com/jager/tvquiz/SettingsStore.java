@@ -121,6 +121,42 @@ public final class SettingsStore implements PinGate.Store {
         sp.edit().putInt("unitLimit", clamp(v, 0, Syllabus.MAX_UNITS)).commit();
     }
 
+    // ---------- v1.1.0 可选加固：默认全部关闭，覆盖安装行为不变 ----------
+    public static final int STREAK_MIN = 1;
+    public static final int STREAK_MAX = 5;
+    public static final int SOURCE_ALL = 0;
+    public static final int SOURCE_KNOWLEDGE_ONLY = 1;
+
+    /** 默认 1：答对 1 题即解锁，与 v1.0.2 完全一致。 */
+    public int unlockStreak() { return clamp(sp.getInt("unlockStreak", 1), STREAK_MIN, STREAK_MAX); }
+    public void unlockStreak(int v) {
+        sp.edit().putInt("unlockStreak", clamp(v, STREAK_MIN, STREAK_MAX)).commit();
+    }
+    public boolean strictOneShot() { return sp.getBoolean("strictOneShot", false); }
+    public void strictOneShot(boolean v) { sp.edit().putBoolean("strictOneShot", v).commit(); }
+    public boolean cooldownEnabled() { return sp.getBoolean("cooldownEnabled", false); }
+    public void cooldownEnabled(boolean v) { sp.edit().putBoolean("cooldownEnabled", v).commit(); }
+    public int questionSource() { return clamp(sp.getInt("questionSource", SOURCE_ALL), SOURCE_ALL, SOURCE_KNOWLEDGE_ONLY); }
+    public void questionSource(int v) {
+        sp.edit().putInt("questionSource", clamp(v, SOURCE_ALL, SOURCE_KNOWLEDGE_ONLY)).commit();
+    }
+
+    /** 冷却存截止时间戳 + 写入时的墙钟与 elapsedRealtime 快照，用于抗重启 / 抗改时间。 */
+    public long cooldownDeadline() { return sp.getLong("cooldownDeadline", 0L); }
+    public long cooldownSavedWall() { return sp.getLong("cooldownSavedWall", 0L); }
+    public long cooldownSavedElapsed() { return sp.getLong("cooldownSavedElapsed", 0L); }
+    public int cooldownWrongCount() { return sp.getInt("cooldownWrongCount", 0); }
+    public void saveCooldown(long deadline, long savedWall, long savedElapsed, int wrongCount) {
+        sp.edit().putLong("cooldownDeadline", deadline)
+                .putLong("cooldownSavedWall", savedWall)
+                .putLong("cooldownSavedElapsed", savedElapsed)
+                .putInt("cooldownWrongCount", wrongCount).commit();
+    }
+    public void clearCooldown() {
+        sp.edit().remove("cooldownDeadline").remove("cooldownSavedWall")
+                .remove("cooldownSavedElapsed").remove("cooldownWrongCount").commit();
+    }
+
     // ---------- 频率 / 配比 / 在线源 ----------
 
     public int intervalSec() { return sp.getInt("interval", 30); }

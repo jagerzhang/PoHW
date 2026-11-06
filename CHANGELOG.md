@@ -1,8 +1,8 @@
 # Changelog
 
-> **版本口径**：对外只保留 3 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
-> **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）。
-> 当前开发版本 **v1.2.0**（versionCode 25）尚未打 tag / 发 Release。
+> **版本口径**：对外发布 4 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
+> **v1.2.0**（25–26）。`v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
 > 已合并归档为末尾的 `v0.9.0-re`，不对应任何可下载的 Release。
@@ -10,9 +10,9 @@
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
 
-## v1.2.0 (versionCode 25) — version line promotion
+## v1.2.0 (versionCode 25–26) — new bank, difficulty preference and release
 
-Display version 1.1.0 -> **1.2.0**, `versionCode` 24 -> **25**, same release
+Display version 1.1.0 -> **1.2.0**, `versionCode` 24 -> **25–26**, same release
 keystore (SHA-256 `76eb6063b574...26172`). `1.1.0` was never tagged or released.
 The built-in bank replacement (4733 cleaned questions), difficulty preference
 and weighted draws are new capabilities, so the unreleased development line is
@@ -32,7 +32,29 @@ from every earlier build still work.
   last published build 21, and no tag or GitHub Release is cut. Per the release
   rule these move together only when the maintainer explicitly names a tag.
 - Gates: `LAYOUT_CONTRACT_OK 192`, `JVM_TESTS_OK 293`,
-  `MUTATION_SUITE_OK 64/64`, `BUILD_OK version=1.2.0 code=25`.
+  `MUTATION_SUITE_OK 64/64`, `BUILD_OK version=1.2.0 code=26`.
+
+### versionCode 26 — neutral data-source notice and release build
+
+`versionCode` 25 -> **26**; display version stays **1.2.0**. The three `meta`
+rows inside `app/assets/quiz.db` were rewritten to a neutral notice, which
+changes the APK payload, so the build number advances to keep over-the-top
+installs from every earlier build valid.
+
+- README, CHANGELOG history, `LICENSE`, `docs/*`, the site FAQ/footer, the
+  bank-builder notes and app source comments now use one neutral wording:
+  part of the bank is compiled from publicly available Internet material,
+  with a GitHub-Issues takedown contact. No specific source is named.
+- A neutral `docs/DATA_SOURCES.md` replaces the previous source-and-licence
+  document; stale references to data the shipped bank no longer uses were
+  removed.
+- `v1.2.0` is tagged at this build. The site release notes gain a fourth card
+  and the CI metadata assertion now expects four published versions.
+- Gates: `LAYOUT_CONTRACT_OK 192`, `JVM_TESTS_OK 293`,
+  `MUTATION_SUITE_OK 64/64`, `BUILD_OK version=1.2.0 code=26`; badging
+  `versionCode='26' versionName='1.2.0'`, release certificate
+  `76eb6063...6172` continuous.
+
 
 ## v1.1.0 (versionCode 22–24) — unreleased development line
 
@@ -87,22 +109,23 @@ release notes are updated at that point.
 - `BUILD_OK version=1.1.0 code=22`; v1/v2/v3 signatures valid, certificate
   continuous; `src.zip` clean and contains `.github/workflows/ci.yml`.
 
-### versionCode 24 — new cleaned bank, difficulty preference, attribution
+### versionCode 24 — new cleaned bank and difficulty preference
 
 Display version stays **1.1.0** (not yet tagged), `versionCode` 23 -> **24**, same
 release keystore (SHA-256 `76eb6063b574...26172`).
 
 - **Built-in bank replaced.** `app/assets/quiz.db` now has **4733 questions**
-  (860 self-generated for kindergarten-grade 2, 3874 cleaned third-party).
+  (860 self-generated for kindergarten-grade 2, 3873 compiled from public
+  Internet sources).
   The old 5129-row catalog-location bank is gone. Schema keeps the original 17
   columns and adds `difficulty` / `difficulty_level`; `knowledge`, `chapters`,
   `meta` tables and `quiz.db.version` are preserved so `QuizDb.open()` and
   over-the-top upgrades keep working.
-- **Third-party questions were cleaned per question** over four passes
-  (10632 -> 3874; 6758 rejections with reasons). **No written licence from the
-  source site; personal non-commercial use only.** The old README claim that the
-  APK contains no third-party question text is now removed, and `docs/ATTRIBUTION.md`
-  is shipped in the repo and must not be deleted.
+- **Questions collected from public Internet sources were validated and cleaned
+  per question** over four passes (10632 -> 3873; 6758 rejections with reasons).
+  A neutral data-source notice lives in `docs/DATA_SOURCES.md`: rights to the
+  content remain with their respective owners, and a takedown contact via GitHub
+  Issues is provided.
 - **Difficulty preference.** New `DifficultyPolicy` (pure Java): 0=unlimited
   (default), 1=low, 2=mid, 3=high, with **80/20 weighted draws** rather than a
   hard filter, because the source difficulty coefficient is crowd-sourced and

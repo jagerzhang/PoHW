@@ -26,7 +26,7 @@ __pycache__/
 *.py[cod]
 .venv/
 
-# Local data sources (upstream catalog is not redistributable)
+# Local data snapshots are not committed to the repository
 /data/
 /third_party/
 

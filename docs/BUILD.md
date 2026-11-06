@@ -53,16 +53,15 @@ bash app/build.sh                                    # 产出 dist/PoHW-v1.2.0.a
 ## 4. 重新生成题库
 
 ```bash
-git clone https://github.com/RedSamerai/learning-content /path/to/learning-content
 python3 tools/quizbank/build_bank.py \
-    --lc /path/to/learning-content \
+    --lc /path/to/catalog-data \
     --out app/assets/quiz.db \
     --stats docs/BANK_STATS.md \
     --seed 20261104
 python3 tools/quizbank/verify.py app/assets/quiz.db
 ```
 
-上游原始仓库（约 20 MB）不要提交进本仓库，`.gitignore` 已排除 `/data/` 与 `/third_party/`。
+原始纲目数据（约 20 MB）不要提交进本仓库，`.gitignore` 已排除 `/data/` 与 `/third_party/`。
 `--seed` 固定时生成结果完全可复现。
 
 ## 5. 常见问题

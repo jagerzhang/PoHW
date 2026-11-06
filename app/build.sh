@@ -8,7 +8,7 @@ APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
 VERSION_NAME="1.2.0"
-VERSION_CODE="25"
+VERSION_CODE="26"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -30,9 +30,10 @@ cd "$ROOT"
 echo "[0/9] static guards"
 grep -q "versionCode=\"$VERSION_CODE\"" "$APP/AndroidManifest.xml"
 grep -q "versionName=\"$VERSION_NAME\"" "$APP/AndroidManifest.xml"
-# code21：只发布 3 个语义化版本；feature 分支的自动审核工作流必须随仓库分发。
+# 只发布 4 个语义化版本；feature 分支的自动审核工作流必须随仓库分发。
 [ -f "$ROOT/.github/workflows/ci.yml" ] || { echo "FORBIDDEN: missing auto-review workflow"; exit 1; }
 grep -qF 'VERSION_NAME="1.2.0"' "$APP/build.sh"
+grep -qF 'version: "v1.2.0"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.0.2"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.0.1"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.0.0"' "$ROOT/site/script.js"

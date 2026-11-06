@@ -1,12 +1,12 @@
 # quizbank —— 内置题库工具
 
-两个零第三方依赖的 Python 脚本，负责把开源 K12 纲目变成 App 能直接读的 SQLite。
+两个零第三方依赖的 Python 脚本，负责把知识点纲目数据变成 App 能直接读的 SQLite。
 
 ## build_bank.py
 
 ```bash
 python3 tools/quizbank/build_bank.py \
-    --lc /path/to/learning-content \
+    --lc /path/to/catalog-data \
     --out app/assets/quiz.db \
     --stats docs/BANK_STATS.md \
     --seed 20261104 \
@@ -15,7 +15,7 @@ python3 tools/quizbank/build_bank.py \
 
 | 参数 | 说明 |
 | --- | --- |
-| `--lc` | `RedSamerai/learning-content` 仓库目录（必需） |
+| `--lc` | 知识点纲目数据目录（必需） |
 | `--out` | 输出 SQLite 路径，默认 `app/assets/quiz.db` |
 | `--stats` | 可选，写出统计 Markdown |
 | `--seed` | 随机种子，固定后结果完全可复现 |

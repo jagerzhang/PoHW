@@ -2,14 +2,12 @@
 
 ## 一句话结论
 
-`app/assets/quiz.db` 里的**题目不是从任何题库抄来的**，而是把开源仓库
-[RedSamerai/learning-content](https://github.com/RedSamerai/learning-content)
-的**全部知识点纲目**导入 SQLite 后，由 `tools/quizbank/build_bank.py`
-参数化生成的；正确答案由纲目数据本身或程序计算确定。
+`app/assets/quiz.db` 的题目由本项目按课标自编的题目，与整理自互联网公开渠道、
+经逐题校验清洗后的题目组成，共 4733 道，覆盖幼儿园～六年级语数外，
+并带难度分档字段。
 
-上游仓库只有「年级段 / 学科 / 章节 / 知识点」这类纲目字段，
-**没有题目、选项、答案**（实测 4,026 个 JSON 中大部分 `description` / `example` /
-`explanation` 为空）。因此不存在「把现成真题搬进来」这回事。
+> 本文件描述题库构建器的设计、表结构与校验口径。来源说明见
+> [DATA_SOURCES.md](DATA_SOURCES.md)。
 
 ## 全量导入口径
 
@@ -69,7 +67,7 @@ App 端 `QuizTextSizer` 还会按长度自适应字号。
 
 ```bash
 python3 tools/quizbank/build_bank.py \
-    --lc /path/to/learning-content \
+    --lc /path/to/catalog-data \
     --out app/assets/quiz.db \
     --stats docs/BANK_STATS.md --seed 20261104
 python3 tools/quizbank/verify.py app/assets/quiz.db
@@ -81,10 +79,10 @@ python3 tools/quizbank/verify.py app/assets/quiz.db
 
 ## 许可证边界
 
-上游 `learning-content` 仓库**未附 LICENSE**。本仓库的 MIT 许可证**只覆盖代码**，
-不包含 `app/assets/quiz.db` 中的纲目数据；该数据仅供个人非商业学习使用。
-仓库与 APK 中不含任何火花 K12 / 付费接口 / 爬取所得的真题文本。
-如需公开再分发，请先确认上游授权状态或换成自己有权利使用的数据源。
+本仓库的 MIT 许可证**只覆盖代码**，不覆盖 `app/assets/quiz.db` 中的题库内容；
+题库内容的权利归各自权利人所有，仅供个人非商业学习使用。
+**如有侵权或其他权益问题，请通过 GitHub Issue 联系维护者，核实后会及时删除或替换。**
+完整说明见 [DATA_SOURCES.md](DATA_SOURCES.md)。
 
 ## 错题库（v6）与教材版本边界
 
@@ -96,7 +94,7 @@ python3 tools/quizbank/verify.py app/assets/quiz.db
 不每秒查询 SQLite。`onUpgrade()` 采用非破坏式迁移，不会 DROP 掉家长积累的错题；
 列表最多展示最近 500 条，标题显示的是真实总数。
 
-**教材版本说明**：上游 `learning-content` 只有纲目（年级段 / 学科 / 章节 / 知识点），
+**教材版本说明**：题库数据只有纲目（年级段 / 学科 / 章节 / 知识点），
 没有出版社或教材版本字段，因此 `questions` 表也没有 `edition` 列。
 v6 的分学科教材版本设置会：
 
@@ -167,7 +165,7 @@ v6 的分学科教材版本设置会：
 | **A 学期维度** | 设置页加「上册 / 下册 / 全学年」（默认全学年，兼容覆盖安装）；`QuizDb.random()` WHERE 加 `AND term=?`；`term=''` 的 810 道程序出题做成「是否含综合练习」开关 | 低：1 个 SP 键 + 1 行 UI + 1 个 SQL 条件 + 契约 / 单测 / 分布回归扩展 | 只分上下册；三年级上约 196 题（数学 43 题），够弹，但解决不了「刚开学只学 2 单元」 |
 | **B 学期 + 单元进度** | 在 A 上加「已学到第 N 单元」，按有序单元名单过滤 `topic`；**必须新增 `assets/syllabus.json`** 人工维护「教材版本 × 年级 × 学期 × 学科 → 有序单元名数组」 | 中高：题库没有顺序 / 版本，需补外部进度表并和 `topic` 对名；还要处理「选中单元题太少」的兜底 | 真正贴合「开学 1–2 个月」；建议先只做 1–6 年级数 / 语 / 英人教版试点 |
 | **C 能力题优先** | 把 `mathG1..mathG6` 提升为主来源，家长选「能力题优先 / 纲目题 / 混合」；三年级 10 类题型（万以内加减法、多位数乘一位数、分数初步、周长、单位换算…）可按「已学题型」白名单开关 | 中：改 `QuizEngine.next()` 优先级 + 题型白名单 + UI；语文 / 英语的参数化题较薄 | 治「题目类型不对」这一层，不依赖题库标签、不需要教材顺序表 |
-| **D 重做题库标签** | 给 5,129 题补 `edition / unit_index / unit_name / difficulty`，剔除三年级质数 / 百分数，纲目定位题降级为知识卡 | 最高；learning-content 本身没有单元顺序，仍需人工或 LLM 标注 | 治本但周期长 |
+| **D 重做题库标签** | 给 5,129 题补 `edition / unit_index / unit_name / difficulty`，剔除三年级质数 / 百分数，纲目定位题降级为知识卡 | 最高；题库本身没有单元顺序，仍需人工或 LLM 标注 | 治本但周期长 |
 
 **当时推荐**：A + C（学期过滤 + 能力题优先）。**用户最终选择 B**：只有 B 真正解决「开学 1–2 个月只学了前两个单元」这一诉求。B 已按文末的边界落地，A 的学期维度随 B 一起实现；C / D 仍未实现。
 

@@ -57,6 +57,12 @@ and English questions had missing spaces between words (`Sheisagirl`,
 - Docs refreshed: `QUESTION_BANK.md` / `BANK_STATS.md` now describe the
   shipped bank instead of the retired 5129-row catalog bank; `DATA_SOURCES.md`
   and README carry the new counts.
+- Post-release docs sync: `README.md` and the static site no longer describe
+  the retired 5129-question catalog bank. Both now carry the shipped 3965
+  questions with grade 1-6 labels, the grade cap on every draw layer, the
+  practice mode, the default-on auto-continue setting and a corrected FAQ
+  (the bank does have difficulty levels; it has no term/unit data). No APK
+  change and no new versionCode.
 - Gates: `LAYOUT_CONTRACT_OK 211`, `JVM_TESTS_OK 308`,
   `BANK_QUALITY_OK questions=3965`, `VERIFY = PASS (bank-v2)`,
   `MUTATION_SUITE_OK 76/76`, `BUILD_OK version=1.2.3 code=35`.

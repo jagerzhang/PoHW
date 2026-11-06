@@ -1,8 +1,8 @@
 # Changelog
 
-> **版本口径**：对外发布 6 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 7 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
-> **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）。
+> **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）。
 > `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
@@ -10,6 +10,56 @@
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.2.3 (versionCode 35) — bank quality rebuild, grade cap, seventh release
+
+Display version 1.2.2 -> **1.2.3**, `versionCode` 33 -> **35** (34 belongs
+to the Android 4.0 legacy branch), same release keystore
+(SHA-256 `76eb6063b574...26172`). Seventh published release.
+
+User report: a third grader was asked `a×5=a×10` (an algebraic equation),
+and English questions had missing spaces between words (`Sheisagirl`,
+`I'mgoingto`, `Junefirstis`).
+
+**Root cause** (full read-only audit of all 4733 questions):
+
+- 3490 questions (74%) were `grade=-1` / 通用 with no reliable grade label.
+- There were **zero** grade-3+ Chinese/English questions while settings allow
+  grades 1-9, so `QuizDb.random()` fell back to `WHERE subject=?` and released
+  the entire ungraded pool, including middle-school geometry, percentages,
+  olympiad items and glued English text. It was not an occasional bad item;
+  the default pool itself was an all-grade mixture.
+- Even graded labels were unreliable: `TK00258` arrived tagged as a
+  third-grade textbook question but is an algebraic equation.
+
+**Changes**:
+
+- `tools/quizbank/rebuild_bank.py` (new, reproducible) re-grades every
+  question from a primary-school curriculum whitelist instead of trusting
+  upstream labels: only items that clearly and *solely* match grade 1-3
+  keywords may enter the low-grade pool; everything else is graded 4+.
+  It repairs glued English words with a wordlist splitter (heuristics avoid
+  mis-splitting proper nouns such as `Hebei`), and removes out-of-scope,
+  truncated, duplicate and unrepairable questions. **4733 -> 3965**
+  questions, all with an explicit grade 1-6; `quiz.db.version` is now
+  `pohw-2026.11.07-bank-v3`.
+- `QuizDb`: all four pool predicates and the final fallback now carry
+  `grade<=?`. No layer can widen past the user's grade, including the
+  last-resort query. `countFor` / `countForGrade` use the same cap so the UI
+  count matches the real pool. `study_scope_check.py` and
+  `bank_distribution_check.py` replicate and assert these caps.
+- `tests/bank_quality_check.py` (new CI gate) checks grade labels, distinct
+  options, English spacing, duplicate stems, middle-school keywords, algebra
+  in grades <=3, and a minimum cumulative pool per grade and subject. Wired
+  into `build.sh` and the auto-review workflow.
+- Two negative mutations (BW/BX) pin the grade caps; SQL-constant mutation
+  anchors retargeted to the new predicates.
+- Docs refreshed: `QUESTION_BANK.md` / `BANK_STATS.md` now describe the
+  shipped bank instead of the retired 5129-row catalog bank; `DATA_SOURCES.md`
+  and README carry the new counts.
+- Gates: `LAYOUT_CONTRACT_OK 211`, `JVM_TESTS_OK 308`,
+  `BANK_QUALITY_OK questions=3965`, `VERIFY = PASS (bank-v2)`,
+  `MUTATION_SUITE_OK 76/76`, `BUILD_OK version=1.2.3 code=35`.
 
 ## v1.2.2 (versionCode 33) — console layout finalised, sixth release
 

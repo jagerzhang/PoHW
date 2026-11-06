@@ -62,6 +62,7 @@ jobs:
           python3 tools/quizbank/build_syllabus.py --check
           python3 tests/study_scope_check.py
           python3 tests/bank_distribution_check.py
+          python3 tests/bank_quality_check.py
 
       - name: Full APK build (dev-signed on CI)
         env:
@@ -81,10 +82,10 @@ jobs:
           print('site versions   :', versions)
           print('CHANGELOG groups:', groups)
           print('manifest version:', name)
-          assert versions == ['v1.2.2', 'v1.2.1', 'v1.2.0', 'v1.0.2', 'v1.0.1', 'v1.0.0'], versions
+          assert versions == ['v1.2.3', 'v1.2.2', 'v1.2.1', 'v1.2.0', 'v1.0.2', 'v1.0.1', 'v1.0.0'], versions
           published = [g for g in groups if g in versions]
           assert published == versions, published
-          # CHANGELOG 允许未发布开发版本段（v1.1.0）；官网记录与 6 个 Release 一一对应。
+          # CHANGELOG 允许未发布开发版本段（v1.1.0）；官网记录与 7 个 Release 一一对应。
           assert name == groups[0][1:], name
           assert os.path.isfile('.github/workflows/ci.yml')
           print('RELEASE_METADATA_OK')

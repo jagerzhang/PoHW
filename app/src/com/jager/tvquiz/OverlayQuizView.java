@@ -222,6 +222,15 @@ public final class OverlayQuizView {
         paint();
     }
 
+    /** 家长开启「答对自动继续」时：只展示结果，不显示「继续观看」按钮。 */
+    public void correctAuto(String msg, String exp) {
+        result.setTextColor(Ui.GREEN);
+        result.setText(msg);
+        explain.setText(exp);
+        cont.setVisibility(View.INVISIBLE);
+        paint();
+    }
+
     // ---------- 键盘路由：把 Android KeyEvent 翻成语义后交给 KeyRouter ----------
 
     private boolean onKey(KeyEvent e) {

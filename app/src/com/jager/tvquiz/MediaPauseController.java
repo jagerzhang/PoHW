@@ -13,10 +13,16 @@ import android.view.KeyEvent;
  *
  * Android 没有「强制暂停第三方播放器」的公开 API（注入按键需要签名级
  * INJECT_EVENTS 权限，MediaSessionManager.getActiveSessions 需要用户授予
- * 通知使用权）。这里叠加两条所有应用都可用的标准路径：
+ * 通知使用权）。可用的是两条标准路径：
  *   1) 申请 AUDIOFOCUS_GAIN_TRANSIENT：规范播放器收到 LOSS_TRANSIENT 会自行暂停；
  *   2) 派发 KEYCODE_MEDIA_PAUSE：带 MediaSession 的播放器会直接收到暂停键。
- * 答对解锁时释放音频焦点，并按家长设置派发 MEDIA_PLAY 尝试恢复播放。
+ *
+ * 关键：**同一时刻只使用其中一条，并且暂停 / 恢复必须成对**。电视播放器普遍把
+ * 媒体键当成 play/pause 切换键。旧实现弹题时既发 MEDIA_PAUSE 又抢音频焦点，
+ * 两条暂停信号互相抵消（弹题没暂停）；答对时又「先归还焦点、再补发 MEDIA_PLAY」，
+ * 播放器随 AUDIOFOCUS_GAIN 恢复播放后被 PLAY 键再次切换，反而停下
+ * （点「继续观看」后视频暂停）。现在拿到焦点就完全靠焦点，拿不到才用媒体键
+ * 兜底；媒体键路径的恢复键也提到归还焦点之前，两条路径各自内部配对。
  *
  * 这是 best-effort：不保证所有视频 App 都响应，也不申请任何额外权限。
  */
@@ -35,6 +41,8 @@ public final class MediaPauseController {
     private AudioFocusRequest focusRequest;
     private boolean focusHeld = false;
     private boolean pauseRequested = false;
+    /** 只有音频焦点没申请到、改用媒体键兜底时才为 true。 */
+    private boolean usedMediaKey = false;
 
     public MediaPauseController(Context c) {
         Context app = c.getApplicationContext();
@@ -46,7 +54,8 @@ public final class MediaPauseController {
     public void quizShown(SettingsStore st) {
         if (am == null || !st.pauseOnQuiz()) return;
         pauseRequested = true;
-        dispatch(KeyEvent.KEYCODE_MEDIA_PAUSE);
+        focusHeld = false;
+        usedMediaKey = false;
         try {
             int r;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -69,9 +78,14 @@ public final class MediaPauseController {
             Log.w(TAG, "requestAudioFocus failed", e);
             focusHeld = false;
         }
+        // 只发一种暂停信号：拿到焦点就完全依赖 LOSS_TRANSIENT；拿不到才补媒体键。
+        if (!focusHeld) {
+            usedMediaKey = true;
+            dispatch(KeyEvent.KEYCODE_MEDIA_PAUSE);
+        }
     }
 
-    /** 答对并点击「继续观看」后调用；是否尝试恢复由家长设置决定。 */
+    /** 答对并「继续观看」（或自动继续）后调用；是否尝试恢复由家长设置决定。 */
     public void quizFinished(SettingsStore st) {
         releaseInternal(st.pauseOnQuiz() && st.resumePlayback());
     }
@@ -86,12 +100,11 @@ public final class MediaPauseController {
 
     @SuppressWarnings("deprecation")
     private void releaseInternal(boolean tryResume) {
-        // 只有「本次暂停过、家长允许恢复、且当初没拿到音频焦点」才补发 MEDIA_PLAY：
-        // 若焦点曾被授予，规范播放器在 abandon 后收到 AUDIOFOCUS_GAIN 会自行恢复，
-        // 再补发 MEDIA_PLAY 可能造成二次切换，甚至唤醒无关的 MediaSession；
-        // 若焦点从未被授予，MEDIA_PAUSE 是唯一的暂停信号，必须补发 MEDIA_PLAY 才能恢复。
-        // 注意：这里的 focusHeld 必须在下方清零之前求值。
-        boolean shouldResume = pauseRequested && tryResume && !focusHeld;
+        // 媒体键兜底路径：先补发 MEDIA_PLAY 再归还焦点。反过来做会让播放器随
+        // AUDIOFOCUS_GAIN 恢复播放之后，又把 PLAY 当成切换键切回暂停。
+        if (usedMediaKey && pauseRequested && tryResume) {
+            dispatch(KeyEvent.KEYCODE_MEDIA_PLAY);
+        }
         // 无论 tryResume 与否，都必须归还 TRANSIENT 音频焦点，绝不把别人的焦点扣在手里。
         if (am != null && focusHeld) {
             try {
@@ -107,7 +120,7 @@ public final class MediaPauseController {
         focusRequest = null;
         focusHeld = false;
         pauseRequested = false;
-        if (shouldResume) dispatch(KeyEvent.KEYCODE_MEDIA_PLAY);
+        usedMediaKey = false;
         // 诚实说明：resumePlayback=false 也只是 best-effort。一旦 abandon 音频焦点，
         // 合规播放器可能随 AUDIOFOCUS_GAIN 自行恢复播放；想彻底阻止只能永久持有
         // 音频焦点，那既不可接受也不礼貌，因此无法保证「绝不恢复」。

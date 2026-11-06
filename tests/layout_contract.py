@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="26"' in _mf, "manifest versionCode advances to 26")
-check('VERSION_CODE="26"' in b, "build script versionCode advances to 26")
+check('android:versionCode="28"' in _mf, "manifest versionCode advances to 28")
+check('VERSION_CODE="28"' in b, "build script versionCode advances to 28")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -354,8 +354,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="26"' in _mf, "manifest versionCode advances to 26")
-check('VERSION_CODE="26"' in b, "build script versionCode advances to 26")
+check('android:versionCode="28"' in _mf, "manifest versionCode advances to 28")
+check('VERSION_CODE="28"' in b, "build script versionCode advances to 28")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -549,5 +549,32 @@ check("pick(diffRoot, null)" in _qd24,
       "final unconstrained fallback still uses WHERE difficulty_level=N")
 check("KNOWLEDGE_ONLY_SQL + diffW" in _qd24,
       "knowledge-only chain also keeps the difficulty predicate")
+
+# ---- versionCode 28：答对自动继续 + 暂停信号互斥 ----
+_st28 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsStore.java")))
+_sa28 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsActivity.java")))
+_o28 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizOverlayService.java")))
+_v28 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/OverlayQuizView.java")))
+_mp28 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/MediaPauseController.java")))
+check('getBoolean("autoContinueOnCorrect", true)' in _st28,
+      "auto-continue defaults to enabled")
+check('rowAutoContinue = addRow' in _sa28
+      and 'autoContinueOnCorrect(!st.autoContinueOnCorrect())' in _sa28,
+      "quiz settings card exposes the auto-continue toggle")
+check('autoContinue = st.autoContinueOnCorrect();' in _o28
+      and 'if (autoContinue) {' in _o28
+      and 'quizView.correctAuto(' in _o28,
+      "service reads the setting and auto-finishes a correct answer")
+check('if (quizShowing) finishQuiz();' in _o28,
+      "auto-finish guards against a second dismissal")
+check('correctAuto(String msg, String exp)' in _v28
+      and 'cont.setVisibility(View.INVISIBLE)' in _v28,
+      "auto-finish hides the continue button")
+check('usedMediaKey' in _mp28 and 'if (!focusHeld) {' in _mp28
+      and _mp28.count('dispatch(KeyEvent.KEYCODE_MEDIA_PAUSE)') == 1,
+      "media pause is only a fallback when audio focus was denied")
+check(_mp28.find('dispatch(KeyEvent.KEYCODE_MEDIA_PLAY)')
+      < _mp28.find('abandonAudioFocus'),
+      "resume key is sent before releasing audio focus")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

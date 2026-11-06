@@ -94,6 +94,7 @@ public class QuizOverlayService extends Service {
     private boolean cooldownEnabled = false;
     private boolean knowledgeOnly = false;
     private int difficultyLevel = DifficultyPolicy.LEVEL_ALL;
+    private boolean autoContinue = true;
     private boolean pendingSwap = false;
     private final Runnable pendingSwapTask = new Runnable() {
         @Override public void run() {
@@ -310,6 +311,7 @@ public class QuizOverlayService extends Service {
         cooldownEnabled = st.cooldownEnabled();
         knowledgeOnly = st.questionSource() == SettingsStore.SOURCE_KNOWLEDGE_ONLY;
         difficultyLevel = st.difficultyLevel();
+        autoContinue = st.autoContinueOnCorrect();
         cooldown.reset();
         engine = new QuizEngine(st.grade(), st.edition(),
                 st.weight(Subjects.MATH), st.weight(Subjects.CHINESE),
@@ -486,6 +488,18 @@ public class QuizOverlayService extends Service {
             // 默认 required=1：第一次答对即解锁，与 v1.0.2 逐字等价。
             if (!unlock.onCorrect()) {
                 swapQuestion(unlock.progress());
+                return;
+            }
+            if (autoContinue) {
+                // 答对即继续：不显示「继续观看」按钮，且必须 post 出按键分发栈，
+                // 否则同步 removeViewImmediate() 会 detach 当前 ViewRootImpl。
+                quizView.correctAuto("✓ 答对啦！自动继续观看 " + interval + " 秒",
+                        current.explain);
+                handler.post(new Runnable() {
+                    @Override public void run() {
+                        if (quizShowing) finishQuiz();
+                    }
+                });
                 return;
             }
             quizView.correct("✓ 答对啦！继续观看 " + interval + " 秒", current.explain);

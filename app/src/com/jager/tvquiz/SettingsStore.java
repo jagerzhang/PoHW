@@ -142,6 +142,12 @@ public final class SettingsStore implements PinGate.Store {
     }
 
     /** 题目难度倾向：0=不限（默认，行为不变）/ 1=低 / 2=中 / 3=高。 */
+    /** 答对后自动继续观看，默认开：达到解锁门槛不再要求再按一次「继续观看」。 */
+    public boolean autoContinueOnCorrect() { return sp.getBoolean("autoContinueOnCorrect", true); }
+    public void autoContinueOnCorrect(boolean v) {
+        sp.edit().putBoolean("autoContinueOnCorrect", v).commit();
+    }
+
     public int difficultyLevel() { return clamp(sp.getInt("difficultyLevel", 0), 0, 3); }
     public void difficultyLevel(int v) {
         sp.edit().putInt("difficultyLevel", clamp(v, 0, 3)).commit();

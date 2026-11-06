@@ -2,7 +2,7 @@
 
 > **版本口径**：对外只保留 3 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）。
-> 当前开发版本 **v1.1.0**（versionCode 22）尚未打 tag / 发 Release。
+> 当前开发版本 **v1.2.0**（versionCode 25）尚未打 tag / 发 Release。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
 > 已合并归档为末尾的 `v0.9.0-re`，不对应任何可下载的 Release。
@@ -10,7 +10,34 @@
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
 
-## v1.1.0 (versionCode 22) — optional hardening for issue #1
+## v1.2.0 (versionCode 25) — version line promotion
+
+Display version 1.1.0 -> **1.2.0**, `versionCode` 24 -> **25**, same release
+keystore (SHA-256 `76eb6063b574...26172`). `1.1.0` was never tagged or released.
+The built-in bank replacement (4733 cleaned questions), difficulty preference
+and weighted draws are new capabilities, so the unreleased development line is
+promoted to a minor version rather than shipping another build under a label
+that has no Release. `versionCode` keeps increasing so over-the-top installs
+from every earlier build still work.
+
+- Synced the stale `versionCode 22` references in `README.md` and at the top of
+  this file with the real build (25); `README.md` had contradicted its own
+  version-policy paragraph.
+- `app/build.sh`, `AndroidManifest.xml`, `docs/BUILD.md`, the source contract
+  (`tests/layout_contract.py`) and the mutation anchors
+  (`tests/mutation_suite.py`) now pin `1.2.0` / `25`, including the hardcoded
+  static guard and the display-version rollback mutation.
+- **Deliberately unchanged**: `site/script.js` still lists exactly three
+  releases (v1.0.2 / v1.0.1 / v1.0.0), `site/index.html` still reports the
+  last published build 21, and no tag or GitHub Release is cut. Per the release
+  rule these move together only when the maintainer explicitly names a tag.
+- Gates: `LAYOUT_CONTRACT_OK 192`, `JVM_TESTS_OK 293`,
+  `MUTATION_SUITE_OK 64/64`, `BUILD_OK version=1.2.0 code=25`.
+
+## v1.1.0 (versionCode 22–24) — unreleased development line
+
+> This line was never tagged or released; all of its work (code 22-24) is
+> carried forward by `## v1.2.0 (versionCode 25)` above.
 
 Display version 1.0.2 -> **1.1.0**, `versionCode` 21 -> **22**, same release
 keystore (SHA-256 `76eb6063b574...26172`). **All four hardening options are

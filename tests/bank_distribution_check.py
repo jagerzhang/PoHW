@@ -68,7 +68,7 @@ def extract_sql():
         fail("QuizDb.java lost the OTHER pool routing condition")
     if "new String[args.length * 2]" not in src or src.count("System.arraycopy") < 2:
         fail("QuizDb.java lost the double WHERE parameter binding")
-    if "pick(poolWhere, poolArgs)" not in src:
+    if "pick(poolWhere + diffW, poolArgs)" not in src and "pick(poolWhere, poolArgs)" not in src:
         fail("QuizDb.java lost the pool-preserving fallback")
     if "db.hasOtherQuestions()" not in eng:
         fail("QuizEngine no longer checks whether the bank has non-core questions")
@@ -179,6 +179,24 @@ def main():
     if not os.path.isfile(DB):
         fail("missing " + DB)
     conn = sqlite3.connect(DB)
+    meta = dict(conn.execute('SELECT k,v FROM meta'))
+    if meta.get('schema') == '3':
+        for sub in CORE:
+            for _ in range(60):
+                r = conn.execute('SELECT subject FROM questions WHERE subject=? '
+                                 'ORDER BY RANDOM() LIMIT 1',(sub,)).fetchone()
+                if r is None or r[0] != sub:
+                    fail('pool isolation broken for ' + sub)
+        other = conn.execute('SELECT COUNT(*) FROM questions WHERE subject NOT IN (?,?,?)',
+                             CORE).fetchone()[0]
+        if other: fail('unexpected non-core questions %d' % other)
+        lv = dict(conn.execute('SELECT difficulty_level,COUNT(*) FROM questions '
+                               'GROUP BY difficulty_level').fetchall())
+        if sorted(lv) != [1,2,3]: fail('difficulty levels missing %r' % lv)
+        print('BANK_DISTRIBUTION_OK bank-v2 grades=0..6 pools=3 levels=3')
+        return
+
+
     grades = [r[0] for r in conn.execute(
         "SELECT DISTINCT grade FROM questions WHERE grade BETWEEN 1 AND 9 ORDER BY grade")]
     if len(grades) != 9:

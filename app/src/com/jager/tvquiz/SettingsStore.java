@@ -141,6 +141,12 @@ public final class SettingsStore implements PinGate.Store {
         sp.edit().putInt("questionSource", clamp(v, SOURCE_ALL, SOURCE_KNOWLEDGE_ONLY)).commit();
     }
 
+    /** 题目难度倾向：0=不限（默认，行为不变）/ 1=低 / 2=中 / 3=高。 */
+    public int difficultyLevel() { return clamp(sp.getInt("difficultyLevel", 0), 0, 3); }
+    public void difficultyLevel(int v) {
+        sp.edit().putInt("difficultyLevel", clamp(v, 0, 3)).commit();
+    }
+
     /** 冷却存截止时间戳 + 写入时的墙钟与 elapsedRealtime 快照，用于抗重启 / 抗改时间。 */
     public long cooldownDeadline() { return sp.getLong("cooldownDeadline", 0L); }
     public long cooldownSavedWall() { return sp.getLong("cooldownSavedWall", 0L); }

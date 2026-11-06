@@ -93,6 +93,7 @@ public class QuizOverlayService extends Service {
     private boolean strictOneShot = false;
     private boolean cooldownEnabled = false;
     private boolean knowledgeOnly = false;
+    private int difficultyLevel = DifficultyPolicy.LEVEL_ALL;
     private boolean pendingSwap = false;
     private final Runnable pendingSwapTask = new Runnable() {
         @Override public void run() {
@@ -308,12 +309,14 @@ public class QuizOverlayService extends Service {
         strictOneShot = st.strictOneShot();
         cooldownEnabled = st.cooldownEnabled();
         knowledgeOnly = st.questionSource() == SettingsStore.SOURCE_KNOWLEDGE_ONLY;
+        difficultyLevel = st.difficultyLevel();
         cooldown.reset();
         engine = new QuizEngine(st.grade(), st.edition(),
                 st.weight(Subjects.MATH), st.weight(Subjects.CHINESE),
                 st.weight(Subjects.ENGLISH), st.weight(Subjects.OTHER));
         engine.setAllSubjects(st.allSubjects());
         engine.setKnowledgeOnly(knowledgeOnly);
+        engine.setDifficultyLevel(difficultyLevel);
         engine.setStudyScope(SyllabusAssets.get(this), st.termIndex(), st.unitLimit());
         QuizDb cached = QuizDb.peek();
         if (cached != null) {

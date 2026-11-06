@@ -59,6 +59,53 @@ def main(path):
     assert {'questions', 'knowledge', 'chapters', 'meta'} <= set(tables)
 
     errs = []
+    if meta.get('schema') == '3':
+        rows = c.execute('SELECT topic,text,opt_a,opt_b,opt_c,opt_d,'
+                         'answer_index,explain FROM questions').fetchall()
+        bad = sum(1 for r in rows if not from_bank_check(r))
+        if bad: errs.append('illegal questions %d' % bad)
+        if len(rows) != int(meta['questions']): errs.append('meta.questions mismatch')
+        if c.execute('SELECT COUNT(*) FROM knowledge').fetchone()[0] != int(meta['knowledge']):
+            errs.append('meta.knowledge mismatch')
+        lv = dict(c.execute('SELECT difficulty_level,COUNT(*) FROM questions '
+                           'GROUP BY difficulty_level').fetchall())
+        if sorted(lv) != [1,2,3] or min(lv.values()) < 100:
+            errs.append('difficulty levels incomplete %r' % lv)
+        miss = 0
+        for g in range(0,7):
+            for sub in ('数学','语文','英语'):
+                r = c.execute('SELECT topic,text,opt_a,opt_b,opt_c,opt_d,answer_index,explain '
+                              'FROM questions WHERE grade=? AND subject=? '
+                              'ORDER BY RANDOM() LIMIT 1',(g,sub)).fetchone()
+                if r is None:
+                    r = c.execute('SELECT topic,text,opt_a,opt_b,opt_c,opt_d,answer_index,explain '
+                                  'FROM questions WHERE subject=? ORDER BY RANDOM() LIMIT 1',(sub,)).fetchone()
+                if r is None or not from_bank_check(r): miss += 1
+        if miss: errs.append('graded fallback failed %d times' % miss)
+        okc = badc = 0
+        for t,a,b,cc,d,ai in c.execute('SELECT text,opt_a,opt_b,opt_c,opt_d,answer_index '
+                                       'FROM questions WHERE source=?',('程序出题',)).fetchall():
+            if '= ?' not in str(t) and '＝ ?' not in str(t): continue
+            expr = str(t).split('＝')[0].split('=')[0].strip()
+            expr = expr.replace('＋','+').replace('－','-').replace('×','*').replace('÷','/').replace(' ','')
+            if not re.fullmatch('[0-9+*/().-]+',expr): continue
+            try:
+                v = eval(expr)
+                opts=[a,b,cc,d]
+                if abs(float(opts[ai]) - v) < 1e-6: okc += 1
+                else: badc += 1
+            except Exception: pass
+        if badc: errs.append('arithmetic answers wrong %d' % badc)
+        flipped = bytearray(raw); flipped[64] ^= 1
+        if hashlib.sha256(bytes(flipped)).hexdigest() == hashlib.sha256(raw).hexdigest():
+            errs.append('tamper detection failed')
+        print('BANK_V2 questions=%d knowledge=%s levels=%s arithmetic=%d/%d miss=%d'
+              % (len(rows), meta['knowledge'], lv, okc, okc+badc, miss))
+        print('VERIFY = %s (bank-v2)' % ('PASS' if not errs else 'FAIL'))
+        db.close()
+        return 0 if not errs else 1
+
+
     rows = c.execute('SELECT topic,text,opt_a,opt_b,opt_c,opt_d,'
                      'answer_index,explain FROM questions').fetchall()
     for i, r in enumerate(rows):

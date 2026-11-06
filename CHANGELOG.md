@@ -60,6 +60,39 @@ release notes are updated at that point.
 - `BUILD_OK version=1.1.0 code=22`; v1/v2/v3 signatures valid, certificate
   continuous; `src.zip` clean and contains `.github/workflows/ci.yml`.
 
+### versionCode 24 — new cleaned bank, difficulty preference, attribution
+
+Display version stays **1.1.0** (not yet tagged), `versionCode` 23 -> **24**, same
+release keystore (SHA-256 `76eb6063b574...26172`).
+
+- **Built-in bank replaced.** `app/assets/quiz.db` now has **4733 questions**
+  (860 self-generated for kindergarten-grade 2, 3874 cleaned third-party).
+  The old 5129-row catalog-location bank is gone. Schema keeps the original 17
+  columns and adds `difficulty` / `difficulty_level`; `knowledge`, `chapters`,
+  `meta` tables and `quiz.db.version` are preserved so `QuizDb.open()` and
+  over-the-top upgrades keep working.
+- **Third-party questions were cleaned per question** over four passes
+  (10632 -> 3874; 6758 rejections with reasons). **No written licence from the
+  source site; personal non-commercial use only.** The old README claim that the
+  APK contains no third-party question text is now removed, and `docs/ATTRIBUTION.md`
+  is shipped in the repo and must not be deleted.
+- **Difficulty preference.** New `DifficultyPolicy` (pure Java): 0=unlimited
+  (default), 1=low, 2=mid, 3=high, with **80/20 weighted draws** rather than a
+  hard filter, because the source difficulty coefficient is crowd-sourced and
+  noisy (631 identical-question groups, 83% disagree by >0.1). Settings key
+  `difficultyLevel`, one new settings row, service injects into `QuizEngine`,
+  and `QuizDb.random()` appends the `difficulty_level` predicate to **every**
+  fallback layer including the final unconstrained one.
+- Original questions were augmented with 180 harder items so the clean tier
+  has all three levels (overall low 1584 / mid 1615 / high 1534).
+- **Honest degradation**: the new bank has no `term` / textbook-unit data, so
+  study-scope filtering falls back to grade/subject. `verify.py`,
+  `bank_distribution_check.py` and `study_scope_check.py` gained explicit
+  bank-v2 branches that keep the old schema-2 logic intact for history.
+- Gates: `LAYOUT_CONTRACT_OK 192`, `JVM_TESTS_OK 293` (new
+  `DifficultyPolicyTest` 13), `MUTATION_SUITE_OK 64/64` (63 negative mutations
+  + 1 dev-sign build gate), `BUILD_OK version=1.1.0 code=24`.
+
 ### versionCode 23 — question preference no longer leaks catalog questions
 
 Bug report: with "仅知识/计算题" selected, the TV still showed

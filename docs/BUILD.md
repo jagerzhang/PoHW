@@ -95,7 +95,7 @@ Gradle Wrapper、联网拉依赖和一套额外的构建缓存。命令行链路
 `EXTRA_STOP_VERIFIED`。另外确认 `QuickBootReceiver` 已注册、
 `KeyRouter` / `QuizFlow` / `BehaviorV601Test` 真的被编译与执行。
 
-`[0/9]` 还会执行 `python3 tests/layout_contract.py`：**183 条**源码级布局与发布契约断言，
+`[0/9]` 还会执行 `python3 tests/layout_contract.py`：**192 条**源码级布局与发布契约断言，
 覆盖首页 3×2 网格、设置页单列卡片流、等宽 weight 布局、四向 DPAD 焦点链、
 滚动容器参数（`setFillViewport` / `Ui.fill(1)` / wrap-content 子容器）、
 四槽学科权重、双路径 SQL、题目学科标签反推以及证书门禁本身；复审加固后还钉死
@@ -114,7 +114,7 @@ OTHER 池路由字面量、SQL 双份参数绑定、池保持兜底常量、`has
 `QuizDb.java` 的 `POOL_*` 命名常量提取与 Java 同源的真实 SQL，校验双份绑定与池保持兜底，
 对内置题库做 9 年级 × 4 池 × 60 次池隔离、两次 5000 次配比分布、全学科关闭 0 题校验，
 以及 `FALLBACK_POOL_OK`（模拟三年级英语池 / 其他池为空，兜底仍保持学科约束、不串池）。
-`tests/mutation_suite.py` 落仓库可复核：**58 组负向变异 + 1 次不带发布密钥构建（59/59）**（含注释诱饵、破坏绑定、
+`tests/mutation_suite.py` 落仓库可复核：**63 组负向变异 + 1 次不带发布密钥构建（64/64）**（含注释诱饵、破坏绑定、
 去掉池保持兜底、不带发布密钥构建、恢复 gradeWide SQL）全部被契约 / 运行时分布 / 构建门禁拦下，
 末尾自动恢复源码哈希并用发布密钥重建 `dist/`。
 注意 `grep -q 'new int[Subjects.COUNT]'` 会把方括号当正则字符类；必须用 `grep -qF`。

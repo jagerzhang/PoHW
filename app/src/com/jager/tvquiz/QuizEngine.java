@@ -175,6 +175,10 @@ public final class QuizEngine {
     }
 
     private boolean knowledgeOnly = false;
+    private int difficultyLevel = DifficultyPolicy.LEVEL_ALL;
+
+    /** 难度倾向，默认不限；与「出题偏好」互不影响。 */
+    public void setDifficultyLevel(int v) { difficultyLevel = DifficultyPolicy.clamp(v); }
 
     /** 出题偏好，默认 false：全部题目（与 v1.0.2 一致）。 */
     public void setKnowledgeOnly(boolean v) { knowledgeOnly = v; }
@@ -188,8 +192,9 @@ public final class QuizEngine {
             return list.get(r.nextInt(list.size()));
         }
         if (hasDb) {
+            boolean matchLevel = DifficultyPolicy.useLevel(difficultyLevel, r.nextInt(100));
             Question q = db.random(grade, s, allSubjects, syllabus, termIndex, unitLimit,
-                    knowledgeOnly);
+                    knowledgeOnly, difficultyLevel, matchLevel);
             if (q != null) return q;
         }
         if (hasBank) return list.get(r.nextInt(list.size()));

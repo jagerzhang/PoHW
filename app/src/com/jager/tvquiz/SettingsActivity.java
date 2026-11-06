@@ -56,7 +56,7 @@ public class SettingsActivity extends Activity {
     private EditText urlEdit;
     private Button rowGrade, rowInterval, rowScope, rowSync, rowTerm, rowUnit;
     /** v1.1.0 四项可选加固，默认全关。 */
-    private Button rowStreak, rowStrict, rowCooldown, rowSource;
+    private Button rowStreak, rowStrict, rowCooldown, rowSource, rowDifficulty;
     /** 学科设置复合行：左按钮切教材版本，右按钮切题目配比。 */
     private Button[] rowEd = new Button[Subjects.COUNT];
     /** 在线源并排行：左检查题库更新 / 右自动更新，供行内左右焦点链使用。 */
@@ -371,7 +371,14 @@ public class SettingsActivity extends Activity {
                 refreshRows();
             }
         });
+        rowDifficulty = addRow(quiz, "题目难度", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                st.difficultyLevel((st.difficultyLevel() + 1) % 4);
+                refreshRows();
+            }
+        });
         note(quiz, "点击右侧取值即可循环切换，离开设置页时统一保存。");
+        note(quiz, "题目难度为倾向加权（约 80% 按所选档抽题），默认「不限」不改变原有抽题行为；站点难度系数存在噪声，不保证绝对分档。");
         note(quiz, "默认：答对 1 题即过关、严格模式关、无冷却惩罚、全部题目。上面四项都是可选加固，不开就和旧版一样。");
         note(quiz, "出题偏好＝仅知识/计算题时，只抽 810 道真知识/计算题（数学算式、语文古诗/词语、英语词汇/句型）；这类题没有学期与单元信息，学习学期/已学单元显示「不适用」，全学科模式的其他学科池交给参数化生成器。");
         note(quiz, "学习进度：学期按题库 term 过滤（上 / 下册含「全一册」，排除无学期的综合练习）；"
@@ -694,6 +701,7 @@ public class SettingsActivity extends Activity {
                 ? ("连续答对 " + st.unlockStreak() + " 题") : "答对 1 题即可");
         rowStrict.setText(st.strictOneShot() ? "开启（每题 1 次机会）" : "关闭（每题 2 次机会）");
         rowCooldown.setText(st.cooldownEnabled() ? "开启（答错递增冷却）" : "关闭（默认不惩罚）");
+        rowDifficulty.setText(new String[]{"不限（默认）", "低 · 偏易", "中", "高 · 偏难"}[st.difficultyLevel()]);
         rowSource.setText(st.questionSource() == SettingsStore.SOURCE_KNOWLEDGE_ONLY
                 ? "仅知识/计算题" : "全部题目");
         rowScope.setText(st.allSubjects() ? "全学科（含物理/历史等）" : "仅数 / 语 / 英");

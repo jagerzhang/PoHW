@@ -204,9 +204,15 @@ def build():
     if not os.path.isfile(DB):
         fail("missing quiz.db: " + DB)
     conn = sqlite3.connect(DB)
+    # bank-v2 题库没有 term / 教材单元数据：进度表保留兼容，但只校验自身结构。
+    bank_v2 = False
+    try:
+        bank_v2 = dict(conn.execute("SELECT k,v FROM meta")).get("schema") == "3"
+    except Exception:
+        pass
     grades = {}
     for (grade, term_idx), units in sorted(BOOKS.items()):
-        actual = topic_names(conn, grade, term_idx)
+        actual = set() if bank_v2 else topic_names(conn, grade, term_idx)
         declared = []
         seen_names = set()
         out_units = []
@@ -221,22 +227,28 @@ def build():
                     fail("duplicate/empty alias %r at grade=%d term=%d" % (a, grade, term_idx))
                 if any(ch in a for ch in ("%", "_", "'")):
                     fail("alias contains SQL wildcard/quote: %r" % a)
-                if a not in actual:
+                if not bank_v2 and a not in actual:
                     fail("alias %r not present in quiz.db for grade=%d term=%d" % (a, grade, term_idx))
                 declared.append(a)
             out_units.append({"name": name, "match": list(aliases)})
-        missing = sorted(actual - set(declared))
-        if missing:
-            fail("uncovered topic units grade=%d term=%d: %s" % (grade, term_idx, missing))
-        extra = sorted(set(declared) - actual)
-        if extra:
-            fail("stale aliases grade=%d term=%d: %s" % (grade, term_idx, extra))
-        q = question_count(conn, grade, term_idx, set(declared))
-        if q <= 0:
-            fail("no questions covered for grade=%d term=%d" % (grade, term_idx))
+        q = 0
+        if not bank_v2:
+            missing = sorted(actual - set(declared))
+            if missing:
+                fail("uncovered topic units grade=%d term=%d: %s" % (grade, term_idx, missing))
+            extra = sorted(set(declared) - actual)
+            if extra:
+                fail("stale aliases grade=%d term=%d: %s" % (grade, term_idx, extra))
+            q = question_count(conn, grade, term_idx, set(declared))
+            if q <= 0:
+                fail("no questions covered for grade=%d term=%d" % (grade, term_idx))
         grades.setdefault(str(grade), {})[str(term_idx)] = {"数学": out_units}
-        print("  %d年级%s: %d 单元 / %d 别名 / %d 题" %
-              (grade, "上" if term_idx == 1 else "下", len(out_units), len(declared), q))
+        if bank_v2:
+            print("  bank-v2 %d年级%s: %d 单元 / %d 别名（题库无单元数据，仅结构校验）" %
+                  (grade, "上" if term_idx == 1 else "下", len(out_units), len(declared)))
+        else:
+            print("  %d年级%s: %d 单元 / %d 别名 / %d 题" %
+                  (grade, "上" if term_idx == 1 else "下", len(out_units), len(declared), q))
     conn.close()
     return {
         "version": VERSION,

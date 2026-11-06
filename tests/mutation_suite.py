@@ -40,10 +40,11 @@ CH = os.path.join(ROOT, "CHANGELOG.md")
 SJS = os.path.join(ROOT, "site/script.js")
 CI = os.path.join(ROOT, ".github/workflows/ci.yml")
 APNG = os.path.join(ROOT, "app/res/drawable-nodpi/donate_alipay.png")
+DP = os.path.join(SRC, "DifficultyPolicy.java")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
 for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
-           RM, CH, SJS, CI, APNG, UP, CD):
+           RM, CH, SJS, CI, APNG, UP, CD, DP):
     BK[p] = os.path.join(BK_DIR, os.path.basename(p) + ".bk")
     shutil.copyfile(p, BK[p])
 ORIG = {p: hashlib.sha256(open(p, "rb").read()).hexdigest() for p in BK}
@@ -143,14 +144,14 @@ MUTATIONS = [
     ("O", "service stops passing the fourth weight",
      lambda: replace(O, "st.weight(Subjects.OTHER)", "0"), False, True, False),
     ("P", "versionCode rolled back",
-     lambda: replace(B, 'VERSION_CODE="23"', 'VERSION_CODE="22"'), False, True, False),
+     lambda: replace(B, 'VERSION_CODE="24"', 'VERSION_CODE="23"'), False, True, False),
     ("Q", "OTHER routing disabled",
      lambda: replace(D, "boolean other = s == Subjects.OTHER && allSubjects;", "boolean other = false;"), True, True, False),
     ("R", "single WHERE binding",
      lambda: replace(D, "new String[args.length * 2]", "new String[args.length]"), True, True, False),
     ("S", "broken SQL plus comment decoy", break_other_grade_with_decoy, True, False, True),
     ("T", "pool-preserving fallback removed",
-     lambda: replace(D, "        if (q == null) q = pick(poolWhere, poolArgs);", "        if (q == null) q = pick(\"\", null);"), True, True, False),
+     lambda: replace(D, "        if (q == null) q = pick(poolWhere + diffW, poolArgs);", "        if (q == null) q = pick(\"\", null);"), True, True, False),
     ("U", "empty non-core pool ignored",
      lambda: replace(E, "db.hasOtherQuestions()", "true"), False, True, False),
     ("V", "row gap removed",
@@ -184,7 +185,7 @@ MUTATIONS = [
      lambda: replace(ST, "getInt(\"termIdx\", Syllabus.TERM_ALL)",
                      "getInt(\"termIdx\", Syllabus.TERM_FIRST)"), False, True, False),
     ("AH", "strict scope layer dropped",
-     lambda: replace(D, "String strict = where + termW + unitW;",
+     lambda: replace(D, "String strict = where + termW + unitW + diffW;",
                      "String strict = where;"), False, True, False),
     ("AI", "engine stops passing study scope",
      lambda: replace(E, "syllabus, termIndex, unitLimit", "null, 0, 0"), False, True, False),
@@ -248,9 +249,19 @@ MUTATIONS = [
     ("BE", "question preference bypassed",
      lambda: replace(O, 'engine.setKnowledgeOnly(knowledgeOnly);', 'engine.setKnowledgeOnly(false);'), False, True, False),
     ("BF", "knowledge-only fallback loses the source constraint",
-     lambda: replace(D, 'pick(poolWhere + KNOWLEDGE_ONLY_SQL, poolArgs)', 'pick(poolWhere, poolArgs)'), False, True, False),
+     lambda: replace(D, 'pick(poolWhere + KNOWLEDGE_ONLY_SQL + diffW, poolArgs)', 'pick(poolWhere, poolArgs)'), False, True, False),
     ("BG", "knowledge-only chain disabled",
      lambda: replace(D, 'if (knowledgeOnly) {', 'if (false) {'), False, True, False),
+    ("BH", "difficulty default changed to low",
+     lambda: replace(ST, 'getInt("difficultyLevel", 0)', 'getInt("difficultyLevel", 1)'), False, True, False),
+    ("BI", "difficulty becomes a hard filter",
+     lambda: replace(DP, 'MATCH_RATE = 80', 'MATCH_RATE = 100'), False, True, False),
+    ("BJ", "fallback drops the difficulty predicate",
+     lambda: replace(D, 'pick(poolWhere + diffW, poolArgs)', 'pick(poolWhere, poolArgs)'), False, True, False),
+    ("BK", "service stops injecting difficulty",
+     lambda: replace(O, 'engine.setDifficultyLevel(difficultyLevel);', ''), False, True, False),
+    ("BL", "difficulty settings row removed",
+     lambda: replace(S, 'rowDifficulty = addRow', '// rowDifficulty = addRow'), False, True, False),
 ]
 
 print("--- baseline ---")

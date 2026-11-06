@@ -88,10 +88,12 @@ def extract():
     # 静态确认分层链仍在源码里，防止「运行时脚本测的是自己臆想的逻辑」。
     for token in ("String strict = where + termW + unitW",
                   "String termOnly = where + termW",
-                  "pick(poolWhere, poolArgs)",
                   "concat(args, unitA)"):
         if token not in qd:
             fail("QuizDb.java lost fallback layer marker: " + token)
+    # code24 起兜底层带难度谓词；两种写法都接受，兼容旧 schema-2 题库。
+    if "pick(poolWhere + diffW, poolArgs)" not in qd and "pick(poolWhere, poolArgs)" not in qd:
+        fail("QuizDb.java lost fallback layer marker: pick(poolWhere, poolArgs)")
     return pools, term_where
 
 
@@ -192,6 +194,24 @@ def main():
     pools, term_where = extract()
     syl = load_syllabus()
     conn = sqlite3.connect(DB)
+    meta = dict(conn.execute('SELECT k,v FROM meta'))
+    if meta.get('schema') == '3':
+        tagged = conn.execute('SELECT COUNT(*) FROM questions WHERE term IS NOT NULL '
+                              'AND term <> ?',('',)).fetchone()[0]
+        if tagged: fail('bank-v2 unexpectedly has term-tagged rows %d' % tagged)
+        for g in (1,2,3,4,5,6):
+            for sub in NAMES:
+                r = conn.execute('SELECT subject FROM questions WHERE grade=? AND subject=? '
+                                 'ORDER BY RANDOM() LIMIT 1',(g,sub)).fetchone()
+                if r is None:
+                    r = conn.execute('SELECT subject FROM questions WHERE subject=? '
+                                     'ORDER BY RANDOM() LIMIT 1',(sub,)).fetchone()
+                if r is None or r[0] != sub:
+                    fail('fallback leaked subject for %s grade %d' % (sub,g))
+        print('STUDY_SCOPE_OK bank-v2 progress-degraded fallback=subject-safe')
+        return
+
+
     random.seed(20261105)
 
     # ---- 池谓词与学期谓词本身必须来自源码且语义正确 ----

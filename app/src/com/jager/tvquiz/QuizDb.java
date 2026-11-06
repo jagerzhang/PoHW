@@ -296,10 +296,21 @@ public final class QuizDb {
         return random(grade, subject, allSubjects, syllabus, termIndex, unitLimit, false);
     }
 
-    /** knowledgeOnly=true 走独立的带约束链；默认 false 时原五层兜底逐字不变。 */
+    /** 兼容重载：不带难度倾向，行为与 code23 逐字一致。 */
     public QuizEngine.Question random(int grade, int subject, boolean allSubjects,
                                       Syllabus syllabus, int termIndex, int unitLimit,
                                       boolean knowledgeOnly) {
+        return random(grade, subject, allSubjects, syllabus, termIndex, unitLimit,
+                knowledgeOnly, DifficultyPolicy.LEVEL_ALL, false);
+    }
+
+    /** 难度只做倾向加权：matchLevel=true 时所有兜底层都带 difficulty_level 约束。 */
+    public QuizEngine.Question random(int grade, int subject, boolean allSubjects,
+                                      Syllabus syllabus, int termIndex, int unitLimit,
+                                      boolean knowledgeOnly, int difficultyLevel,
+                                      boolean matchLevel) {
+        String diffW = matchLevel ? DifficultyPolicy.predicate(difficultyLevel) : "";
+        String diffRoot = matchLevel ? DifficultyPolicy.rootPredicate(difficultyLevel) : "";
         int s = Subjects.norm(subject);
         // 路由条件必须与此字面量一致：只有「选中 OTHER 且开启全学科」才进其他池。
         // tests/layout_contract.py 与 build.sh 都钉死了这一行。
@@ -326,8 +337,8 @@ public final class QuizDb {
             // 所以偏好模式不用 termW/unitW；且每一层兜底都必须保留 source 约束。
             // 两层都空时返回 null，交给 QuizEngine 的参数化生成器出真计算 / 词库题，
             // 绝不回退到含 4319 道纲目定位题的全库。
-            QuizEngine.Question kq = pick(where + KNOWLEDGE_ONLY_SQL, args);
-            if (kq == null) kq = pick(poolWhere + KNOWLEDGE_ONLY_SQL, poolArgs);
+            QuizEngine.Question kq = pick(where + KNOWLEDGE_ONLY_SQL + diffW, args);
+            if (kq == null) kq = pick(poolWhere + KNOWLEDGE_ONLY_SQL + diffW, poolArgs);
             return kq;
         }
 
@@ -339,22 +350,19 @@ public final class QuizDb {
         String[] unitA = Syllabus.unitArgs(names);
 
         QuizEngine.Question q;
-        String strict = where + termW + unitW;
+        String strict = where + termW + unitW + diffW;
         String tried = strict;
         q = pick(strict, concat(args, unitA));
         if (q == null) {
-            String termOnly = where + termW;
+            String termOnly = where + termW + diffW;
             if (!termOnly.equals(tried)) {
                 q = pick(termOnly, args);
                 tried = termOnly;
             }
         }
-        if (q == null && !where.equals(tried)) {
-            q = pick(where, args);
-            tried = where;
-        }
-        if (q == null) q = pick(poolWhere, poolArgs);
-        if (q == null) q = pick("", null);
+        if (q == null) q = pick(where + diffW, args);
+        if (q == null) q = pick(poolWhere + diffW, poolArgs);
+        if (q == null) q = pick(diffRoot, null);
         return q;
     }
 

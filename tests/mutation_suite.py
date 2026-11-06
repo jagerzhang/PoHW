@@ -41,10 +41,11 @@ SJS = os.path.join(ROOT, "site/script.js")
 CI = os.path.join(ROOT, ".github/workflows/ci.yml")
 APNG = os.path.join(ROOT, "app/res/drawable-nodpi/donate_alipay.png")
 DP = os.path.join(SRC, "DifficultyPolicy.java")
+MP = os.path.join(SRC, "MediaPauseController.java")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
 for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
-           RM, CH, SJS, CI, APNG, UP, CD, DP):
+           RM, CH, SJS, CI, APNG, UP, CD, DP, MP):
     BK[p] = os.path.join(BK_DIR, os.path.basename(p) + ".bk")
     shutil.copyfile(p, BK[p])
 ORIG = {p: hashlib.sha256(open(p, "rb").read()).hexdigest() for p in BK}
@@ -144,7 +145,7 @@ MUTATIONS = [
     ("O", "service stops passing the fourth weight",
      lambda: replace(O, "st.weight(Subjects.OTHER)", "0"), False, True, False),
     ("P", "versionCode rolled back",
-     lambda: replace(B, 'VERSION_CODE="26"', 'VERSION_CODE="25"'), False, True, False),
+     lambda: replace(B, 'VERSION_CODE="28"', 'VERSION_CODE="27"'), False, True, False),
     ("Q", "OTHER routing disabled",
      lambda: replace(D, "boolean other = s == Subjects.OTHER && allSubjects;", "boolean other = false;"), True, True, False),
     ("R", "single WHERE binding",
@@ -262,6 +263,15 @@ MUTATIONS = [
      lambda: replace(O, 'engine.setDifficultyLevel(difficultyLevel);', ''), False, True, False),
     ("BL", "difficulty settings row removed",
      lambda: replace(S, 'rowDifficulty = addRow', '// rowDifficulty = addRow'), False, True, False),
+    ("BM", "auto-continue default flipped off",
+     lambda: replace(ST, 'getBoolean("autoContinueOnCorrect", true)',
+                     'getBoolean("autoContinueOnCorrect", false)'), False, True, False),
+    ("BN", "auto-continue settings row removed",
+     lambda: replace(S, 'rowAutoContinue = addRow', '// rowAutoContinue = addRow'), False, True, False),
+    ("BO", "auto-finish branch disabled",
+     lambda: replace(O, 'if (autoContinue) {', 'if (false) {'), False, True, False),
+    ("BP", "pause signals sent unconditionally again",
+     lambda: replace(MP, 'if (!focusHeld) {', 'if (true) {'), False, True, False),
 ]
 
 print("--- baseline ---")

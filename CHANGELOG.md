@@ -2,7 +2,7 @@
 
 > **版本口径**：对外发布 4 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
-> **v1.2.0**（25–26）。`v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
+> **v1.2.0**（25–28）。`v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
 > 已合并归档为末尾的 `v0.9.0-re`，不对应任何可下载的 Release。
@@ -10,7 +10,7 @@
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
 
-## v1.2.0 (versionCode 25–26) — new bank, difficulty preference and release
+## v1.2.0 (versionCode 25–28) — new bank, difficulty preference and release
 
 Display version 1.1.0 -> **1.2.0**, `versionCode` 24 -> **25–26**, same release
 keystore (SHA-256 `76eb6063b574...26172`). `1.1.0` was never tagged or released.
@@ -33,6 +33,28 @@ from every earlier build still work.
   rule these move together only when the maintainer explicitly names a tag.
 - Gates: `LAYOUT_CONTRACT_OK 192`, `JVM_TESTS_OK 293`,
   `MUTATION_SUITE_OK 64/64`, `BUILD_OK version=1.2.0 code=26`.
+
+### versionCode 28 — auto-continue on correct + pause/resume signal fix
+
+`versionCode` 26 -> **28** (27 belongs to the standalone Android 4.0 legacy
+branch); display version stays **1.2.0**, same release keystore
+(SHA-256 `76eb6063b574...26172`). Not tagged / released yet.
+
+- **Bug fix (user report)**: on real TVs the video kept playing while the quiz
+  was shown but paused *after* tapping "继续观看". `MediaPauseController` used to
+  send `MEDIA_PAUSE` **and** grab `AUDIOFOCUS_GAIN_TRANSIENT` at the same time,
+  then released the focus *before* sending `MEDIA_PLAY`. TV players commonly
+  treat media keys as play/pause toggles, so the two pause signals cancelled
+  each other and the trailing PLAY toggled playback back off. The two paths are
+  now mutually exclusive: audio focus alone when granted, media keys alone when
+  the focus request fails, and the resume key is sent before focus is returned.
+- **New setting** "答对自动继续" in quiz card 01, default **on**: once the unlock
+  gate is met the quiz closes itself, no second remote press. Turning it off
+  keeps the original "继续观看" confirmation. `OverlayQuizView.correctAuto()`
+  hides the continue button; the dismissal is posted off the key-dispatch stack
+  so `removeViewImmediate()` never detaches an active ViewRootImpl.
+- Gates: `LAYOUT_CONTRACT_OK 199` (+7 assertions), `JVM_TESTS_OK 293`,
+  `MUTATION_SUITE_OK 68/68` (+4 mutations), `BUILD_OK version=1.2.0 code=28`.
 
 ### versionCode 26 — neutral data-source notice and release build
 

@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 """PoHW 内置题库构建器（零第三方依赖，Python 3.8+）。
 
-把 RedSamerai/learning-content 的**全部**知识点纲目导入随 APK 发布的
+把一份知识点纲目数据导入随 APK 发布的
 SQLite 数据库，并为每个知识点生成答案可校验的四选一题。
 
     python3 tools/quizbank/build_bank.py \
-        --lc /path/to/learning-content \
+        --lc /path/to/catalog-data \
         --out app/assets/quiz.db \
         --seed 20261104 \
         --stats docs/BANK_STATS.md
@@ -17,9 +17,8 @@ SQLite 数据库，并为每个知识点生成答案可校验的四选一题。
     questions  四选一题（grade/subject/text/opt_a..opt_d/answer_index/explain）
     meta       版本与统计
 
-说明：learning-content 仓库只有知识点纲目，不含题目、选项和答案。
-本脚本不引用、不打包任何第三方题库的真题文本，所有题目均由本文件
-参数化生成，正确答案由数据本身或程序计算确定。
+说明：纲目数据只含知识点字段，不含题目、选项和答案。
+题目由本文件参数化生成，正确答案由数据本身或程序计算确定。
 """
 import argparse
 import collections
@@ -84,7 +83,7 @@ def load_nodes(lc):
     merged = {}
     files = iter_source_files(lc)
     if not files:
-        raise SystemExit('未找到 learning-content 数据：%s' % lc)
+        raise SystemExit('未找到纲目数据：%s' % lc)
     for path in files:
         origin = os.path.relpath(path, lc)
         try:
@@ -187,7 +186,7 @@ def knowledge_questions(nodes, rng):
     for i, n in enumerate(nodes):
         locate = '%s / %s / %s / %s' % (
             n['grade_label'], n['subject'], n['chapter'], n['topic'])
-        explain = '纲目定位：%s　·　来源：learning-content' % locate
+        explain = '纲目定位：%s' % locate
         variant = i % 3
         q = None
         if variant == 0:
@@ -469,10 +468,10 @@ def write_db(dest, nodes, questions, version, files):
         ('knowledge', str(len(nodes))),
         ('subjects', str(len(subjects))),
         ('grades', str(len({n['grade_label'] for n in nodes}))),
-        ('source', 'RedSamerai/learning-content (full catalog)'),
+        ('source', 'catalog data'),
         ('sourceFiles', str(len(files))),
-        ('note', '全量纲目导入；题目由 build_bank.py 参数化生成，答案由数据/程序确定；不含任何第三方真题文本。'),
-        ('licenseNote', '题库数据来自 learning-content，该仓库未附 LICENSE；仅作个人非商业学习用途，不随本项目 MIT 许可证一并授权。'),
+        ('note', '全量纲目导入；题目由 build_bank.py 参数化生成，答案由数据/程序确定。'),
+        ('licenseNote', '题库内容部分整理自互联网公开渠道，仅供个人非商业学习使用；如有侵权请通过 GitHub Issue 联系删除。详见 docs/DATA_SOURCES.md。'),
     ])
     db.commit()
     c.execute('VACUUM')
@@ -520,7 +519,7 @@ def verify_db(path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--lc', required=True, help='learning-content 仓库目录')
+    ap.add_argument('--lc', required=True, help='知识点纲目数据目录')
     ap.add_argument('--out', default='app/assets/quiz.db')
     ap.add_argument('--seed', type=int, default=20261104)
     ap.add_argument('--per-cell', type=int, default=30, help='每个年级每科程序题数')
@@ -552,7 +551,6 @@ def main():
     by_grade = collections.Counter(n['grade_label'] for n in nodes)
     if a.stats:
         lines = ['# 内置题库统计', '',
-                 '- 数据源：`RedSamerai/learning-content`（全量纲目）',
                  '- 版本：`%s`' % version,
                  '- 源文件：**%d** 个；去重后知识点：**%d** 条' % (len(files), len(nodes)),
                  '- 学科：**%d** 个（%s）' % (len(subjects), '、'.join(subjects)),
@@ -566,8 +564,7 @@ def main():
         lines += ['', '## 各年级段知识点', '',
                   '| 年级段 | 知识点 |', '| --- | ---: |']
         lines += ['| %s | %d |' % (k, v) for k, v in sorted(by_grade.items())]
-        lines += ['', '> 题目全部由 `tools/quizbank/build_bank.py` 参数化生成，',
-                  '> learning-content 原库只提供知识点纲目，不含题目/选项/答案。']
+        lines += ['', '> 题目全部由 `tools/quizbank/build_bank.py` 参数化生成。']
         os.makedirs(os.path.dirname(os.path.abspath(a.stats)), exist_ok=True)
         with open(a.stats, 'w', encoding='utf-8') as f:
             f.write('\n'.join(lines) + '\n')

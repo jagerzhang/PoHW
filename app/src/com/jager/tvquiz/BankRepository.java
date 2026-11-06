@@ -64,15 +64,15 @@ public final class BankRepository {
 
     /**
      * 标记内置离线题库为当前题源。
-     * APK 内不预置任何第三方题库包：内置题库由 tools/quizbank 从开源
-     * learning-content 纲目生成，随 assets/quiz.db 发布，完全离线。
+     * APK 内不预置任何第三方题库包：内置题库随 assets/quiz.db 发布，
+     * 由 App 本地随机抽题，完全离线。
      * 在线题库源是可选能力，只有家长在设置里自行填写地址后才会联网；
      * 已配置在线源时不覆盖其状态，旧版「内置示例题库」状态在此迁移。
      */
     public static void installBuiltin(Context c, SettingsStore st) {
         String src = st.bankSource();
         boolean legacy = "未初始化".equals(src) || src.contains("示例")
-                || src.contains("火花") || src.contains("本地缓存");
+                || src.contains("本地缓存");
         if (!src.startsWith("内置离线") && !legacy) return;
 
         QuizDb db = QuizDb.open(c);

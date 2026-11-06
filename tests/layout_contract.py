@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="25"' in _mf, "manifest versionCode advances to 25")
-check('VERSION_CODE="25"' in b, "build script versionCode advances to 25")
+check('android:versionCode="26"' in _mf, "manifest versionCode advances to 26")
+check('VERSION_CODE="26"' in b, "build script versionCode advances to 26")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -354,8 +354,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="25"' in _mf, "manifest versionCode advances to 25")
-check('VERSION_CODE="25"' in b, "build script versionCode advances to 25")
+check('android:versionCode="26"' in _mf, "manifest versionCode advances to 26")
+check('VERSION_CODE="26"' in b, "build script versionCode advances to 26")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -405,8 +405,8 @@ check("保留所有权利 · Proof of Homework" in _site and "jagerzhang · PoHW
       "footer copyright uses the new wording")
 check('id="year"' not in _site and 'getElementById("year")' not in _site_js,
       "footer year is fixed in HTML, not overwritten by JS")
-check("versionCode 21" in _site and "versionCode 21" in _site_js,
-      "site still reports the last published build 21 (v1.2.0 pending release)")
+check("versionCode 26" in _site and "versionCode 21" in _site_js,
+      "site reports the latest build 26 and keeps the v1.0.2 card note")
 check("addView(bankRow, rowLp())" in s,
       "bank update and auto-update share one side-by-side row")
 check("track(btnCheck, rowSync)" in s,
@@ -436,14 +436,16 @@ _ci_text = read(_ci21) if os.path.isfile(_ci21) else ""
 check('android:versionName="1.2.0"' in _mf21
       and 'VERSION_NAME="1.2.0"' in _b21,
       "display version is 1.2.0 in both manifest and build script")
-check(_site_js.count('version: "v1.0.2"') == 1
+check(_site_js.count('version: "v1.2.0"') == 1
+      and _site_js.count('version: "v1.0.2"') == 1
       and _site_js.count('version: "v1.0.1"') == 1
       and _site_js.count('version: "v1.0.0"') == 1
-      and _site_js.count('version: "') == 3,
-      "site release notes expose exactly three distinct release versions")
-check(_ch21.count("\n## v1.0.2") == 1 and _ch21.count("\n## v1.0.1") == 1
-      and _ch21.count("\n## v1.0.0") == 1 and _ch21.count("\n## v0.9.0-re") == 1,
-      "changelog groups builds into three releases plus one dev archive")
+      and _site_js.count('version: "') == 4,
+      "site release notes expose exactly four distinct release versions")
+check(_ch21.count("\n## v1.2.0") == 1 and _ch21.count("\n## v1.0.2") == 1
+      and _ch21.count("\n## v1.0.1") == 1 and _ch21.count("\n## v1.0.0") == 1
+      and _ch21.count("\n## v0.9.0-re") == 1,
+      "changelog groups builds into four releases plus one dev archive")
 check("## Dev build v6.0.0" not in _ch21 and "## Dev build v5.0.0" not in _ch21
       and "## v4.1.0" not in _ch21 and "## v1 - v3" not in _ch21,
       "pre-1.0 dev-build sections are collapsed into the 0.9.0-re archive")

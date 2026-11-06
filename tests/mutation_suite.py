@@ -143,7 +143,7 @@ MUTATIONS = [
     ("O", "service stops passing the fourth weight",
      lambda: replace(O, "st.weight(Subjects.OTHER)", "0"), False, True, False),
     ("P", "versionCode rolled back",
-     lambda: replace(B, 'VERSION_CODE="22"', 'VERSION_CODE="21"'), False, True, False),
+     lambda: replace(B, 'VERSION_CODE="23"', 'VERSION_CODE="22"'), False, True, False),
     ("Q", "OTHER routing disabled",
      lambda: replace(D, "boolean other = s == Subjects.OTHER && allSubjects;", "boolean other = false;"), True, True, False),
     ("R", "single WHERE binding",
@@ -247,6 +247,10 @@ MUTATIONS = [
      lambda: replace(O, '        unlock.onWrong();\n', '        // unlock.onWrong();\n'), False, True, False),
     ("BE", "question preference bypassed",
      lambda: replace(O, 'engine.setKnowledgeOnly(knowledgeOnly);', 'engine.setKnowledgeOnly(false);'), False, True, False),
+    ("BF", "knowledge-only fallback loses the source constraint",
+     lambda: replace(D, 'pick(poolWhere + KNOWLEDGE_ONLY_SQL, poolArgs)', 'pick(poolWhere, poolArgs)'), False, True, False),
+    ("BG", "knowledge-only chain disabled",
+     lambda: replace(D, 'if (knowledgeOnly) {', 'if (false) {'), False, True, False),
 ]
 
 print("--- baseline ---")

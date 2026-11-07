@@ -95,7 +95,7 @@ def write(args):
             shutil.copyfile(src, os.path.join(DL, name))
     keep = set((main_ver, main_latest, leg_ver, leg_latest))
     for f in os.listdir(DL):
-        if f.startswith('PoHW-v') and f.endswith('.apk') and f not in keep:
+        if f.startswith('PoHW-') and f.endswith('.apk') and f not in keep:
             os.remove(os.path.join(DL, f))
     print('UPDATE_MANIFEST_OK main=%d legacy=%d files=%d'
           % (args.main_code, args.legacy_code, len(os.listdir(DL))))
@@ -137,7 +137,7 @@ def check(strict=False):
         allowed = set((os.path.basename(m['versioned']),
                        os.path.basename(leg['versioned'])))
         for f in os.listdir(DL):
-            if f.startswith('PoHW-v') and f.endswith('.apk') and f not in allowed:
+            if f.startswith('PoHW-') and f.endswith('.apk') and f not in allowed:
                 fail('stale versioned apk in site/dl: ' + f)
     edge = os.path.join(SITE, 'edgeone.json')
     if not os.path.isfile(edge):

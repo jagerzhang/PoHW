@@ -1,9 +1,9 @@
 # Changelog
 
-> **版本口径**：对外发布 9 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 10 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
 > **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）、
-> **v1.2.4**（37）、**v1.2.5**（39）。
+> **v1.2.4**（37）、**v1.2.5**（39）、**v1.2.6**（41）。
 > `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
@@ -11,6 +11,39 @@
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.2.6 (versionCode 41) — update card focus chain and feedback fix
+
+Display version 1.2.5 -> **1.2.6**, `versionCode` 39 -> **41** (40 reserved
+for the Android 4.0 legacy branch), same release keystore
+(SHA-256 `76eb6063b574...26172`). Tenth published release.
+
+**User report (real TV)**: in parent settings, "立即检查版本" and
+"下载并安装新版本" appeared dead, and the DPAD could not reach the fixed
+footer buttons "修改家长密码" / "保存并返回".
+
+**Root cause**: `wireVerticalFocus()` builds the single-column DPAD chain once
+in `buildSettings()`; `firstUsable()` skips disabled views. But `refreshRows()`
+called `btnUpdateInstall.setEnabled(p != null)`. With no newer version
+available (installed 39 == manifest 39) that button became a **disabled node
+inside the chain**, so focus got stuck before the footer. Both onClick paths
+also lacked immediate visible feedback when there was nothing to do.
+
+**Changes**:
+
+- Update buttons are never disabled. State is expressed through button text
+  (`下载并安装新版本（暂无更新）` / with version), status text and Toast.
+- `updateChecking` / `updateDownloading` booleans guard re-entrant taps
+  without touching `setEnabled`.
+- `refreshRows()` calls `wireVerticalFocus()` after state changes so the chain
+  is rebuilt against the current enabled state.
+- Both onClick paths show an immediate Toast; check results (including
+  failure and "already latest") show a Toast plus status text.
+- Contract assertions forbid `btnUpdateInstall.setEnabled(` and pin the focus
+  rebuild; negative mutation CF restores the old broken behaviour and is
+  rejected. Also fixes `update_manifest.py` cleanup to match `PoHW-*.apk`.
+
+No change to the question bank or the guard logic.
 
 ## v1.2.5 (versionCode 39) — optional online version update, ninth release
 

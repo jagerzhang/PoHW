@@ -70,6 +70,8 @@ public class SettingsActivity extends Activity {
     /** v1.2.5 在线版本更新：自动检查开关 / 状态 / 手动下载安装。 */
     private Button rowUpdate, btnUpdateInstall;
     private TextView updateStatus;
+    /** 防重入标志：绝不用 setEnabled(false) 禁用已登记焦点链的按钮。 */
+    private boolean updateChecking = false, updateDownloading = false;
     /** 单列焦点链：每行一个数组，纵向按加入顺序连接。 */
     private final java.util.List<View[]> focusRows = new java.util.ArrayList<View[]>();
     private Button btnChangePin, btnSave;
@@ -558,7 +560,15 @@ public class SettingsActivity extends Activity {
         });
         addButton(upd, "立即检查版本", 0xFF185FA5, new View.OnClickListener() {
             @Override public void onClick(View v) {
+                if (updateChecking) {
+                    Toast.makeText(SettingsActivity.this, "正在检查版本，请稍候",
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                updateChecking = true;
                 updateStatus.setText("正在检查版本…");
+                Toast.makeText(SettingsActivity.this, "正在检查版本…",
+                        Toast.LENGTH_SHORT).show();
                 checkUpdate();
             }
         });
@@ -567,12 +577,20 @@ public class SettingsActivity extends Activity {
             @Override public void onClick(View v) {
                 UpdateConfig.Info info = UpdateState.pending;
                 if (info == null) {
-                    Toast.makeText(SettingsActivity.this, "当前没有待安装的新版本",
+                    Toast.makeText(SettingsActivity.this,
+                            "当前已是最新版本；如需重新检查请点「立即检查版本」",
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
+                if (updateDownloading) {
+                    Toast.makeText(SettingsActivity.this, "正在下载，请稍候",
                             Toast.LENGTH_SHORT).show();
                     return;
                 }
-                btnUpdateInstall.setEnabled(false);
+                updateDownloading = true;
                 updateStatus.setText("正在下载新版本…");
+                Toast.makeText(SettingsActivity.this, "开始下载新版本…",
+                        Toast.LENGTH_SHORT).show();
                 UpdateInstaller.download(SettingsActivity.this, info, new UpdateInstaller.Listener() {
                     @Override public void onProgress(final String msg) {
                         runOnUiThread(new Runnable() {
@@ -582,12 +600,10 @@ public class SettingsActivity extends Activity {
                     @Override public void onDone(final boolean ok, final String msg) {
                         runOnUiThread(new Runnable() {
                             @Override public void run() {
+                                updateDownloading = false;
                                 updateStatus.setText(msg);
-                                btnUpdateInstall.setEnabled(UpdateState.pending != null);
-                                if (!ok) {
-                                    Toast.makeText(SettingsActivity.this, msg,
-                                            Toast.LENGTH_LONG).show();
-                                }
+                                Toast.makeText(SettingsActivity.this, msg,
+                                        Toast.LENGTH_LONG).show();
                             }
                         });
                     }
@@ -831,7 +847,11 @@ public class SettingsActivity extends Activity {
             updateStatus.setText((um == null || um.length() == 0
                     ? "尚未检查版本" : um)
                     + (p == null ? "" : NL + "更新内容：" + p.notes));
-            btnUpdateInstall.setEnabled(p != null);
+            btnUpdateInstall.setText(p == null
+                      ? "下载并安装新版本（暂无更新）"
+                      : "下载并安装新版本 v" + p.versionName);
+              // 状态变化后按当前 enabled 重建纵向链，避免焦点卡在某一行。
+              wireVerticalFocus();
         }
     }
 
@@ -842,7 +862,9 @@ public class SettingsActivity extends Activity {
         try {
             localCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
         } catch (Exception e) {
+            updateChecking = false;
             updateStatus.setText("无法读取当前版本");
+            Toast.makeText(this, "无法读取当前版本", Toast.LENGTH_LONG).show();
             return;
         }
         st.lastUpdateCheckMs(System.currentTimeMillis());
@@ -864,7 +886,10 @@ public class SettingsActivity extends Activity {
                                       + info.versionCode + "）"
                                     : "已是最新版本 " + info.versionName;
                         }
-                        refreshRows();
+                        updateChecking = false;
+                          refreshRows();
+                          Toast.makeText(SettingsActivity.this, UpdateState.message,
+                                  Toast.LENGTH_LONG).show();
                     }
                 });
             }

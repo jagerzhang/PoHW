@@ -22,7 +22,7 @@ command -v aapt2 javac d8 zipalign apksigner   # 应全部能找到
 ```bash
 bash tests/run.sh                                   # 245 个 JVM 单测（9 组）
 python3 tools/quizbank/verify.py app/assets/quiz.db  # 题库独立校验
-bash app/build.sh                                    # 产出 dist/PoHW-v1.2.5.apk
+bash app/build.sh                                    # 产出 dist/PoHW-v1.2.6.apk
 ```
 
 `app/build.sh` 的九个阶段：

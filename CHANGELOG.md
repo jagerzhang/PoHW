@@ -1,8 +1,9 @@
 # Changelog
 
-> **版本口径**：对外发布 7 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 8 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
-> **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）。
+> **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）、
+> **v1.2.4**（37）。
 > `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
@@ -10,6 +11,67 @@
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.2.4 (versionCode 37) — practice layout fix, question-type tags, eighth release
+
+Display version 1.2.3 -> **1.2.4**, `versionCode` 35 -> **37** (36 belongs
+to the Android 4.0 legacy branch), same release keystore
+(SHA-256 `76eb6063b574...26172`). Eighth published release.
+
+**User report: practice mode showed no question at all.** The practice page
+opened, but the card only had a subject label; the stem and all four A/B/C/D
+buttons were invisible.
+
+**Root cause:** `PracticeActivity.buildView()` passed `Ui.fill(0)` to the
+stem, both option rows and the explanation. `Ui.fill(w)` builds
+`LinearLayout.LayoutParams(MATCH_PARENT, 0, w)`, so `w=0` gives the child an
+EXACTLY-0 height in a vertical LinearLayout. `TextView.setMinHeight()` cannot
+override an EXACTLY measure spec, so the stem collapsed too and the 56dp
+buttons were clipped by their zero-height parent row. The guard overlay never
+had this problem because `OverlayQuizView` uses `Ui.fill(1)` and fixed dp
+heights. The bug dates back to the v1.2.1 practice page, and no contract
+asserted the card geometry.
+
+**Changes:**
+
+- `PracticeActivity`: stem `Ui.fill(3)`, each option row `Ui.fixed(64dp)`
+  (56dp button + 4dp margins), explanation `Ui.fill(1)` with a 30dp minimum.
+- `PracticeConfig.MAX_GRADE` 9 -> 6: the shipped bank only covers grades 1-6,
+  so grades 7-9 could only return primary-school questions under a misleading
+  label. `PracticeConfigTest` asserts the loop stays within 1-6.
+- `tests/layout_contract.py` forbids `Ui.fill(0)` in any app source and
+  asserts a positive weight for the stem / explanation plus a real height for
+  the option rows; `build.sh` carries the same negative gate on code lines.
+- `tests/bank_quality_check.py` replays the real `QuizDb.random()` pool SQL
+  for all 144 practice combinations (grade 1-6 x 3 subjects x 4 difficulty
+  levels x weighted on/off) and asserts every drawn row has a non-empty stem,
+  four distinct non-empty options and a valid answer index.
+- Negative mutations BZ (stem back to zero height) and CA (grade cap back to
+  9) pin both fixes.
+
+**Also shipped (previously an unreleased code-37 build):**
+
+- **The "仅知识/计算题" preference was a no-op.** Every row in the bank carried
+  `source='程序出题'`, so `KNOWLEDGE_ONLY_SQL` filtered nothing. The bank now
+  has an explicit `qtype` column: 3950 `knowledge` and 14 `recognition`
+  templates, and the predicate is `qtype='knowledge'`. With the preference
+  off the whole bank is still available. Negative mutation BY pins it.
+- **Second quality pass.** A stratified audit found 52 mis-graded items in
+  grades <=3 (direction/方位角, 最简真分数, 小数计数单位, 比例放大, 列成等式);
+  curriculum rules move them to grades 4-6, and the scan now reports zero
+  such features in the <=3 pool.
+- **Short English gluing.** Splitter threshold 5 -> 3 letters, wordlist
+  completed (`me`, `than`, `ago` protected), repairing 106 questions; zero
+  splittable residues left.
+- Bank: 3965 -> **3964** questions (one row removed because repairing its
+  options made two answers identical). `quiz.db.version` is
+  `pohw-2026.11.07-bank-v4`; grades 1-6 and difficulty levels 1/2/3 intact.
+  `bank_quality_check.py` asserts the qtype column, both values and the meta
+  counters.
+
+- Gates: `LAYOUT_CONTRACT_OK 253`, `JVM_TESTS_OK 311`,
+  `BANK_QUALITY_OK questions=3964 qtype=3950/14 practice_combos=144`,
+  `MUTATION_SUITE_OK 79/79`, `BUILD_OK version=1.2.4 code=37`.
 
 ## v1.2.3 (versionCode 35) — bank quality rebuild, grade cap, seventh release
 

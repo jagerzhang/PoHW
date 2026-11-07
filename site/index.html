@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PoHW · Proof of Homework — 答对题目，无限续租！</title>
-<meta name="description" content="PoHW（Proof of Homework）是装在 Android TV 上的反沉迷家长守护工具：跨应用全屏答题遮罩，答对才能继续观看，内置 3,965 题带 1–6 年级标签的离线题库，完全离线、零联网。">
+<meta name="description" content="PoHW（Proof of Homework）是装在 Android TV 上的反沉迷家长守护工具：跨应用全屏答题遮罩，答对才能继续观看，内置 3,964 题带 1–6 年级标签的离线题库，完全离线、零联网。">
 <meta name="theme-color" content="#0F1725">
 <link rel="icon" type="image/png" href="assets/ic_launcher.png">
 <link rel="stylesheet" href="style.css">
@@ -47,7 +47,7 @@
         </div>
         <div class="hero-facts">
           <span>Android 5.0+ / minSdk 21</span>
-          <span>3,965 题离线题库</span>
+          <span>3,964 题离线题库</span>
           <span>零联网 · 不收集数据</span>
         </div>
       </div>
@@ -119,7 +119,7 @@
 
         <article class="feature-card">
           <span class="feature-no">04</span>
-          <h3>3,965 题离线题库</h3>
+          <h3>3,964 题离线题库</h3>
           <p>内置 SQLite，覆盖小学 1–6 年级语数外；每题带明确年级标签与低 / 中 / 高难度分档。题目由按课标自编的题与整理自公开渠道、逐题校验清洗后的题组成。完全离线、零联网，默认一次网络请求都不发；在线题库源默认关闭，需家长自行填地址才启用。</p>
           <span class="tag warn">完全离线 · 零联网</span>
         </article>
@@ -235,7 +235,7 @@
       <div class="download-box">
         <span class="eyebrow">Download</span>
         <h2 class="section-title">下载最新版本</h2>
-        <p>最新版本 <strong>v1.2.3</strong>（当前构建 <code>versionCode 35</code>）；签名证书连续（<code>76eb6063…6172</code>），旧版可直接覆盖安装，家长密码、设置与错题库都会保留。APK 附件以 Releases 页面实际发布为准，本页不写死任何直链资产文件名。</p>
+        <p>最新版本 <strong>v1.2.4</strong>（当前构建 <code>versionCode 37</code>）；签名证书连续（<code>76eb6063…6172</code>），旧版可直接覆盖安装，家长密码、设置与错题库都会保留。APK 附件以 Releases 页面实际发布为准，本页不写死任何直链资产文件名。</p>
         <div class="download-actions">
           <a class="btn btn-primary btn-lg" href="https://github.com/jagerzhang/PoHW/releases/latest">下载 APK（最新 Release）</a>
           <a class="btn btn-ghost" href="https://github.com/jagerzhang/PoHW/releases">所有 Releases</a>
@@ -252,7 +252,7 @@
       <div class="section-head">
         <span class="eyebrow">Changelog</span>
         <h2 class="section-title">版本更新记录</h2>
-        <p class="section-lead">按时间倒序整理自仓库 <a href="https://github.com/jagerzhang/PoHW/blob/main/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a>。与 GitHub Releases 一一对应、按版本聚合，目前共 <strong>7 个正式版本</strong>（v1.0.0 / v1.0.1 / v1.0.2 / v1.2.0 / v1.2.1 / v1.2.2 / v1.2.3）；v1.0.0 之前为开发期内部迭代编号，已归档为 v0.9.0-re。<code>versionCode</code> 为单调技术计数、不随展示版本重置。具体构建号与改动以仓库 CHANGELOG 为准。</p>
+        <p class="section-lead">按时间倒序整理自仓库 <a href="https://github.com/jagerzhang/PoHW/blob/main/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a>。与 GitHub Releases 一一对应、按版本聚合，目前共 <strong>8 个正式版本</strong>（v1.0.0 / v1.0.1 / v1.0.2 / v1.2.0 / v1.2.1 / v1.2.2 / v1.2.3 / v1.2.4）；v1.0.0 之前为开发期内部迭代编号，已归档为 v0.9.0-re。<code>versionCode</code> 为单调技术计数、不随展示版本重置。具体构建号与改动以仓库 CHANGELOG 为准。</p>
       </div>
       <div id="releases-list" class="releases"></div>
     </div>
@@ -275,10 +275,10 @@
 
         <details class="faq-item">
           <summary>会不会抽到超纲题？</summary>
-          <p>v1.2.3 起做了两层保护：题库按小学课标知识点白名单<strong>逐题重新定级</strong>（不再信任题面自带标签，例如曾把代数等式标成三年级），只有明确且单纯命中 1–3 年级课标的题才进低年级池；抽题时<strong>每一层都带年级上限</strong>，只取不高于当前年级的题，任何兜底都不会放宽。同时修复了英文单词间空格丢失、剔除了中学课文与重复题，题库由 4,733 道精简为 3,965 道。规则已固化进自动审核门禁；如遇具体不适用的题目，欢迎通过 GitHub Issue 反馈，核实后会调整规则并重建题库。</p>
+          <p>v1.2.3 起做了两层保护：题库按小学课标知识点白名单<strong>逐题重新定级</strong>（不再信任题面自带标签，例如曾把代数等式标成三年级），只有明确且单纯命中 1–3 年级课标的题才进低年级池；抽题时<strong>每一层都带年级上限</strong>，只取不高于当前年级的题，任何兜底都不会放宽。同时修复了英文单词间空格丢失、剔除了中学课文与重复题，题库由 4,733 道精简为 3,964 道。规则已固化进自动审核门禁；如遇具体不适用的题目，欢迎通过 GitHub Issue 反馈，核实后会调整规则并重建题库。</p>
         </details>        <details class="faq-item">
           <summary>内置题库是教材同步练习题吗？</summary>
-          <p>不是。内置 3,965 道题由本项目按课标自编的题，与整理自互联网公开渠道、经逐题校验清洗后的题组成，全部带 1–6 年级标签与难度分档，偏「知识点辨识 / 能力题」，不是教材同步真题，也不是教辅题库。题库内容不含站点水印、外链或付费题数据。它的作用是打断连续观看、让孩子回忆一下学过什么。来源说明见仓库 <code>docs/DATA_SOURCES.md</code>。</p>
+          <p>不是。内置 3,964 道题由本项目按课标自编的题，与整理自互联网公开渠道、经逐题校验清洗后的题组成，全部带 1–6 年级标签与难度分档，偏「知识点辨识 / 能力题」，不是教材同步真题，也不是教辅题库。题库内容不含站点水印、外链或付费题数据。它的作用是打断连续观看、让孩子回忆一下学过什么。来源说明见仓库 <code>docs/DATA_SOURCES.md</code>。</p>
         </details>
 
         <details class="faq-item">

@@ -56,6 +56,11 @@ v1.0.1 起控制台只有一个守护开关：`GuardState.toggleColor(running)` 
 没有可靠单元顺序，只做学期过滤；全学年模式下单元选择自动禁用。
 `tests/study_scope_check.py` 用真实 SQL 复刻这条链并逐层断言。
 
+> **当前题库口径（v1.2.3 之后）**：`questions` 表已无 `term` 数据、无单元序号，
+> 因此学期 / 单元条件对新库诚实退化为按年级 / 学科过滤；所有池谓词与最后一层
+> 保底查询都带 `grade<=?`，任何兜底都不会放宽年级上限。上面的 810 道综合练习、
+> 「放宽年级 → 全库」是历史方案 B 的描述，见 [QUESTION_BANK.md](QUESTION_BANK.md)。
+
 **默认开关与启动链路**：全新安装时「开机自启」关、「启动即守护」开、答题暂停与恢复播放均开。
 `MainActivity.onCreate()` 用 `LaunchPolicy.shouldAutoGuard()` 判定是否自动拉起守护，四个条件缺一不可：
 冷启动（`savedInstanceState == null`）、开关开启、已授权悬浮窗、服务未运行。从后台返回前台只走

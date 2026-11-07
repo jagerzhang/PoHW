@@ -42,7 +42,7 @@ public final class QuizDb {
     private static final String POOL_CORE_GRADE = "WHERE grade<=? AND subject=?";
     private static final String POOL_CORE_ALL = "WHERE grade<=? AND subject=?";
     /** 可选出题偏好：只优先抽真知识 / 计算题；空池时仍按原有五层兜底回退全库。 */
-    private static final String KNOWLEDGE_ONLY_SQL = " AND source='程序出题'";
+    private static final String KNOWLEDGE_ONLY_SQL = " AND qtype='knowledge'";
 
     private static QuizDb instance;
     private final SQLiteDatabase db;

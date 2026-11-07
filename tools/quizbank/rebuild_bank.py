@@ -30,8 +30,8 @@ import sys
 
 # ---------------------------------------------------------------- 课标年级规则
 MATH_RULES = [
- (6, r'边长的比|面积的比|比是\s*\d+|度数比|\d+\s*[:：]\s*\d+\s*[:：]\s*\d+|百分数|百分比|%|比例|比例尺|成正比例|成反比例|比值|化简比|圆柱|圆锥|圆周率|π|扇形|负数|有理数|数轴|鸽巢|抽屉原理|浓度|利率|折扣|纳税|圆的面积|圆的周长'),
- (5, r'小数.{0,4}除|除以.{0,6}小数|等腰三角形|等边三角形|\d+\.\d+\s*[÷/]|[÷/]\s*\d+\.\d+|年龄.{0,8}倍|年后|内角|方程|等式性质|未知数|字母表示数|用字母表示|当\s*[a-zA-Z]\s*=|若\s*[a-zA-Z]\s*=|已知\s*[a-zA-Z]\s*=|[a-zA-Z]\s*[×÷*=]\s*[0-9a-zA-Z]|[0-9]\s*[a-zA-Z]\b|[a-zA-Z]{2}\s*[+×÷=]|[a-zA-Z]\s*[×÷*]\s*[a-zA-Z]|[0-9][a-zA-Z]\s*[+\-]|质因数|最大公因数|最小公倍数|公因数|公倍数|分解质因数|互质|整除|素数|合数|约数|长方体|正方体|体积|容积|表面积|平行四边形.{0,6}面积|梯形.{0,6}面积|三角形.{0,6}面积|通分|约分|最简分数|假分数|带分数|倒数|小数乘|小数除|数对'),
+ (6, r'按\s*\d+\s*[:：]\s*\d+\s*放大|面积是原来面积|南偏|北偏|东偏|西偏|\d+\s*°|边长的比|面积的比|比是\s*\d+|度数比|\d+\s*[:：]\s*\d+\s*[:：]\s*\d+|百分数|百分比|%|比例|比例尺|成正比例|成反比例|比值|化简比|圆柱|圆锥|圆周率|π|扇形|负数|有理数|数轴|鸽巢|抽屉原理|浓度|利率|折扣|纳税|圆的面积|圆的周长'),
+ (5, r'最简真分数|分母是|分子.{0,6}扩大|通分|约分|小数点右边第|计数单位|列成等式|甲袋有|乙袋有|小数.{0,4}除|除以.{0,6}小数|等腰三角形|等边三角形|\d+\.\d+\s*[÷/]|[÷/]\s*\d+\.\d+|年龄.{0,8}倍|年后|内角|方程|等式性质|未知数|字母表示数|用字母表示|当\s*[a-zA-Z]\s*=|若\s*[a-zA-Z]\s*=|已知\s*[a-zA-Z]\s*=|[a-zA-Z]\s*[×÷*=]\s*[0-9a-zA-Z]|[0-9]\s*[a-zA-Z]\b|[a-zA-Z]{2}\s*[+×÷=]|[a-zA-Z]\s*[×÷*]\s*[a-zA-Z]|[0-9][a-zA-Z]\s*[+\-]|质因数|最大公因数|最小公倍数|公因数|公倍数|分解质因数|互质|整除|素数|合数|约数|长方体|正方体|体积|容积|表面积|平行四边形.{0,6}面积|梯形.{0,6}面积|三角形.{0,6}面积|通分|约分|最简分数|假分数|带分数|倒数|小数乘|小数除|数对'),
  (4, r'\d+\.\d+|\d{4,}\s*[×÷]|亿|万以上|三位数乘两位数|除数是两位数|运算定律|乘法分配律|乘法结合律|乘法交换律|四则混合|角的度量|平角|周角|钝角|锐角|公顷|平方千米|小数的意义|小数加减|条形统计图|平行四边形|梯形|垂直|平行|射线|直线'),
  (3, r'万以内|多位数乘一位数|一位数除|周长|长方形.{0,6}周长|正方形.{0,6}周长|分数|几分之几|年月日|闰年|24\s*时|24小时计时|吨|千克|千米|毫米|分米|面积单位|小数|时间|时针|分针|秒'),
  (2, r'100以内|表内乘|乘法口诀|口诀|米.{0,4}厘米|认识时间|时分|东南西北|方向|角的初步|统计表'),
@@ -101,6 +101,8 @@ clean listen happen speak learn watch study friends bags cups bottles pop nice m
 let lets us go going to have an apple water some three bag of row four in on at is it this that these those
 rice milk oranges juice bread cake tea coffee bus car bike train plane ship bed room home work classroom
 season spring summer autumn winter weather sunny rainy cloudy windy snowy hot warm cool cold
+than ago although though until unless besides upon across among between behind below
+me him them us he she we do does did can may was were am are be been its mine yours hers ours theirs
 Sunday Monday Tuesday Wednesday Thursday Friday Saturday birthday holiday present party family
 don't can't didn't doesn't isn't aren't wasn't weren't won't it's i'm let's he's she's that's what's where's know knows'''.split())
 PROPER = set('''chinese english beijing shanghai tianjin guangzhou america american china france japan london washington
@@ -185,7 +187,7 @@ def fix_english(text):
     def repl(m):
         nonlocal n
         w = m.group(0)
-        if len(w) < 5:
+        if len(w) < 3:
             return w
         parts = split_words(w)
         if not parts:
@@ -198,7 +200,7 @@ def fix_english(text):
     residual = False
     for m in TOKEN.finditer(fixed):
         w = m.group(0)
-        if len(w) < 5:
+        if len(w) < 3:
             continue
         if len(w) < 8:
             if split_words(w):
@@ -216,6 +218,17 @@ TRUNCATED = re.compile(r'[，,、；;]\s*$')
 PLACEHOLDER = re.compile(r'\[图片\]|\[图\]|\[表格\]|如下图|如下表|听录音')
 PREFIX = re.compile(r'^\s*参考答案\s*[:：]\s*')
 FIELDS = ('text', 'opt_a', 'opt_b', 'opt_c', 'opt_d', 'explain')
+
+
+# 「仅知识 / 计算题」偏好要排除的辨识 / 分类模板题：
+# 这类题只需认出图形、颜色或类别，不是真正的知识 / 计算题。
+RECOGNITION = re.compile(
+    r'下面哪个是|下面哪个数|下面哪个数字|属于哪|哪个学科|归为|选出.*同类|'
+    r'下面哪一组|下列.*属于哪|哪一(类|种学科)')
+
+
+def qtype_of(text):
+    return 'recognition' if RECOGNITION.search(text or '') else 'knowledge'
 
 
 def norm_text(s):
@@ -284,6 +297,7 @@ def rebuild(src, out, version):
         seen.add(key)
         r['grade'] = g
         r['grade_label'] = '%d年级' % g
+        r['qtype'] = qtype_of(r['text'])
         r['qhash'] = qhash_of(r['text'], [r[k] for k in FIELDS[1:5]])
         kept.append(r)
         report['保留'] += 1
@@ -295,7 +309,8 @@ def rebuild(src, out, version):
         id TEXT PRIMARY KEY, grade INTEGER, grade_label TEXT, term TEXT, subject TEXT,
         subject_group TEXT, chapter TEXT, topic TEXT, text TEXT,
         opt_a TEXT, opt_b TEXT, opt_c TEXT, opt_d TEXT, answer_index INTEGER,
-        explain TEXT, source TEXT, qhash TEXT, difficulty REAL, difficulty_level INTEGER)''')
+        explain TEXT, source TEXT, qhash TEXT, difficulty REAL, difficulty_level INTEGER,
+        qtype TEXT)''')
     db.execute('''CREATE TABLE knowledge (
         id TEXT, raw_id TEXT, grade INTEGER, grade_label TEXT, term TEXT, subject TEXT,
         subject_group TEXT, chapter TEXT, topic TEXT, description TEXT, example TEXT, explanation TEXT)''')
@@ -304,12 +319,13 @@ def rebuild(src, out, version):
     db.execute('CREATE TABLE meta (k TEXT PRIMARY KEY, v TEXT)')
     cols = ('id','grade','grade_label','term','subject','subject_group','chapter','topic',
             'text','opt_a','opt_b','opt_c','opt_d','answer_index','explain','source',
-            'qhash','difficulty','difficulty_level')
+            'qhash','difficulty','difficulty_level','qtype')
     db.executemany('INSERT INTO questions VALUES (' + ','.join(['?'] * len(cols)) + ')',
                    [tuple(r[k] for k in cols) for r in kept])
     db.execute('CREATE INDEX idx_q_grade ON questions(grade,subject)')
     db.execute('CREATE INDEX idx_q_subject ON questions(subject)')
     db.execute('CREATE INDEX idx_q_level ON questions(difficulty_level,subject)')
+    db.execute('CREATE INDEX idx_q_qtype ON questions(qtype,grade,subject)')
     kn, ch = set(), set()
     for r in kept:
         topic = r['topic'] or r['chapter'] or '综合练习'
@@ -327,11 +343,15 @@ def rebuild(src, out, version):
         'grades': str(len(set(r['grade'] for r in kept))),
         'source': 'self-generated + compiled from public Internet sources',
         'sourceFiles': str(len(rows)),
+        'qtypeKnowledge': str(sum(1 for r in kept if r['qtype'] == 'knowledge')),
+        'qtypeRecognition': str(sum(1 for r in kept if r['qtype'] == 'recognition')),
         'note': '按课标重打年级、修复英文空格并剔除不合格题后的题库；来源说明见 docs/DATA_SOURCES.md',
         'licenseNote': '部分题目整理自互联网公开渠道，仅供个人非商业学习使用；如有侵权请通过 GitHub Issue 联系删除。详见 docs/DATA_SOURCES.md',
     }
     db.executemany('INSERT INTO meta VALUES (?,?)', list(meta.items()))
     db.commit()
+    report['题型_知识计算'] = sum(1 for r in kept if r['qtype'] == 'knowledge')
+    report['题型_辨识分类'] = sum(1 for r in kept if r['qtype'] == 'recognition')
     dist = collections.Counter((r['grade'], r['subject']) for r in kept)
     db.close()
     return report, dist, samples, len(kept)

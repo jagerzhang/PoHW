@@ -7,8 +7,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
-VERSION_NAME="1.2.3"
-VERSION_CODE="35"
+VERSION_NAME="1.2.4"
+VERSION_CODE="37"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -32,7 +32,8 @@ grep -q "versionCode=\"$VERSION_CODE\"" "$APP/AndroidManifest.xml"
 grep -q "versionName=\"$VERSION_NAME\"" "$APP/AndroidManifest.xml"
 # 只发布 7 个语义化版本；feature 分支的自动审核工作流必须随仓库分发。
 [ -f "$ROOT/.github/workflows/ci.yml" ] || { echo "FORBIDDEN: missing auto-review workflow"; exit 1; }
-grep -qF 'VERSION_NAME="1.2.3"' "$APP/build.sh"
+grep -qF 'VERSION_NAME="1.2.4"' "$APP/build.sh"
+grep -qF 'version: "v1.2.4"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.2.3"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.2.2"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.2.1"' "$ROOT/site/script.js"
@@ -131,6 +132,12 @@ python3 tools/quizbank/build_syllabus.py --check
 python3 tests/study_scope_check.py
 # 题库质量：年级标签、英文空格、重复题、超纲词与累积池题量。
 python3 tests/bank_quality_check.py
+# v1.2.4：练习页禁止零高度权重布局（题干 / 选项被压成 0 高度＝「没有内容」）。
+if grep -v -e '^[[:space:]]*//' -e '^[[:space:]]*\*' "$SRC"/*.java \
+    | grep -qF 'Ui.fill(0)'; then
+  echo 'FORBIDDEN: zero-height weighted view in practice layout'; exit 1
+fi
+
 # 方案 B：配比必须真的进入抽题链路，禁止退回 gradeWide / 15% / 旧标签路径。
 W="$APP/src/com/jager/tvquiz/SubjectWeights.java"
 DB="$APP/src/com/jager/tvquiz/QuizDb.java"

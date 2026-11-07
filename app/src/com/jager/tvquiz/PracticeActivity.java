@@ -106,7 +106,9 @@ public class PracticeActivity extends Activity {
         card.addView(meta, Ui.fixed(this, 24));
         text = Ui.tv(this, "", 22, Ui.TEXT);
         text.setMinHeight(Ui.dp(this, 66));
-        card.addView(text, Ui.fill(0));
+        // 题干必须拿到正的权重：Ui.fill(0) 在垂直 LinearLayout 中会被测成 0 高度，
+        // 整张题目卡片会显示成「没有内容」（v1.2.4 修复）。
+        card.addView(text, Ui.fill(3));
 
         for (int r = 0; r < 2; r++) {
             LinearLayout row = Ui.hbox(this);
@@ -124,13 +126,15 @@ public class PracticeActivity extends Activity {
                 opts[idx] = b;
                 row.addView(b);
             }
-            card.addView(row, Ui.fill(0));
+            // 按钮自身 56dp + 上下各 4dp margin = 64dp，行必须有真实高度。
+            card.addView(row, Ui.fixed(this, 64));
         }
 
         result = Ui.tv(this, "", 20, Ui.GREEN);
         card.addView(result, Ui.fixed(this, 28));
         explain = Ui.tv(this, "", 15, Ui.MUTED);
-        card.addView(explain, Ui.fill(0));
+        explain.setMinHeight(Ui.dp(this, 30));
+        card.addView(explain, Ui.fill(1));
         root.addView(card, Ui.fill(1));
 
         LinearLayout bottom = Ui.hbox(this);

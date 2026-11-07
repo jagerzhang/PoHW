@@ -76,6 +76,15 @@ def main():
                         problems["english_glued"] += 1
                         break
 
+    qtypes = collections.Counter(r['qtype'] for r in rows)
+    if set(qtypes) != {'knowledge', 'recognition'}:
+        fail('qtype must contain exactly knowledge and recognition: %r' % qtypes)
+    if qtypes['recognition'] < 5 or qtypes['knowledge'] < 3000:
+        fail('qtype distribution looks wrong: %r' % qtypes)
+    if (meta.get('qtypeKnowledge') != str(qtypes['knowledge'])
+            or meta.get('qtypeRecognition') != str(qtypes['recognition'])):
+        fail('meta qtype counters mismatch')
+
     seen = set()
     for r in rows:
         key = (r["subject"], R.norm_text(r["text"]))
@@ -96,8 +105,47 @@ def main():
                         "GROUP BY difficulty_level"))
     if sorted(lv) != [1, 2, 3] or min(lv.values()) < 100:
         fail("difficulty levels incomplete %r" % lv)
-    print("BANK_QUALITY_OK questions=%d grades=1..6 pools=18 levels=%s"
-          % (len(rows), sorted(lv)))
+    # ---- v1.2.4：练习模式抽题覆盖 ----
+    # 复刻 QuizDb.random(grade, subject, allSubjects=false, ..., matchLevel)
+    # 的首选池 SQL。练习页的题干与 A/B/C/D 必须能真的取到题库题，且内容合法，
+    # 否则用户看到的就是「自由练习题目没有内容」。
+    cur = c.cursor()
+    combos124 = 0
+    empty124 = []
+    invalid124 = []
+    for g124 in range(1, 7):
+        for sub124 in ("数学", "语文", "英语"):
+            for level124 in (0, 1, 2, 3):
+                for match124 in (False, True):
+                    diff124 = (" AND difficulty_level=%d" % level124
+                               if match124 and level124 else "")
+                    where124 = "WHERE grade<=? AND subject=?" + diff124
+                    select124 = ("SELECT topic,text,opt_a,opt_b,opt_c,opt_d,"
+                                 "answer_index,explain,subject FROM questions ")
+                    sql124 = (select124 + where124 +
+                              " LIMIT 1 OFFSET (ABS(RANDOM()) % MAX(1,"
+                              "(SELECT COUNT(*) FROM questions " + where124 + ")))")
+                    row124 = cur.execute(sql124,
+                                         (g124, sub124, g124, sub124)).fetchone()
+                    combos124 += 1
+                    if row124 is None:
+                        empty124.append((g124, sub124, level124, match124))
+                        continue
+                    text124 = (row124[1] or "").strip()
+                    opts124 = [(row124[i] or "").strip() for i in (2, 3, 4, 5)]
+                    ai124 = row124[6]
+                    if (len(text124) < 3 or any(not o for o in opts124)
+                            or len(set(opts124)) < 4 or not 0 <= ai124 <= 3):
+                        invalid124.append((g124, sub124, level124, match124))
+    if empty124:
+        fail("practice pool empty: %r" % empty124[:5])
+    if invalid124:
+        fail("practice question has blank content: %r" % invalid124[:5])
+
+    print("BANK_QUALITY_OK questions=%d grades=1..6 qtype=%d/%d pools=18 levels=%s "
+          "practice_combos=%d"
+          % (len(rows), qtypes["knowledge"], qtypes["recognition"], sorted(lv),
+             combos124))
     return 0
 
 

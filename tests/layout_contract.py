@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="35"' in _mf, "manifest versionCode advances to 35")
-check('VERSION_CODE="35"' in b, "build script versionCode advances to 35")
+check('android:versionCode="37"' in _mf, "manifest versionCode advances to 37")
+check('VERSION_CODE="37"' in b, "build script versionCode advances to 37")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -354,8 +354,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="35"' in _mf, "manifest versionCode advances to 35")
-check('VERSION_CODE="35"' in b, "build script versionCode advances to 35")
+check('android:versionCode="37"' in _mf, "manifest versionCode advances to 37")
+check('VERSION_CODE="37"' in b, "build script versionCode advances to 37")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -405,8 +405,8 @@ check("保留所有权利 · Proof of Homework" in _site and "jagerzhang · PoHW
       "footer copyright uses the new wording")
 check('id="year"' not in _site and 'getElementById("year")' not in _site_js,
       "footer year is fixed in HTML, not overwritten by JS")
-check("versionCode 35" in _site and "versionCode 21" in _site_js,
-      "site reports the latest build 35 and keeps the v1.0.2 card note")
+check("versionCode 37" in _site and "versionCode 21" in _site_js,
+      "site reports the latest build 37 and keeps the v1.0.2 card note")
 check("addView(bankRow, rowLp())" in s,
       "bank update and auto-update share one side-by-side row")
 check("track(btnCheck, rowSync)" in s,
@@ -433,25 +433,26 @@ _ch21 = read(os.path.join(ROOT, "CHANGELOG.md"))
 _rm21 = read(os.path.join(ROOT, "README.md"))
 _ci21 = os.path.join(ROOT, ".github/workflows/ci.yml")
 _ci_text = read(_ci21) if os.path.isfile(_ci21) else ""
-check('android:versionName="1.2.3"' in _mf21
-      and 'VERSION_NAME="1.2.3"' in _b21,
-      "display version is 1.2.3 in both manifest and build script")
-check(_site_js.count('version: "v1.2.3"') == 1
+check('android:versionName="1.2.4"' in _mf21
+      and 'VERSION_NAME="1.2.4"' in _b21,
+      "display version is 1.2.4 in both manifest and build script")
+check(_site_js.count('version: "v1.2.4"') == 1
+      and _site_js.count('version: "v1.2.3"') == 1
       and _site_js.count('version: "v1.2.2"') == 1
       and _site_js.count('version: "v1.2.1"') == 1
       and _site_js.count('version: "v1.2.0"') == 1
       and _site_js.count('version: "v1.0.2"') == 1
       and _site_js.count('version: "v1.0.1"') == 1
       and _site_js.count('version: "v1.0.0"') == 1
-      and _site_js.count('version: "') == 7,
-      "site release notes expose exactly seven distinct release versions")
-check(_ch21.count("\n## v1.2.3") == 1 and _ch21.count("\n## v1.2.2") == 1
+      and _site_js.count('version: "') == 8,
+      "site release notes expose exactly eight distinct release versions")
+check(_ch21.count("\n## v1.2.4") == 1 and _ch21.count("\n## v1.2.3") == 1 and _ch21.count("\n## v1.2.2") == 1
       and _ch21.count("\n## v1.2.1") == 1
       and _ch21.count("\n## v1.2.0") == 1
       and _ch21.count("\n## v1.0.2") == 1 and _ch21.count("\n## v1.0.1") == 1
       and _ch21.count("\n## v1.0.0") == 1
       and _ch21.count("\n## v0.9.0-re") == 1,
-      "changelog groups builds into seven releases plus one dev archive")
+      "changelog groups builds into eight releases plus one dev archive")
 check("## Dev build v6.0.0" not in _ch21 and "## Dev build v5.0.0" not in _ch21
       and "## v4.1.0" not in _ch21 and "## v1 - v3" not in _ch21,
       "pre-1.0 dev-build sections are collapsed into the 0.9.0-re archive")
@@ -501,9 +502,9 @@ check('unlock.onCorrect()' in _o_code and 'swapQuestion(unlock.progress())' in _
 check('applyCooldown()' in _o_code and 'quizView.cooldown(' in _o_code
       and 'restoreCooldown()' in _o_code and 'st.clearCooldown()' in _o_code,
       "cooldown only delays swapping and survives process restart")
-check('KNOWLEDGE_ONLY_SQL' in _qd and "source='程序出题'" in _qd
+check('KNOWLEDGE_ONLY_SQL' in _qd and "qtype='knowledge'" in _qd
       and 'engine.setKnowledgeOnly(knowledgeOnly)' in _o_code,
-      "question preference filters the bank without deleting rows")
+      "question preference filters recognition templates without deleting rows")
 check('rowStreak = addRow' in _act and 'rowStrict = addRow' in _act
       and 'rowCooldown = addRow' in _act and 'rowSource = addRow' in _act,
       "settings expose all four optional hardening switches")
@@ -622,5 +623,26 @@ check('POOL_CORE_ALL = "WHERE grade<=? AND subject=?"' in _d
       "all four pool predicates keep the grade cap")
 check('String rootW = diffRoot.isEmpty() ? "WHERE grade<=?"' in _d,
       "the last-resort query also keeps the grade cap")
+
+# ---- v1.2.4：练习模式题目卡片必须真的可见 ----
+# Ui.fill(w) 生成 LayoutParams(MATCH_PARENT, 0, w)：w=0 时子 View 在垂直
+# LinearLayout 中收到 EXACTLY 0 高度，题干 / 选项 / 解析全部被压没，setMinHeight
+# 也救不回来。用户反馈「自由练习题目没有内容」即由此而来。
+_src124 = os.path.join(ROOT, "app/src/com/jager/tvquiz")
+for _fn124 in sorted(os.listdir(_src124)):
+    if _fn124.endswith(".java"):
+        check("Ui.fill(0)" not in strip_comments(read(os.path.join(_src124, _fn124))),
+              "no zero-height weighted view in " + _fn124)
+_m124 = re.search(r"card\.addView\(text,\s*Ui\.fill\((\d+)\)\)", _p121)
+check(_m124 is not None and int(_m124.group(1)) > 0,
+      "practice question text has a positive height weight")
+_rows124 = re.findall(r"card\.addView\(row,\s*Ui\.fixed\(this,\s*(\d+)\)\)", _p121)
+check(len(_rows124) == 1 and int(_rows124[0]) >= 64,
+      "practice option rows have a real height for the 56dp buttons")
+_m124b = re.search(r"card\.addView\(explain,\s*Ui\.fill\((\d+)\)\)", _p121)
+check(_m124b is not None and int(_m124b.group(1)) > 0,
+      "practice explanation has a positive height weight")
+check("MAX_GRADE = 6" in _c121 and "MAX_GRADE = 9" not in _c121,
+      "practice grade selector matches the grade 1..6 built-in bank")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

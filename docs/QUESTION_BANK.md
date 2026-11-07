@@ -2,7 +2,7 @@
 
 ## 一句话结论
 
-`app/assets/quiz.db` 当前为 **`pohw-2026.11.07-bank-v3`**，共 **3965 道题**，
+`app/assets/quiz.db` 当前为 **`pohw-2026.11.07-bank-v4`**，共 **3964 道题**，
 覆盖小学 1–6 年级语数外，每题带明确的 `grade`、`difficulty` 与 `difficulty_level`。
 题目由本项目按课标自编的低年级题，与整理自互联网公开渠道、经逐题校验清洗后的题目组成。
 
@@ -50,6 +50,19 @@ Schema 仍为旧版兼容的 17 列 + `difficulty` / `difficulty_level` 两列�
 | 题干截断 / 依赖缺失材料 | 剔除 |
 | 重复题 | 按 (学科, 归一化题干) 去重，保留首次 |
 | 解析前缀 | 清理「参考答案：」 |
+
+## 题型标签与「仅知识 / 计算题」偏好
+
+`questions` 表带 `qtype` 列，由 `rebuild_bank.py` 逐题判定：
+
+| 值 | 题数 | 说明 |
+| --- | ---: | --- |
+| `knowledge` | 3950 | 计算、应用、古诗词语、英语对话与语法等真知识 / 能力题 |
+| `recognition` | 14 | 「下面哪个是长方形？」「属于哪一类」这类辨识 / 分类模板题 |
+
+`QuizDb.KNOWLEDGE_ONLY_SQL` 为 ` AND qtype='knowledge'`：家长开启出题偏好时
+只抽知识 / 计算题，关闭时仍可用全库。**不物理删除任何题目**，只是加筛选条件；
+`bank_quality_check.py` 会校验该列、两种取值与 meta 计数。
 
 ## 抽题与年级上限
 

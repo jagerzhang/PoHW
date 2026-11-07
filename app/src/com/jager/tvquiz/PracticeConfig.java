@@ -13,7 +13,8 @@ public final class PracticeConfig {
     public static final int ENGLISH = 2;
     public static final int MIXED = 3;
     public static final int MIN_GRADE = 1;
-    public static final int MAX_GRADE = 9;
+    /** 内置题库只覆盖小学 1–6 年级，练习模式不再提供会错配标签的 7–9 年级。 */
+    public static final int MAX_GRADE = 6;
     public static final int DIFF_ALL = 0;
     public static final int DIFF_MAX = 3;
 

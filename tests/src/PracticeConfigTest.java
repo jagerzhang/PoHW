@@ -34,6 +34,15 @@ public class PracticeConfigTest {
         ok("P14 难度循环", c.difficulty() == 1);
         ok("P15 汇总含已练/正确/连对",
            c.summary().contains("已练") && c.summary().contains("正确") && c.summary().contains("连对"));
+        PracticeConfig g = new PracticeConfig();
+        int maxGrade = 0;
+        for (int i = 0; i < 12; i++) {
+            g.cycleGrade();
+            if (g.grade() > maxGrade) maxGrade = g.grade();
+        }
+        ok("P16 年级上限与小学题库一致", PracticeConfig.MAX_GRADE == 6);
+        ok("P17 年级循环不超过 6 年级", maxGrade == 6);
+        ok("P18 年级循环回到起点", g.grade() == 3);
         System.out.println("VERIFY=" + (fail == 0 ? "PASS" : "FAIL") + " total=" + pass);
         if (fail > 0) System.exit(1);
     }

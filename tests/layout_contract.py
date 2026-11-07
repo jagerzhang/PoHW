@@ -88,8 +88,8 @@ check("getPackageInfo" in m, "home version still read from PackageManager")
 
 # ---- 家长设置：单列卡片流 ----
 check(s.count("new ScrollView(this)") == 1, "settings has exactly one scroll container")
-check(s.count("addCard(") == 6, "settings declares 5 grouped cards + helper")
-check(len(re.findall(r'addCard\(col, "0\d', s)) == 5, "settings has 5 numbered cards")
+check(s.count("addCard(") == 7, "settings declares 6 grouped cards + helper")
+check(len(re.findall(r'addCard\(col, "0\d', s)) == 6, "settings has 6 numbered cards")
 check("addColumn" not in raw_s and "wireColumns" not in raw_s,
       "legacy three-column helpers are gone")
 check(s.count("wireVerticalFocus()") == 2, "settings declares and calls the vertical focus chain")
@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="37"' in _mf, "manifest versionCode advances to 37")
-check('VERSION_CODE="37"' in b, "build script versionCode advances to 37")
+check('android:versionCode="39"' in _mf, "manifest versionCode advances to 39")
+check('VERSION_CODE="39"' in b, "build script versionCode advances to 39")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -235,7 +235,7 @@ _launch = strip_comments(read(os.path.join(
 _res = os.path.join(ROOT, "app/res")
 
 check("ROW_GAP_DP = 12" in s, "settings declares a shared 12dp row gap")
-check(s.count("rowLp()") == 6, "row gap is applied to every row, button, note and paired bank row")
+check(s.count("rowLp()") == 8, "row gap is applied to every row, button, note and paired bank row")
 check("p.setMargins(0, half, 0, half)" in s, "row gap is symmetric top and bottom")
 check('getBoolean("bootAutostart", false)' in _st,
       "boot autostart defaults off (parent opt-in)")
@@ -354,8 +354,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="37"' in _mf, "manifest versionCode advances to 37")
-check('VERSION_CODE="37"' in b, "build script versionCode advances to 37")
+check('android:versionCode="39"' in _mf, "manifest versionCode advances to 39")
+check('VERSION_CODE="39"' in b, "build script versionCode advances to 39")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -405,8 +405,8 @@ check("保留所有权利 · Proof of Homework" in _site and "jagerzhang · PoHW
       "footer copyright uses the new wording")
 check('id="year"' not in _site and 'getElementById("year")' not in _site_js,
       "footer year is fixed in HTML, not overwritten by JS")
-check("versionCode 37" in _site and "versionCode 21" in _site_js,
-      "site reports the latest build 37 and keeps the v1.0.2 card note")
+check("versionCode 39" in _site and "versionCode 21" in _site_js,
+      "site reports the latest build 39 and keeps the v1.0.2 card note")
 check("addView(bankRow, rowLp())" in s,
       "bank update and auto-update share one side-by-side row")
 check("track(btnCheck, rowSync)" in s,
@@ -433,10 +433,11 @@ _ch21 = read(os.path.join(ROOT, "CHANGELOG.md"))
 _rm21 = read(os.path.join(ROOT, "README.md"))
 _ci21 = os.path.join(ROOT, ".github/workflows/ci.yml")
 _ci_text = read(_ci21) if os.path.isfile(_ci21) else ""
-check('android:versionName="1.2.4"' in _mf21
-      and 'VERSION_NAME="1.2.4"' in _b21,
-      "display version is 1.2.4 in both manifest and build script")
-check(_site_js.count('version: "v1.2.4"') == 1
+check('android:versionName="1.2.5"' in _mf21
+      and 'VERSION_NAME="1.2.5"' in _b21,
+      "display version is 1.2.5 in both manifest and build script")
+check(_site_js.count('version: "v1.2.5"') == 1
+      and _site_js.count('version: "v1.2.4"') == 1
       and _site_js.count('version: "v1.2.3"') == 1
       and _site_js.count('version: "v1.2.2"') == 1
       and _site_js.count('version: "v1.2.1"') == 1
@@ -444,15 +445,16 @@ check(_site_js.count('version: "v1.2.4"') == 1
       and _site_js.count('version: "v1.0.2"') == 1
       and _site_js.count('version: "v1.0.1"') == 1
       and _site_js.count('version: "v1.0.0"') == 1
-      and _site_js.count('version: "') == 8,
-      "site release notes expose exactly eight distinct release versions")
-check(_ch21.count("\n## v1.2.4") == 1 and _ch21.count("\n## v1.2.3") == 1 and _ch21.count("\n## v1.2.2") == 1
+      and _site_js.count('version: "') == 9,
+      "site release notes expose exactly nine distinct release versions")
+check(_ch21.count("\n## v1.2.5") == 1
+      and _ch21.count("\n## v1.2.4") == 1 and _ch21.count("\n## v1.2.3") == 1 and _ch21.count("\n## v1.2.2") == 1
       and _ch21.count("\n## v1.2.1") == 1
       and _ch21.count("\n## v1.2.0") == 1
       and _ch21.count("\n## v1.0.2") == 1 and _ch21.count("\n## v1.0.1") == 1
       and _ch21.count("\n## v1.0.0") == 1
       and _ch21.count("\n## v0.9.0-re") == 1,
-      "changelog groups builds into eight releases plus one dev archive")
+      "changelog groups builds into nine releases plus one dev archive")
 check("## Dev build v6.0.0" not in _ch21 and "## Dev build v5.0.0" not in _ch21
       and "## v4.1.0" not in _ch21 and "## v1 - v3" not in _ch21,
       "pre-1.0 dev-build sections are collapsed into the 0.9.0-re archive")
@@ -644,5 +646,50 @@ check(_m124b is not None and int(_m124b.group(1)) > 0,
       "practice explanation has a positive height weight")
 check("MAX_GRADE = 6" in _c121 and "MAX_GRADE = 9" not in _c121,
       "practice grade selector matches the grade 1..6 built-in bank")
+
+
+# ---- v1.2.5：在线版本更新契约 ----
+_src125 = os.path.join(ROOT, "app/src/com/jager/tvquiz")
+_cfg125 = strip_comments(read(os.path.join(_src125, "UpdateConfig.java")))
+_chk125 = strip_comments(read(os.path.join(_src125, "UpdateChecker.java")))
+_ins125 = strip_comments(read(os.path.join(_src125, "UpdateInstaller.java")))
+_sto125 = strip_comments(read(os.path.join(_src125, "SettingsStore.java")))
+_mf125 = read(os.path.join(ROOT, "app/AndroidManifest.xml"))
+_edge125 = read(os.path.join(ROOT, "site/edgeone.json"))
+_check_script = read(os.path.join(ROOT, "tools/publish/update_manifest.py"))
+check('getBoolean("autoCheckUpdate", true)' in _sto125,
+      "automatic version check defaults to enabled")
+check('CHECK_INTERVAL_MS = 24L' in _cfg125,
+      "version check is throttled to 24 hours")
+check('safeUrl(' in _cfg125 and 'HOST + "/dl/"' in _cfg125,
+      "download URLs are pinned to the official site")
+check('validSha256(' in _cfg125 and 'i.downloadUrl() == null' in _cfg125,
+      "manifest sha256 and download URL are validated before use")
+check('setInstanceFollowRedirects(false)' in _chk125
+      and 'UpdateConfig.HOST' in _chk125,
+      "checker refuses cross-host redirects")
+check('MessageDigest.getInstance("SHA-256")' in _ins125
+      and 'info.sha256.equalsIgnoreCase(actual)' in _ins125,
+      "downloaded APK is verified against the manifest sha256")
+check('Intent.ACTION_VIEW' in _ins125
+      and 'FLAG_GRANT_READ_URI_PERMISSION' in _ins125,
+      "system installer is launched with a granted Uri")
+check('REQUEST_INSTALL_PACKAGES' in _mf125
+      and 'com.jager.tvquiz.update' in _mf125,
+      "install permission and private update provider are declared")
+check('android:exported="false"' in _mf125
+      and 'grantUriPermissions="true"' in _mf125,
+      "update provider is not exported and grants read access")
+check('no-store' in _edge125 and '/update.json' in _edge125,
+      "edgeone.json disables caching for the update manifest")
+check('def check(strict=False)' in _check_script
+      and 'no-store' in _check_script,
+      "manifest gate checks structure and cache rules")
+check('update_manifest.py --check' in read(BUILD),
+      "build gate validates the update manifest")
+check('startUpdateCheck(false)' in strip_comments(read(MAIN)),
+      "console triggers the throttled version check on cold start")
+check('btnUpdateInstall.setEnabled(p != null)' in strip_comments(read(SET)),
+      "download and install require an explicit parent action")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

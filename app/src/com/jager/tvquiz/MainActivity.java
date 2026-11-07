@@ -74,6 +74,7 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 100);
         }
         readVersion();
+        startUpdateCheck(false);
         setContentView(buildView());
         render();
         // 「启动即守护」：只在冷启动（savedInstanceState 为空）触发；从后台返回前台
@@ -84,6 +85,35 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "已按设置自动开启守护", Toast.LENGTH_SHORT).show();
             handler.postDelayed(renderOnce, 300);
         }
+    }
+
+
+    /** 冷启动自动检查：只拉 update.json，24 小时节流，绝不自动下载 APK。 */
+    private void startUpdateCheck(boolean force) {
+        if (!force && !st.autoCheckUpdate()) return;
+        long now = System.currentTimeMillis();
+        if (!force && !UpdateConfig.shouldCheck(true, now, st.lastUpdateCheckMs())) return;
+        st.lastUpdateCheckMs(now);
+        int local = 0;
+        try { local = Integer.parseInt(appVersionCode); } catch (Exception ignored) { }
+        final int localCode = local;
+        final String channel = getString(R.string.update_channel);
+        new Thread(new Runnable() {
+            @Override public void run() {
+                UpdateConfig.Info info = UpdateChecker.fetch(channel);
+                UpdateState.checkedAt = System.currentTimeMillis();
+                if (info == null) {
+                    UpdateState.message = "版本检查未完成，已忽略（离线功能不受影响）";
+                    return;
+                }
+                boolean has = UpdateConfig.hasUpdate(localCode, info.versionCode,
+                        st.skipUpdateCode());
+                UpdateState.pending = has ? info : null;
+                UpdateState.message = has
+                        ? "发现新版本 " + info.versionName + "，请到家长设置 · 版本更新下载"
+                        : "已是最新版本 " + info.versionName;
+            }
+        }, "pohw-update-check").start();
     }
 
     @Override protected void onResume() {
@@ -436,6 +466,9 @@ public class MainActivity extends Activity {
         s.append("题库源：").append(st.bankSource()).append(" · 版本 ").append(st.bankVersion())
                 .append(" · 上次检查 ").append(ts(st.bankChecked())).append(NL);
         s.append("同步状态：").append(st.bankMessage());
+        s.append(NL);
+        s.append("版本更新：").append(UpdateState.message.length() == 0
+                ? "尚未检查" : UpdateState.message);
         // 每秒轮询只在文本真的变化时才触碰 TextView / Button，避免无意义的重绘。
         String text = s.toString();
         if (!text.equals(status.getText().toString())) status.setText(text);

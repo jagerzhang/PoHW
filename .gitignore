@@ -35,3 +35,6 @@ __pycache__/
 .idea/
 .vscode/
 *.iml
+
+# v1.2.5: Makers 站点需要随仓库分发最新版安装包（只放 site/dl/，不放历史包）
+!site/dl/*.apk

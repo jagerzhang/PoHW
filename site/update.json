@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "publishedAt": "2026-11-07",
+  "main": {
+    "versionName": "1.2.5",
+    "versionCode": 39,
+    "minSdk": 21,
+    "latest": "https://pohw.zhangge.net/dl/latest-main.apk",
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.2.5.apk",
+    "sha256": "fb6bfb6e7f6b8e02dfccb80cdec3ea626e5657f90ecead555f0dd0ae60ab0803",
+    "size": 1029632,
+    "notes": "在线版本更新（低配版仍可手动下载）"
+  },
+  "legacy": {
+    "versionName": "1.2.4",
+    "versionCode": 38,
+    "minSdk": 14,
+    "latest": "https://pohw.zhangge.net/dl/latest-legacy.apk",
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.2.4-legacy.apk",
+    "sha256": "a72d9c7fb67f9e2c68d622289d78b933b27bb1fc1a531841496efd58bb55ec33",
+    "size": 1021440,
+    "notes": "Android 4.0 低配版 v1.2.4（不含在线更新，手动下载）"
+  }
+}

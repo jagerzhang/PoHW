@@ -149,6 +149,14 @@ public final class SettingsStore implements PinGate.Store {
     }
 
     public int difficultyLevel() { return clamp(sp.getInt("difficultyLevel", 0), 0, 3); }
+
+    /** v1.2.5 在线版本更新：默认开启自动检查（只拉清单，不自动下载）。 */
+    public boolean autoCheckUpdate() { return sp.getBoolean("autoCheckUpdate", true); }
+    public void autoCheckUpdate(boolean v) { sp.edit().putBoolean("autoCheckUpdate", v).commit(); }
+    public long lastUpdateCheckMs() { return sp.getLong("lastUpdateCheckMs", 0L); }
+    public void lastUpdateCheckMs(long v) { sp.edit().putLong("lastUpdateCheckMs", v).commit(); }
+    public int skipUpdateCode() { return sp.getInt("skipUpdateCode", 0); }
+    public void skipUpdateCode(int v) { sp.edit().putInt("skipUpdateCode", v).commit(); }
     public void difficultyLevel(int v) {
         sp.edit().putInt("difficultyLevel", clamp(v, 0, 3)).commit();
     }

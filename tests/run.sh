@@ -33,6 +33,8 @@ mkdir -p "$OUT"
   app/src/com/jager/tvquiz/CooldownPolicy.java \
   app/src/com/jager/tvquiz/DifficultyPolicy.java \
   app/src/com/jager/tvquiz/PracticeConfig.java \
+  app/src/com/jager/tvquiz/UpdateConfig.java \
+  app/src/com/jager/tvquiz/UpdateState.java \
   tests/src/PinGateTest.java \
   tests/src/QuizLayoutTest.java \
   tests/src/StopGuardTest.java \
@@ -45,12 +47,14 @@ mkdir -p "$OUT"
   tests/src/UnlockPolicyTest.java \
   tests/src/CooldownPolicyTest.java \
   tests/src/DifficultyPolicyTest.java \
-  tests/src/PracticeConfigTest.java
+  tests/src/PracticeConfigTest.java \
+  tests/src/UpdateConfigTest.java
 
 TOTAL=0
 for t in PinGateTest QuizLayoutTest StopGuardTest StopStateTest GradeScopeTest \
          FeatureV6Test BehaviorV601Test SubjectWeightsTest SyllabusTest \
-         UnlockPolicyTest CooldownPolicyTest DifficultyPolicyTest PracticeConfigTest; do
+         UnlockPolicyTest CooldownPolicyTest DifficultyPolicyTest PracticeConfigTest \
+         UpdateConfigTest; do
   LOG="$ROOT/.build/$t.log"
   "$JAVA_HOME/bin/java" -Dfile.encoding=UTF-8 -cp "$OUT" "$t" > "$LOG"
   grep -q 'VERIFY=PASS' "$LOG" || { cat "$LOG"; echo "FAILED: $t"; exit 1; }

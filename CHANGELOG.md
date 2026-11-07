@@ -45,6 +45,14 @@ guard and answering stay fully offline; no device identifier is uploaded.
   sha256 verification, URL allowlist, private provider, `no-store` rule and
   manifest consistency; three negative mutations (CB/CC/CD) pin them.
 
+- Post-release site fix (no APK change, no new versionCode): all four
+  download buttons now use the Makers-hosted
+  `https://pohw.zhangge.net/dl/latest-main.apk` direct link instead of the
+  GitHub latest-release page; `site/edgeone.json` revalidates `/dl/*` so the
+  fixed `latest-*` aliases never serve a stale APK. Historical versions stay
+  on GitHub Releases. Pinned by layout contract assertions and negative
+  mutation CE.
+
 ## v1.2.4 (versionCode 37) — practice layout fix, question-type tags, eighth release
 
 Display version 1.2.3 -> **1.2.4**, `versionCode` 35 -> **37** (36 belongs

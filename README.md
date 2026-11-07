@@ -42,7 +42,7 @@
 
 ## 快速开始（U 盘安装，不需要电脑连电视）
 
-1. **拿到 APK**：到 [Releases](https://github.com/jagerzhang/PoHW/releases/latest) 下载，或按下方「构建」自行出包。
+1. **拿到 APK**：到 [官网下载页](https://pohw.zhangge.net/#download) 直接下载最新版（历史版本见 [Releases](https://github.com/jagerzhang/PoHW/releases/latest)），或按下方「构建」自行出包。
 2. **拷进 U 盘**：把 APK 文件复制到 U 盘（FAT32 / exFAT 均可）。
 3. **电视上安装**：U 盘插到电视 USB 口 → 打开电视自带的「文件管理器」→ 找到 APK 点击安装；首次安装若提示「未知来源」，按系统提示允许即可。
 4. **授权悬浮窗**：打开 APP，点「授权悬浮窗」，在系统设置里允许「显示在其他应用上层」。

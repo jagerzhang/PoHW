@@ -311,6 +311,11 @@ MUTATIONS = [
     ("CD", "download URL host check removed",
      lambda: replace(UCFG, 'u.startsWith("https://" + HOST + "/dl/")',
                      'true'), False, True, False),
+    ("CE", "download buttons fall back to GitHub releases",
+     lambda: write(SITE, read(SITE).replace(
+         'href="https://pohw.zhangge.net/dl/latest-main.apk"',
+         'href="https://github.com/jagerzhang/PoHW/releases/latest"', 1)),
+     False, True, False),
 ]
 
 print("--- baseline ---")

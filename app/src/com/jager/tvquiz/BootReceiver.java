@@ -27,7 +27,7 @@ public class BootReceiver extends BroadcastReceiver {
     static void tryStartGuard(Context c, Intent i) {
         String action = i == null ? null : i.getAction();
         SettingsStore st = new SettingsStore(c);
-        boolean canDraw = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(c);
+        boolean canDraw = true;
         if (!BootPolicy.shouldStartGuard(st.bootAutostart(), st.autoGuardOnBoot(),
                 st.guardEnabled(), canDraw, action)) {
             return;
@@ -36,8 +36,7 @@ public class BootReceiver extends BroadcastReceiver {
         s.setAction(QuizOverlayService.ACTION_START);
         try {
             // BOOT_COMPLETED 属于后台启动 FGS 的豁免广播，Android 8+ 允许直接拉起。
-            if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(s);
-            else c.startService(s);
+            c.startService(s);
         } catch (Exception e) {
             Log.e(TAG, "开机拉起守护服务失败", e);
         }

@@ -5,8 +5,8 @@
 
 | | |
 | --- | --- |
-| 当前版本 | **v1.2.4**（`versionCode 37`） |
-| 运行平台 | Android TV / 电视盒子，`minSdk 21`，遥控器操作 |
+| 当前版本 | **v1.2.4 低配版**（`versionCode 38`，Android 4.0+） |
+| 运行平台 | Android TV / 电视盒子，`minSdk 14`，遥控器操作 |
 | 分发方式 | 自行侧载 APK（U 盘直装），**不在任何应用商店上架** |
 | 签名证书 | SHA-256 `76eb6063…6172`，历次构建连续，旧版可直接覆盖安装 |
 | 仓库 | https://github.com/jagerzhang/PoHW |
@@ -169,7 +169,7 @@ bash app/build.sh
 所以这一步不依赖人记得传环境变量。本地实验构建须显式 `POHW_ALLOW_DEV_SIGN=1`。
 完整说明见 `docs/BUILD.md`。
 
-版本策略：`versionName` 语义化（当前 1.2.4），`versionCode` 单调递增（当前 37）且**不随展示版本重置**，
+版本策略：`versionName` 语义化（当前 1.2.4），`versionCode` 单调递增（当前 38）且**不随展示版本重置**，
 否则已安装旧版的设备会报 `INSTALL_FAILED_VERSION_DOWNGRADE`。同一版本线内的内部构建不单独发 Release。
 
 ## 验证与门禁

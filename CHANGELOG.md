@@ -73,6 +73,31 @@ asserted the card geometry.
   `BANK_QUALITY_OK questions=3964 qtype=3950/14 practice_combos=144`,
   `MUTATION_SUITE_OK 79/79`, `BUILD_OK version=1.2.4 code=37`.
 
+### versionCode 38 — legacy Android 4.0 variant (branch feat/android4-legacy-v124)
+
+Standalone branch rebuilt from `main` at v1.2.4, **not merged into main**.
+Display version stays **1.2.4**; `versionCode` 37 -> **38**; APK
+`PoHW-v1.2.4-legacy.apk`. Published as `v1.2.4-legacy` (non-Latest) alongside
+the main `v1.2.4` release.
+
+- Same feature set and the same 3964-question bank-v4 as main: the qtype
+  column makes the knowledge-only preference effective, the practice page
+  shows its stem and A/B/C/D options again, and the practice grade selector
+  stops at grade 6.
+- `minSdkVersion` 21 -> **14**, `d8 --min-api 21` -> **14**, theme
+  `Theme.Material` -> `Theme.Holo.Light.NoActionBar`; high-version manifest
+  attributes and `<queries>` removed; `.PracticeActivity` registration kept.
+- API 21/26+ class references removed from the dex: `MediaPauseController`
+  uses only old `requestAudioFocus` / `abandonAudioFocus`, notifications use
+  `Notification.Builder(Context)`, service starts use `startService()`, and
+  overlay-permission checks are replaced by a MIUI settings hint.
+- **Dropped capability**: pausing / resuming background video. The full-screen
+  `TYPE_PHONE` overlay still blocks the picture.
+- Verification is static only (no Android 4.x device or emulator): badging
+  `sdkVersion:'14'` / `versionCode='38'`, dexdump finds no API 21+ symbols,
+  `apksigner verify --min-sdk-version 14` passes, and the full 253-contract /
+  311-JVM / 79-mutation suite plus `BANK_QUALITY_OK questions=3964` passes.
+
 ## v1.2.3 (versionCode 35) — bank quality rebuild, grade cap, seventh release
 
 Display version 1.2.2 -> **1.2.3**, `versionCode` 33 -> **35** (34 belongs

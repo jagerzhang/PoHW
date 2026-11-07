@@ -692,4 +692,17 @@ check('startUpdateCheck(false)' in strip_comments(read(MAIN)),
 check('btnUpdateInstall.setEnabled(p != null)' in strip_comments(read(SET)),
       "download and install require an explicit parent action")
 
+
+# ---- v1.2.5 后续：官网下载直链固定走 Makers ----
+_dl125 = read(os.path.join(ROOT, "site/index.html"))
+check(_dl125.count('href="https://pohw.zhangge.net/dl/latest-main.apk"') == 4,
+      "all four download buttons use the Makers direct link")
+check('href="https://github.com/jagerzhang/PoHW/releases/latest"' not in _dl125,
+      "no download button points at the GitHub latest release")
+check('https://github.com/jagerzhang/PoHW/releases"' in _dl125
+      and '所有 Releases' in _dl125,
+      "historical releases remain reachable")
+check('must-revalidate' in _edge125,
+      "latest APK aliases are revalidated so the CDN never serves a stale package")
+
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

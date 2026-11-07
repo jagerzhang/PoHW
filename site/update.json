@@ -2,14 +2,14 @@
   "schema": 1,
   "publishedAt": "2026-11-07",
   "main": {
-    "versionName": "1.2.5",
-    "versionCode": 39,
+    "versionName": "1.2.6",
+    "versionCode": 41,
     "minSdk": 21,
     "latest": "https://pohw.zhangge.net/dl/latest-main.apk",
-    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.2.5.apk",
-    "sha256": "fb6bfb6e7f6b8e02dfccb80cdec3ea626e5657f90ecead555f0dd0ae60ab0803",
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.2.6.apk",
+    "sha256": "0099b4cab0821430612e497140cc5e3d8c2101689b3bbba96933990608fcdc4c",
     "size": 1029632,
-    "notes": "在线版本更新（低配版仍可手动下载）"
+    "notes": "家长设置版本更新交互修复"
   },
   "legacy": {
     "versionName": "1.2.4",

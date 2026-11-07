@@ -132,7 +132,8 @@ def break_other_grade_with_decoy():
 MUTATIONS = [
     ("A", "home back to 2 columns", lambda: replace(M, "GRID_COLS = 3", "GRID_COLS = 2"), False, True, False),
     ("B", "legacy column helper", lambda: write(S, read(S) + "\n// wireColumns\n"), False, True, False),
-    ("C", "line-commented vertical focus", lambda: replace(S, "        wireVerticalFocus();", "        // wireVerticalFocus();"), False, True, False),
+    ("C", "line-commented vertical focus", lambda: replace(S, "        wireVerticalFocus();\n        wireSubjectRows();",
+                     "        // wireVerticalFocus();\n        wireSubjectRows();"), False, True, False),
     ("E", "block-commented subject focus", lambda: replace(S, "        wireSubjectRows();", "        /*\n        wireSubjectRows();\n        */"), False, True, False),
     ("F", "fillViewport removed", lambda: replace(S, "        sv.setFillViewport(true);", "        // sv.setFillViewport(true);"), False, True, False),
     ("G", "fixed-height scroll area", lambda: replace(S, "        root.addView(sv, Ui.fill(1));", "        root.addView(sv, Ui.fixed(this, 300));"), False, True, False),
@@ -151,7 +152,7 @@ MUTATIONS = [
     ("O", "service stops passing the fourth weight",
      lambda: replace(O, "st.weight(Subjects.OTHER)", "0"), False, True, False),
     ("P", "versionCode rolled back",
-     lambda: replace(B, 'VERSION_CODE="39"', 'VERSION_CODE="38"'), False, True, False),
+     lambda: replace(B, 'VERSION_CODE="41"', 'VERSION_CODE="40"'), False, True, False),
     ("Q", "OTHER routing disabled",
      lambda: replace(D, "boolean other = s == Subjects.OTHER && allSubjects;", "boolean other = false;"), True, True, False),
     ("R", "single WHERE binding",
@@ -236,7 +237,7 @@ MUTATIONS = [
     ("AV", "auto-review workflow removed",
      lambda: os.remove(CI), False, True, False),
     ("AW", "display version rolled back to 1.0.1",
-     lambda: replace(MF, 'android:versionName="1.2.5"', 'android:versionName="1.0.2"'),
+     lambda: replace(MF, 'android:versionName="1.2.6"', 'android:versionName="1.0.2"'),
      False, True, False),
     ("AX", "alipay QR crop corrupted",
      lambda: open(APNG, "wb").write(bytes([137, 80, 78, 71, 13, 10, 26, 10]) + bytes(16)),
@@ -316,6 +317,9 @@ MUTATIONS = [
          'href="https://pohw.zhangge.net/dl/latest-main.apk"',
          'href="https://github.com/jagerzhang/PoHW/releases/latest"', 1)),
      False, True, False),
+    ("CF", "update button disabled again, breaking the DPAD chain",
+     lambda: replace(S, 'btnUpdateInstall.setText(p == null',
+                     'btnUpdateInstall.setEnabled(p != null);\n              btnUpdateInstall.setText(p == null'), False, True, False),
 ]
 
 print("--- baseline ---")

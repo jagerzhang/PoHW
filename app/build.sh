@@ -7,8 +7,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
-VERSION_NAME="1.2.5"
-VERSION_CODE="39"
+VERSION_NAME="1.2.6"
+VERSION_CODE="41"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -32,7 +32,8 @@ grep -q "versionCode=\"$VERSION_CODE\"" "$APP/AndroidManifest.xml"
 grep -q "versionName=\"$VERSION_NAME\"" "$APP/AndroidManifest.xml"
 # 只发布 7 个语义化版本；feature 分支的自动审核工作流必须随仓库分发。
 [ -f "$ROOT/.github/workflows/ci.yml" ] || { echo "FORBIDDEN: missing auto-review workflow"; exit 1; }
-grep -qF 'VERSION_NAME="1.2.5"' "$APP/build.sh"
+grep -qF 'VERSION_NAME="1.2.6"' "$APP/build.sh"
+grep -qF 'version: "v1.2.6"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.2.5"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.2.4"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.2.3"' "$ROOT/site/script.js"
@@ -317,10 +318,10 @@ if [ -d "$ROOT/site" ]; then ZIP_EXTRA="site"; fi
 (cd "$ROOT" && zip -q -r "$DIST/PoHW-src.zip" \
   README.md LICENSE .gitignore CHANGELOG.md .github \
   app/AndroidManifest.xml app/build.sh app/src app/res app/assets \
-  tests docs tools $ZIP_EXTRA -x '*/__pycache__/*' '*.pyc')
+  tests docs tools $ZIP_EXTRA -x '*/__pycache__/*' '*.pyc' 'site/dl/*.apk')
 
 # 源码包只允许源码与文档：Python 字节码和缓存目录属于本机运行产物，不得外发。
-if unzip -l "$DIST/PoHW-src.zip" | grep -qE '__pycache__|\.pyc$'; then
+if unzip -l "$DIST/PoHW-src.zip" | grep -qE '__pycache__|\.pyc$|site/dl/.*\.apk'; then
   echo "FORBIDDEN: python bytecode leaked into the source archive"
   exit 1
 fi

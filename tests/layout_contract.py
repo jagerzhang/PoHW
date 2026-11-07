@@ -92,7 +92,7 @@ check(s.count("addCard(") == 7, "settings declares 6 grouped cards + helper")
 check(len(re.findall(r'addCard\(col, "0\d', s)) == 6, "settings has 6 numbered cards")
 check("addColumn" not in raw_s and "wireColumns" not in raw_s,
       "legacy three-column helpers are gone")
-check(s.count("wireVerticalFocus()") == 2, "settings declares and calls the vertical focus chain")
+check(s.count("wireVerticalFocus()") == 3, "settings declares and calls the vertical focus chain")
 check(s.count("wireSubjectRows()") == 2, "subject rows keep their left/right chain")
 check("setNextFocusUpId" in s and "setNextFocusDownId" in s,
       "settings vertical chain is explicit across nested cards")
@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="39"' in _mf, "manifest versionCode advances to 39")
-check('VERSION_CODE="39"' in b, "build script versionCode advances to 39")
+check('android:versionCode="41"' in _mf, "manifest versionCode advances to 41")
+check('VERSION_CODE="41"' in b, "build script versionCode advances to 41")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -354,8 +354,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="39"' in _mf, "manifest versionCode advances to 39")
-check('VERSION_CODE="39"' in b, "build script versionCode advances to 39")
+check('android:versionCode="41"' in _mf, "manifest versionCode advances to 41")
+check('VERSION_CODE="41"' in b, "build script versionCode advances to 41")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -405,8 +405,8 @@ check("保留所有权利 · Proof of Homework" in _site and "jagerzhang · PoHW
       "footer copyright uses the new wording")
 check('id="year"' not in _site and 'getElementById("year")' not in _site_js,
       "footer year is fixed in HTML, not overwritten by JS")
-check("versionCode 39" in _site and "versionCode 21" in _site_js,
-      "site reports the latest build 39 and keeps the v1.0.2 card note")
+check("versionCode 41" in _site and "versionCode 21" in _site_js,
+      "site reports the latest build 41 and keeps the v1.0.2 card note")
 check("addView(bankRow, rowLp())" in s,
       "bank update and auto-update share one side-by-side row")
 check("track(btnCheck, rowSync)" in s,
@@ -433,10 +433,11 @@ _ch21 = read(os.path.join(ROOT, "CHANGELOG.md"))
 _rm21 = read(os.path.join(ROOT, "README.md"))
 _ci21 = os.path.join(ROOT, ".github/workflows/ci.yml")
 _ci_text = read(_ci21) if os.path.isfile(_ci21) else ""
-check('android:versionName="1.2.5"' in _mf21
-      and 'VERSION_NAME="1.2.5"' in _b21,
-      "display version is 1.2.5 in both manifest and build script")
-check(_site_js.count('version: "v1.2.5"') == 1
+check('android:versionName="1.2.6"' in _mf21
+      and 'VERSION_NAME="1.2.6"' in _b21,
+      "display version is 1.2.6 in both manifest and build script")
+check(_site_js.count('version: "v1.2.6"') == 1
+      and _site_js.count('version: "v1.2.5"') == 1
       and _site_js.count('version: "v1.2.4"') == 1
       and _site_js.count('version: "v1.2.3"') == 1
       and _site_js.count('version: "v1.2.2"') == 1
@@ -445,16 +446,17 @@ check(_site_js.count('version: "v1.2.5"') == 1
       and _site_js.count('version: "v1.0.2"') == 1
       and _site_js.count('version: "v1.0.1"') == 1
       and _site_js.count('version: "v1.0.0"') == 1
-      and _site_js.count('version: "') == 9,
-      "site release notes expose exactly nine distinct release versions")
-check(_ch21.count("\n## v1.2.5") == 1
+      and _site_js.count('version: "') == 10,
+      "site release notes expose exactly ten distinct release versions")
+check(_ch21.count("\n## v1.2.6") == 1
+      and _ch21.count("\n## v1.2.5") == 1
       and _ch21.count("\n## v1.2.4") == 1 and _ch21.count("\n## v1.2.3") == 1 and _ch21.count("\n## v1.2.2") == 1
       and _ch21.count("\n## v1.2.1") == 1
       and _ch21.count("\n## v1.2.0") == 1
       and _ch21.count("\n## v1.0.2") == 1 and _ch21.count("\n## v1.0.1") == 1
       and _ch21.count("\n## v1.0.0") == 1
       and _ch21.count("\n## v0.9.0-re") == 1,
-      "changelog groups builds into nine releases plus one dev archive")
+      "changelog groups builds into ten releases plus one dev archive")
 check("## Dev build v6.0.0" not in _ch21 and "## Dev build v5.0.0" not in _ch21
       and "## v4.1.0" not in _ch21 and "## v1 - v3" not in _ch21,
       "pre-1.0 dev-build sections are collapsed into the 0.9.0-re archive")
@@ -689,8 +691,19 @@ check('update_manifest.py --check' in read(BUILD),
       "build gate validates the update manifest")
 check('startUpdateCheck(false)' in strip_comments(read(MAIN)),
       "console triggers the throttled version check on cold start")
-check('btnUpdateInstall.setEnabled(p != null)' in strip_comments(read(SET)),
-      "download and install require an explicit parent action")
+# ---- v1.2.6：在线更新卡片不得破坏纵向焦点链 ----
+_s126 = strip_comments(read(SET))
+check('btnUpdateInstall.setEnabled(' not in _s126,
+      "update buttons never become disabled (a disabled node breaks the DPAD chain)")
+check('wireVerticalFocus();' in _s126.split('private void refreshRows()')[1]
+      .split('private void checkUpdate()')[0],
+      "refreshRows rebuilds the vertical focus chain after state changes")
+check('正在检查版本，请稍候' in _s126 and '当前已是最新版本' in _s126,
+      "both update buttons give immediate, explicit feedback")
+check('updateChecking' in _s126 and 'updateDownloading' in _s126,
+      "re-entrant taps are guarded without disabling focusable views")
+check('下载并安装新版本（暂无更新）' in _s126,
+      "the install button explains why it has nothing to install")
 
 
 # ---- v1.2.5 后续：官网下载直链固定走 Makers ----

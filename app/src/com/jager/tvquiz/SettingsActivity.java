@@ -67,6 +67,9 @@ public class SettingsActivity extends Activity {
     private Button[] rowWt = new Button[Subjects.COUNT];
     private final java.util.List<Button[]> subjectPairs = new java.util.ArrayList<Button[]>();
     private Button rowBoot, rowAutoGuard, rowPause, rowResume;
+    /** v1.2.5 在线版本更新：自动检查开关 / 状态 / 手动下载安装。 */
+    private Button rowUpdate, btnUpdateInstall;
+    private TextView updateStatus;
     /** 单列焦点链：每行一个数组，纵向按加入顺序连接。 */
     private final java.util.List<View[]> focusRows = new java.util.ArrayList<View[]>();
     private Button btnChangePin, btnSave;
@@ -544,6 +547,63 @@ public class SettingsActivity extends Activity {
         note(online, "如果觉得 PoHW 好用，可以请作者喝一杯咖啡。完全自愿、不影响任何功能；"
                 + "点开后可用遥控器左右键切换微信支付 / 支付宝收款码，用手机扫码即可。");
 
+        // ---- 06 版本更新（联网仅用于取清单与下载安装包）----
+        LinearLayout upd = addCard(col, "06  版本更新（可选 · 默认开启检查）");
+        note(upd, "联网只用于读取版本清单与下载安装包；题库、守护与答题全程离线，不上传任何设备信息。");
+        rowUpdate = addRow(upd, "自动检查版本", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                st.autoCheckUpdate(!st.autoCheckUpdate());
+                refreshRows();
+            }
+        });
+        addButton(upd, "立即检查版本", 0xFF185FA5, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                updateStatus.setText("正在检查版本…");
+                checkUpdate();
+            }
+        });
+        btnUpdateInstall = Ui.button(this, "下载并安装新版本", 0xFF1D9E75, 0xFFFFFFFF, 15);
+        btnUpdateInstall.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                UpdateConfig.Info info = UpdateState.pending;
+                if (info == null) {
+                    Toast.makeText(SettingsActivity.this, "当前没有待安装的新版本",
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                btnUpdateInstall.setEnabled(false);
+                updateStatus.setText("正在下载新版本…");
+                UpdateInstaller.download(SettingsActivity.this, info, new UpdateInstaller.Listener() {
+                    @Override public void onProgress(final String msg) {
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() { updateStatus.setText(msg); }
+                        });
+                    }
+                    @Override public void onDone(final boolean ok, final String msg) {
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                updateStatus.setText(msg);
+                                btnUpdateInstall.setEnabled(UpdateState.pending != null);
+                                if (!ok) {
+                                    Toast.makeText(SettingsActivity.this, msg,
+                                            Toast.LENGTH_LONG).show();
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+        });
+        Ui.focus(btnUpdateInstall, this, 0xFF1D9E75, 0xFFFFFFFF);
+        btnUpdateInstall.setMinHeight(Ui.dp(this, 44));
+        upd.addView(btnUpdateInstall, rowLp());
+        track(btnUpdateInstall);
+        updateStatus = Ui.tv(this, "", 13, Ui.MUTED, Gravity.LEFT);
+        updateStatus.setLineSpacing(0, 1.15f);
+        updateStatus.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 4));
+        upd.addView(updateStatus, rowLp());
+        note(upd, "发现新版本只会提示；下载与安装需家长主动点击，系统安装界面仍需手动确认。");
+
         root.addView(sv, Ui.fill(1));
 
         // ---- 底部固定操作条：长表单滚动时仍可随时保存 ----
@@ -763,6 +823,52 @@ public class SettingsActivity extends Activity {
         if (!urlDirty) setUrlText(st.bankUrl(), false);
         pinState.setText(st.hasPin() ? "家长密码：已设置 ✓" : "家长密码：未设置 ✗");
         updateBankStatus();
+        if (rowUpdate != null) {
+            rowUpdate.setText(st.autoCheckUpdate()
+                    ? "开启（每 24 小时检查一次）" : "关闭（仅手动检查）");
+            String um = UpdateState.message;
+            UpdateConfig.Info p = UpdateState.pending;
+            updateStatus.setText((um == null || um.length() == 0
+                    ? "尚未检查版本" : um)
+                    + (p == null ? "" : NL + "更新内容：" + p.notes));
+            btnUpdateInstall.setEnabled(p != null);
+        }
+    }
+
+
+    /** 家长手动点「立即检查版本」：与冷启动共用 UpdateState，结果只提示不自动下载。 */
+    private void checkUpdate() {
+        final int localCode;
+        try {
+            localCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+        } catch (Exception e) {
+            updateStatus.setText("无法读取当前版本");
+            return;
+        }
+        st.lastUpdateCheckMs(System.currentTimeMillis());
+        final String channel = getString(R.string.update_channel);
+        new Thread(new Runnable() {
+            @Override public void run() {
+                final UpdateConfig.Info info = UpdateChecker.fetch(channel);
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        UpdateState.checkedAt = System.currentTimeMillis();
+                        if (info == null) {
+                            UpdateState.message = "版本检查未完成，已忽略（离线功能不受影响）";
+                        } else {
+                            boolean has = UpdateConfig.hasUpdate(localCode, info.versionCode,
+                                    st.skipUpdateCode());
+                            UpdateState.pending = has ? info : null;
+                            UpdateState.message = has
+                                    ? "发现新版本 " + info.versionName + "（build "
+                                      + info.versionCode + "）"
+                                    : "已是最新版本 " + info.versionName;
+                        }
+                        refreshRows();
+                    }
+                });
+            }
+        }, "pohw-update-check").start();
     }
 
     private void updateBankStatus() {

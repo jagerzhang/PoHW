@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.jager.tvquiz"
-    android:versionCode="37"
-    android:versionName="1.2.4">
+    android:versionCode="39"
+    android:versionName="1.2.5">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="33" />
 
@@ -15,6 +15,8 @@
     <!-- 可选在线题库源：默认不启用，只有家长自行配置地址后才会发起请求 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- v1.2.5 在线版本更新：Android 8+ 拉起系统安装界面必需 -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- TV 无触摸屏；不强制 Leanback，手机/平板亦可安装 -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
@@ -38,6 +40,13 @@
         android:usesCleartextTraffic="false"
         android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <!-- 把已校验的 APK 以 content:// 交给系统安装器；不导出、只读。 -->
+        <provider
+            android:name=".UpdateProvider"
+            android:authorities="com.jager.tvquiz.update"
+            android:exported="false"
+            android:grantUriPermissions="true" />
 
         <activity
             android:name=".MainActivity"

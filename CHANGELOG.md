@@ -1,9 +1,9 @@
 # Changelog
 
-> **版本口径**：对外发布 8 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 9 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
 > **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）、
-> **v1.2.4**（37）。
+> **v1.2.4**（37）、**v1.2.5**（39）。
 > `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
@@ -11,6 +11,39 @@
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.2.5 (versionCode 39) — optional online version update, ninth release
+
+Display version 1.2.4 -> **1.2.5**, `versionCode` 37 -> **39** (38 belongs to
+the Android 4.0 legacy branch), same release keystore
+(SHA-256 `76eb6063b574...26172`). Ninth published release.
+
+**Scope**: the network is used only for version updates. Question bank,
+guard and answering stay fully offline; no device identifier is uploaded.
+
+- **Site**: `site/update.json` fixed manifest, `site/dl/` holds only the
+  latest `latest-main.apk` / `latest-legacy.apk` aliases plus versioned
+  `PoHW-v1.2.5*.apk` files; `site/edgeone.json` sets `no-store` on the
+  manifest and long caching on APKs. `tools/publish/update_manifest.py`
+  generates and verifies the manifest (sha256 / size / channel / URLs).
+- **App**: `UpdateConfig` (pure Java: channel, version compare, 24h throttle,
+  URL allowlist, manifest parsing), `UpdateChecker` (HTTPS only, no cross-host
+  redirects), `UpdateInstaller` (download on explicit parent action, stream
+  sha256 + size check, then system installer), `UpdateProvider` (platform
+  ContentProvider for a `content://` Uri), `UpdateState` (in-process result).
+- **Interaction**: automatic check defaults to **on** and runs at most once
+  per 24h on cold start; a new version only shows a hint. Download and install
+  require the parent to press "下载并安装新版本" in the new `06 版本更新`
+  settings card; the Android installer still needs manual confirmation.
+- **Channels**: `main` (minSdk 21) and `legacy` (minSdk 14) are separated in
+  the manifest. **The Android 4.0 legacy app does not implement update
+  checking this round**; its package stays available for manual download.
+- **Docs**: site copy changed from "zero network" to the factual
+  "offline guard, optional version check"; new FAQ entry. Historical release
+  cards are unchanged.
+- Gates: `layout_contract.py` and `build.sh` assert the default-on switch,
+  sha256 verification, URL allowlist, private provider, `no-store` rule and
+  manifest consistency; three negative mutations (CB/CC/CD) pin them.
 
 ## v1.2.4 (versionCode 37) — practice layout fix, question-type tags, eighth release
 

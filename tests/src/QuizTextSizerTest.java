@@ -59,6 +59,13 @@ public class QuizTextSizerTest {
                 QuizTextSizer.optionFits(200, 8, 8,
                         QuizTextSizer.optionSp(new String[]{longText(35)}), 3));
 
+        ok("Q01 短题干可上 TV", QuizTextSizer.questionFitTv("1+1=?"));
+        ok("Q02 超长题干被挡", !QuizTextSizer.questionFitTv(longText(120)));
+        ok("Q03 依赖课文原文被挡", !QuizTextSizer.questionFitTv("本文结尾的作用是什么"));
+        ok("Q04 多子项编号被挡",
+                !QuizTextSizer.questionFitTv("1. 甲( ) 2. 乙( ) 3. 丙( )"));
+        ok("Q05 null 题干不崩", QuizTextSizer.questionFitTv(null));
+
         System.out.println("VERIFY=" + (fail == 0 ? "PASS" : "FAIL")
                 + " total=" + pass);
         if (fail > 0) System.exit(1);

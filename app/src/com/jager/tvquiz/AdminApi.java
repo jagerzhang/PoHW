@@ -57,7 +57,12 @@ public final class AdminApi {
             s.append(",\"passPercent\":").append(st.passPercent());
             s.append(",\"roundMode\":").append(st.roundMode());
             s.append(",\"wrong\":").append(WrongBook.cachedCount());
-            s.append(",\"version\":\"1.2.7\"}");
+            String ver = "unknown";
+            try {
+                ver = c.getPackageManager().getPackageInfo(
+                        c.getPackageName(), 0).versionName;
+            } catch (Exception ignored) { }
+            s.append(",\"version\":\"").append(ver).append("\"}");
             return new Result(200, s.toString());
         }
         if ("/api/config".equals(path) && "POST".equals(method)) {
@@ -89,23 +94,25 @@ public final class AdminApi {
         return body.substring(q1 + 1, q2);
     }
 
+    /** JSON 数字或数字字符串。旧实现先走 jsonString()，多字段时只有最后一个
+     *  数字能被解析（它会把下一个 key 的引号当成值），导致 /api/config 静默
+     *  丢掉 questionsPerRound / passPercent。这里只按冒号后的字面值解析。 */
     private static int jsonInt(String body, String key) {
-        String v = jsonString(body, key);
-        if (v == null) {
-            if (body == null) return -1;
-            int i = body.indexOf("\"" + key + "\"");
-            if (i < 0) return -1;
-            int c = body.indexOf(':', i);
-            if (c < 0) return -1;
-            StringBuilder b = new StringBuilder();
-            for (int k = c + 1; k < body.length(); k++) {
-                char ch = body.charAt(k);
-                if (ch >= '0' && ch <= '9') b.append(ch);
-                else if (b.length() > 0) break;
-            }
-            try { return Integer.parseInt(b.toString()); } catch (Exception e) { return -1; }
+        if (body == null) return -1;
+        int i = body.indexOf("\"" + key + "\"");
+        if (i < 0) return -1;
+        int c = body.indexOf(':', i);
+        if (c < 0) return -1;
+        int k = c + 1;
+        while (k < body.length() && Character.isWhitespace(body.charAt(k))) k++;
+        StringBuilder b = new StringBuilder();
+        for (; k < body.length(); k++) {
+            char ch = body.charAt(k);
+            if (ch >= '0' && ch <= '9') b.append(ch);
+            else break;
         }
-        try { return Integer.parseInt(v); } catch (Exception e) { return -1; }
+        if (b.length() == 0) return -1;
+        try { return Integer.parseInt(b.toString()); } catch (Exception e) { return -1; }
     }
 
     public static final class Result {

@@ -441,6 +441,7 @@ public class QuizOverlayService extends Service {
             if (k.equals(lastKey)) continue;
             // 选项过长在遥控器四选一里必然被固定高度裁切，直接跳过换一道。
             if (!QuizTextSizer.optionsFitTv(q.options)) continue;
+            if (!QuizTextSizer.questionFitTv(q.text)) continue;
             lastKey = k;
             return q;
         }

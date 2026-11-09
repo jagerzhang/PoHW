@@ -586,6 +586,11 @@ public class SettingsActivity extends Activity {
                 refreshRows();
             }
         });
+        addRow(upd, "手机扫码管理", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(SettingsActivity.this, PairActivity.class));
+            }
+        });
         addButton(upd, "立即检查版本", 0xFF185FA5, new View.OnClickListener() {
             @Override public void onClick(View v) {
                 if (updateChecking) {

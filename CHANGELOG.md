@@ -39,6 +39,29 @@
 - **门禁**：JVM 单测 `RoundPolicyTest`（21 项，总计 358）；`layout_contract` 新增
   20 条断言（含「测试构建必须保持 1.2.7 / 43」）；`mutation_suite` 新增
   CG/CH/CI/CJ/CK 五条负向变异。
+- **UI 修复（真机截图）**：答题选项长文本第二行被固定高度网格裁掉下半截。
+  `OverlayQuizView` 选项网格 186dp → 200dp，按钮加 `setMaxLines(3)` /
+  `setIncludeFontPadding(false)` / `setEllipsize(null)`；`QuizTextSizer` 新增
+  `optionSp()` 按最长选项统一四按钮字号，并提供纯 Java 的 `optionFits()`
+  高度估算；新增 `QuizTextSizerTest`（14 项）。
+- **UI 测试方法**：新增 `tools/ui_check/`（`overlay_check.sh` 抓 uiautomator
+  dump + screencap，`analyze_dump.py` 筛查长文本可疑节点，README 说明三层验证）。
+  远程构建沙箱没有安卓调试桥工具与模拟器镜像，`mac-exec` 当前 SSH 认证失败，因此这一版
+  仍需人在本机跑脚本；脚本产物可回传做多模态截图复核。
+- **WP3 二维码 + 局域网双后台**：新增零依赖 `QrEncoder`（QR Model 2 /
+  V1–V4 / EC-L / Byte / mask0，单块 RS；**Java 输出与标准库 29×29 参考矩阵
+  逐位一致**）、`LanServer`（`ServerSocket:8099` + 极简 HTTP/1.1）、`AdminApi`
+  （PIN→token、失败 5 次锁 60 秒、白名单 API）、`AdminAssets`（文件名白名单）、
+  `PairActivity`（本地渲染二维码 + 大字地址）；`app/assets/admin/` 为 ES5 管理页，
+  零外部 CDN。`lanAdminEnabled` **默认关闭**，家长在「06 版本更新 → 手机扫码管理」
+  手动开启；**TV 端原有设置页全量保留备用**。
+- **文案口径修正**：局域网 ≠ 互联网。官网与 README 从「完全离线、零联网 /
+  默认一次网络请求都不发」改为「题库与守护离线可用，不访问互联网；在线题库源、
+  局域网管理默认关闭；三项都关闭后不产生任何对外请求」。
+- **门禁**：JVM 单测 `QrEncoderTest`（14 项，总计 386）、`QuizTextSizerTest`；
+  `layout_contract` 新增选项裁切与 WP3 断言；`mutation_suite` 新增
+  CL/CM/CN（选项）与 CO/CP/CQ（WP3）六条负向变异。
+
 - **未验证**：小米电视关机→开机、待机→唤醒、运行中按 Home、切 App、强杀进程、
   拔 WAN 六项真机场景；无障碍服务在厂商省电策略下的存活率；二维码与局域网
   双后台（WP3）、文档重构（WP4）尚未落地。

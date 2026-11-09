@@ -50,11 +50,14 @@ RP = os.path.join(SRC, "RoundPolicy.java")
 GW = os.path.join(SRC, "GuardWatchdog.java")
 OVL = os.path.join(SRC, "QuizOverlayService.java")
 AXML = os.path.join(ROOT, "app/res/xml/guard_accessibility.xml")
+OVLQ = os.path.join(SRC, "OverlayQuizView.java")
+ADMAS = os.path.join(SRC, "AdminAssets.java")
+QRJ = os.path.join(SRC, "QrEncoder.java")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
 for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
            RM, CH, SJS, CI, APNG, UP, CD, DP, MP, PA, PC, UI, UCFG,
-           RP, GW, OVL, AXML):
+           RP, GW, OVL, AXML, OVLQ, ADMAS, QRJ):
     BK[p] = os.path.join(BK_DIR, os.path.basename(p) + ".bk")
     shutil.copyfile(p, BK[p])
 ORIG = {p: hashlib.sha256(open(p, "rb").read()).hexdigest() for p in BK}
@@ -336,6 +339,21 @@ MUTATIONS = [
     ("CJ", "HOME detection removed",
      lambda: replace(OVL, "Intent.ACTION_CLOSE_SYSTEM_DIALOGS",
                      "Intent.ACTION_BATTERY_CHANGED"), False, True, False),
+    ("CL", "option text size pinned back to 24sp",
+     lambda: replace(OVLQ, "QuizTextSizer.optionSp(q.options)", "24"), False, True, False),
+    ("CM", "option grid shrunk back to 186dp",
+     lambda: replace(OVLQ, "Ui.dp(c, 200)", "Ui.dp(c, 186)"), False, True, False),
+    ("CN", "font padding restored, clipping long options",
+     lambda: replace(OVLQ, "b.setIncludeFontPadding(false);", ""), False, True, False),
+    ("CO", "LAN admin silently enabled by default",
+     lambda: replace(ST, 'getBoolean("lanAdminEnabled", false)',
+                     'getBoolean("lanAdminEnabled", true)'), False, True, False),
+    ("CP", "admin asset whitelist bypassed",
+     lambda: replace(ADMAS, "if (!ok) return null;", "if (false) return null;"),
+     False, True, False),
+    ("CQ", "QR encoder empty-input guard removed",
+     lambda: replace(QRJ, "if (text == null || text.length() == 0) return -1;", ""),
+     False, True, False),
     ("CK", "test build accidentally bumps the published version",
      lambda: replace(MF, 'android:versionCode="43"', 'android:versionCode="44"'),
      False, True, False),

@@ -74,6 +74,12 @@
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize" />
 
         <activity
+            android:name=".PairActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize" />
+
+        <activity
             android:name=".WrongBookActivity"
             android:exported="false"
             android:screenOrientation="landscape"

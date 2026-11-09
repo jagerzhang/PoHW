@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PoHW · Proof of Homework — 答对题目，无限续租！</title>
-<meta name="description" content="PoHW（Proof of Homework）是装在 Android TV 上的反沉迷家长守护工具：跨应用全屏答题遮罩，答对才能继续观看，内置 3,989 题带 1–6 年级标签的离线题库，题库与守护完全离线，仅版本检查按需联网。">
+<meta name="description" content="PoHW（Proof of Homework）是装在 Android TV 上的反沉迷家长守护工具：跨应用全屏答题遮罩，答对才能继续观看，内置 3,989 题带 1–6 年级标签的离线题库，题库与守护离线可用，不访问互联网；可选局域网管理默认关闭。">
 <meta name="theme-color" content="#0F1725">
 <link rel="icon" type="image/png" href="assets/ic_launcher.png">
 <link rel="stylesheet" href="style.css">
@@ -120,7 +120,7 @@
         <article class="feature-card">
           <span class="feature-no">04</span>
           <h3>3,989 题离线题库</h3>
-          <p>内置 SQLite，覆盖小学 1–6 年级语数外；每题带明确年级标签与低 / 中 / 高难度分档。题目由按课标自编的题与整理自公开渠道、逐题校验清洗后的题组成。题库与守护完全离线、不收集数据；在线题库源默认关闭，需家长自行填地址才启用。版本检查默认每 24 小时读取一次清单，可在家长设置里关闭。</p>
+          <p>内置 SQLite，覆盖小学 1–6 年级语数外；每题带明确年级标签与低 / 中 / 高难度分档。题目由按课标自编的题与整理自公开渠道、逐题校验清洗后的题组成。题库与守护离线可用、不收集数据；在线题库源、局域网手机管理均默认关闭，需家长自行开启。版本检查默认每 24 小时读取一次清单，可在家长设置里关闭。</p>
           <span class="tag warn">离线优先 · 可选更新</span>
         </article>
 
@@ -292,7 +292,7 @@
 
         <details class="faq-item">
           <summary>会收集数据或联网吗？</summary>
-          <p>不收集数据，题库与守护完全离线：<code>INTERNET</code> 权限用于家长自行配置的可选在线题库源，以及默认开启的版本检查（仅 GET 版本清单，24 小时一次，不含任何设备标识）；两项都关闭后 APP 不发请求。不含任何统计、广告或支付 SDK。清单同时设置了 <code>allowBackup=false</code> 与默认禁止明文 HTTP。</p>
+          <p>不收集数据，题库与守护离线可用、不访问互联网：<code>INTERNET</code> 权限用于家长自行配置的可选在线题库源、默认开启的版本检查（仅 GET 版本清单，24 小时一次，不含设备标识），以及默认关闭的局域网管理（数据只在家里 WiFi 内流转，不经过外部服务器）；三项都关闭后 APP 不产生任何对外请求。不含任何统计、广告或支付 SDK。清单同时设置了 <code>allowBackup=false</code> 与默认禁止明文 HTTP。</p>
         </details>
 
         <details class="faq-item">
@@ -376,7 +376,7 @@
             <span>Proof of Homework · 答对题目，无限续租！</span>
           </div>
         </div>
-        <p style="margin-top:16px">个人非商业的 Android TV 反沉迷实验。仅供家庭自用、不上架应用商店、不收集数据、题库与守护完全离线。代码 MIT 许可证，题库内容权利归各自权利人所有，详见 docs/DATA_SOURCES.md。</p>
+        <p style="margin-top:16px">个人非商业的 Android TV 反沉迷实验。仅供家庭自用、不上架应用商店、不收集数据、题库与守护离线可用，不访问互联网。代码 MIT 许可证，题库内容权利归各自权利人所有，详见 docs/DATA_SOURCES.md。</p>
       </div>
       <div class="footer-links">
         <a href="https://pohw.zhangge.net/dl/latest-main.apk">下载 APK</a>

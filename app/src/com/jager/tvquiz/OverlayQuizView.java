@@ -94,6 +94,13 @@ public final class OverlayQuizView {
         for (int i = 0; i < 4; i++) {
             final int idx = i;
             Button b = Ui.button(c, "", Ui.BLUE_LIGHT, Ui.TEXT, 24);
+            // v1.3.0 未发布：允许长选项换行到 3 行，去掉字体自带上下留白，
+            // 否则固定高度网格会把第二行文字裁掉下半截（真机截图反馈）。
+            b.setSingleLine(false);
+            b.setMaxLines(3);
+            b.setEllipsize(null);
+            b.setIncludeFontPadding(false);
+            b.setLineSpacing(0, 1.0f);
             b.setFocusable(false);
             b.setFocusableInTouchMode(false);
             b.setOnClickListener(new View.OnClickListener() {
@@ -109,8 +116,9 @@ public final class OverlayQuizView {
                 ViewGroup.LayoutParams.MATCH_PARENT, 1);
         grid.addView(col1, colLp);
         grid.addView(col2, colLp);
+        // 186dp -> 200dp：给两/三行选项留余量；题干用 Ui.fill(1) 自适应让出空间。
         card.addView(grid, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(c, 186)));
+                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(c, 200)));
 
         result = Ui.tv(c, "", 21, Ui.GREEN);
         card.addView(result, Ui.fixed(c, 34));
@@ -173,7 +181,9 @@ public final class OverlayQuizView {
         cont.setVisibility(View.INVISIBLE);
         // 换题必须整体重置状态机：累计答错次数、禁用选项、高亮、答对标志。
         flow.reset();
+        int optionSp = QuizTextSizer.optionSp(q.options);
         for (int i = 0; i < 4; i++) {
+            opts[i].setTextSize(TypedValue.COMPLEX_UNIT_SP, optionSp);
             opts[i].setText(q.options != null && i < q.options.length
                     ? (q.options[i] == null ? "" : q.options[i]) : "");
         }

@@ -783,4 +783,64 @@ check('stopWithTask="false"' in _mf130,
 check('android:versionName="1.2.7"' in _mf130 and 'android:versionCode="43"' in _mf130,
       "unreleased test build keeps the published version numbers")
 
+
+# ---- v1.3.0 未发布：答题选项长文本不得被固定高度网格裁切 ----
+_ov130 = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/OverlayQuizView.java")))
+_qts130 = read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/QuizTextSizer.java"))
+check("optionSp(" in _qts130 and "optionFits(" in _qts130,
+      "option text has a dynamic size and a fit calculation")
+check("QuizTextSizer.optionSp(q.options)" in _ov130
+      and "opts[i].setTextSize(" in _ov130,
+      "all four option buttons share the dynamic size")
+check("setMaxLines(3)" in _ov130 and "setIncludeFontPadding(false)" in _ov130
+      and "setEllipsize(null)" in _ov130,
+      "option buttons allow three lines without font padding or ellipsis")
+check("Ui.dp(c, 200)" in _ov130 and "Ui.dp(c, 186)" not in _ov130,
+      "option grid has enough height for wrapped text")
+check(os.path.isfile(os.path.join(ROOT, "tests/src/QuizTextSizerTest.java")),
+      "option layout has a JVM regression test")
+check(os.path.isfile(os.path.join(ROOT, "tools/ui_check/analyze_dump.py")),
+      "real-device UI dump analyzer is available")
+
+
+# ---- v1.3.0 未发布：局域网双后台与二维码 ----
+_src131 = os.path.join(ROOT, "app/src/com/jager/tvquiz")
+_qr131 = read(os.path.join(_src131, "QrEncoder.java"))
+_lan131 = read(os.path.join(_src131, "LanServer.java"))
+_api131 = read(os.path.join(_src131, "AdminApi.java"))
+_assets131 = read(os.path.join(_src131, "AdminAssets.java"))
+_pair131 = read(os.path.join(_src131, "PairActivity.java"))
+_sto131 = strip_comments(read(os.path.join(_src131, "SettingsStore.java")))
+_mf131 = read(os.path.join(ROOT, "app/AndroidManifest.xml"))
+check("versionFor(" in _qr131 and "reedSolomon(" in _qr131
+      and "drawCodewords(" in _qr131,
+      "zero-dependency QR encoder covers data, RS and placement")
+check("text.length() == 0) return -1" in _qr131,
+      "QR encoder rejects empty input")
+check(os.path.isfile(os.path.join(ROOT, "tests/src/QrEncoderTest.java")),
+      "QR encoder has a standard-library matrix comparison test")
+check("ServerSocket(PORT)" in _lan131 and "PORT = 8099" in _lan131,
+      "LAN admin listens on a fixed local port only")
+check("github.com" not in _lan131 and "http://" not in _api131,
+      "LAN admin has no outbound internet endpoints")
+check("authorized(" in _api131 and "lockUntil" in _api131
+      and "checkPin(" in _api131,
+      "LAN admin enforces token, PIN and failure lockout")
+check('getBoolean("lanAdminEnabled", false)' in _sto131,
+      "LAN admin is disabled by default")
+check("if (!ok) return null;" in _assets131 and "ALLOWED" in _assets131,
+      "admin assets use a filename whitelist")
+check('android:name=".PairActivity"' in _mf131
+      and 'android:exported="false"' in _mf131,
+      "pairing screen is declared and not exported")
+for _f131 in ("index.html", "app.js", "style.css"):
+    check(os.path.isfile(os.path.join(ROOT, "app/assets/admin", _f131)),
+          "admin page asset " + _f131 + " ships with the APK")
+check("QrEncoder.encode(url)" in _pair131 and "Bitmap.createBitmap" in _pair131,
+      "pairing screen renders the QR locally")
+check("不访问互联网" in read(os.path.join(ROOT, "site/index.html")),
+      "site copy no longer claims zero network traffic")
+
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

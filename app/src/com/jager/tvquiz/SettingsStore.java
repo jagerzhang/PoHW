@@ -78,6 +78,14 @@ public final class SettingsStore implements PinGate.Store {
     // ---------- 开机自启 / 启动即守护 ----------
 
     /** 是否响应开机广播。默认关闭：是否随系统开机拉起，必须由家长显式选择并放行厂商自启动权限。 */
+    /** v1.3.0 未发布：局域网手机管理，默认关闭。 */
+    public boolean lanAdminEnabled() {
+        return sp.getBoolean("lanAdminEnabled", false);
+    }
+    public void lanAdminEnabled(boolean v) {
+        sp.edit().putBoolean("lanAdminEnabled", v).commit();
+    }
+
     /** v1.3.0 未发布：最近一次守护由哪条路径拉起，供「自启可能被拦截」诊断。 */
     public String lastStartVia() { return sp.getString("lastStartVia", "app"); }
     public void lastStartVia(String v) {

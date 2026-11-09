@@ -2,12 +2,12 @@
 
 ## 一句话结论
 
-`app/assets/quiz.db` 当前为 **`pohw-2026.11.07-bank-v4`**，共 **3964 道题**，
+`app/assets/quiz.db` 当前为 **`pohw-2026.11.09-bank-v5`**，共 **3989 道题**，
 覆盖小学 1–6 年级语数外，每题带明确的 `grade`、`difficulty` 与 `difficulty_level`。
 题目由本项目按课标自编的低年级题，与整理自互联网公开渠道、经逐题校验清洗后的题目组成。
 
 > 来源说明见 [DATA_SOURCES.md](DATA_SOURCES.md)；重建脚本见
-> [`tools/quizbank/rebuild_bank.py`](../tools/quizbank/rebuild_bank.py)，门禁见
+> [`tools/quizbank/rebuild_bank.py`](../tools/quizbank/rebuild_bank.py) 与 [`tools/quizbank/apply_review.py`](../tools/quizbank/apply_review.py)，门禁见
 > [`tests/bank_quality_check.py`](../tests/bank_quality_check.py)。
 
 ## 表结构

@@ -94,10 +94,10 @@ public final class OverlayQuizView {
         for (int i = 0; i < 4; i++) {
             final int idx = i;
             Button b = Ui.button(c, "", Ui.BLUE_LIGHT, Ui.TEXT, 24);
-            // v1.3.0 未发布：允许长选项换行到 3 行，去掉字体自带上下留白，
+            // v1.3.0 未发布：允许长选项换行到 4 行，去掉字体自带上下留白，
             // 否则固定高度网格会把第二行文字裁掉下半截（真机截图反馈）。
             b.setSingleLine(false);
-            b.setMaxLines(3);
+            b.setMaxLines(4);
             b.setEllipsize(null);
             b.setIncludeFontPadding(false);
             b.setLineSpacing(0, 1.0f);

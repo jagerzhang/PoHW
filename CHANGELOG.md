@@ -18,6 +18,16 @@
 不升 versionName/versionCode、不部署官网版本卡片**；待电视机真机回归后统一发
 `v1.3.0`（versionCode 44）。当前 `dist` 中的测试包仍为 1.2.7 / 43，可覆盖安装。
 
+- **UI 回归补修（模拟器实测）**：局域网模拟器调试通道抓到 4 个选项 54–71 字的
+  极端题，18sp + 3 行上限仍把末行裁成半截。`QuizTextSizer.optionSp()` 增加
+  14/16/19/22sp 分档（>48 字降到 14sp），选项放宽到 4 行；新增 O13–O15 JVM
+  断言、契约断言与负向变异 CR。13–17 字常规长选项实测已完整显示。
+- **抽题层过滤超长选项**：82 字选项题（且多为高中语文错标小学 3 年级）在
+  14sp / 4 行下仍会被固定高度按钮裁掉末行。`QuizTextSizer.optionsFitTv()`
+  设定 48 字上限，`QuizOverlayService.drawFresh()` 最多重抽 12 次跳过这类题；
+  `showQuiz()` / `swapQuestion()` 已有判空兜底。新增 O16–O18 JVM 断言、契约
+  断言与负向变异 CS。字号分档最终收敛为 24/20/16/14sp（19sp/22sp 档在
+  35 字题上仍会顶出固定高度按钮），模拟器采样复验最长 44 字选项完整显示。
 - **WP5 开机与常驻**：新增 `ReviveReceiver`（`USER_PRESENT` / `SCREEN_ON` /
   `MY_PACKAGE_REPLACED` / `CONNECTIVITY_CHANGE` / 自定义 `REVIVE`）、
   `GuardWatchdog`（`JobScheduler.setPersisted` + `AlarmManager` 双 15 分钟兜底）、

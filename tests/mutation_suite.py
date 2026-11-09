@@ -53,11 +53,12 @@ AXML = os.path.join(ROOT, "app/res/xml/guard_accessibility.xml")
 OVLQ = os.path.join(SRC, "OverlayQuizView.java")
 ADMAS = os.path.join(SRC, "AdminAssets.java")
 QRJ = os.path.join(SRC, "QrEncoder.java")
+QTS = os.path.join(SRC, "QuizTextSizer.java")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
 for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
            RM, CH, SJS, CI, APNG, UP, CD, DP, MP, PA, PC, UI, UCFG,
-           RP, GW, OVL, AXML, OVLQ, ADMAS, QRJ):
+           RP, GW, OVL, AXML, OVLQ, ADMAS, QRJ, QTS):
     BK[p] = os.path.join(BK_DIR, os.path.basename(p) + ".bk")
     shutil.copyfile(p, BK[p])
 ORIG = {p: hashlib.sha256(open(p, "rb").read()).hexdigest() for p in BK}
@@ -356,6 +357,13 @@ MUTATIONS = [
      False, True, False),
     ("CK", "test build accidentally bumps the published version",
      lambda: replace(MF, 'android:versionCode="43"', 'android:versionCode="44"'),
+     False, True, False),
+    ("CR", "extreme long option size back to 18sp",
+     lambda: replace(os.path.join(SRC, "QuizTextSizer.java"),
+                     "if (max > 48) return 14;", "if (max > 48) return 18;"),
+     False, True, False),
+    ("CS", "guard stops skipping over-long TV options",
+     lambda: replace(OVL, "QuizTextSizer.optionsFitTv(q.options)", "true"),
      False, True, False),
 ]
 

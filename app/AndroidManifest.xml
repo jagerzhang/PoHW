@@ -15,6 +15,9 @@
     <!-- 可选在线题库源：默认不启用，只有家长自行配置地址后才会发起请求 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- v1.3.0 未发布：休眠唤醒兜底与常驻自检 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- v1.2.5 在线版本更新：Android 8+ 拉起系统安装界面必需 -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
@@ -91,7 +94,8 @@
         <service
             android:name=".QuizOverlayService"
             android:exported="false"
-            android:enabled="true" />
+            android:enabled="true"
+            android:stopWithTask="false" />
 
         <!-- 仅 BOOT_COMPLETED 受 RECEIVE_BOOT_COMPLETED 保护，且是 Android 12+
              后台启动前台服务的豁免广播；QUICKBOOT 拆到单独 receiver。 -->
@@ -109,7 +113,44 @@
             <intent-filter>
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.tcl.android.intent.action.BOOT_COMPLETED" />
+                <action android:name="com.hisense.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- 休眠唤醒 / 解锁 / 覆盖安装 / 定时自检：不带 RECEIVE_BOOT_COMPLETED
+             permission，否则非保护广播会被系统过滤。SCREEN_ON 标准上只能动态注册，
+             此处声明仅为兼容部分厂商；主力是 USER_PRESENT + AlarmManager。 -->
+        <receiver
+            android:name=".ReviveReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.USER_PRESENT" />
+                <action android:name="android.intent.action.SCREEN_ON" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+                <action android:name="com.jager.tvquiz.REVIVE" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".GuardWatchdog"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <!-- 可选常驻看门狗：默认不启用，家长须到系统无障碍设置中手动开启。 -->
+        <service
+            android:name=".GuardAccessibilityService"
+            android:exported="true"
+            android:label="@string/accessibility_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/guard_accessibility" />
+        </service>
     </application>
 </manifest>

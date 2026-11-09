@@ -12,6 +12,37 @@
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
 
+### 未发布（main 上的测试构建，不对应任何 Release / tag）
+
+本段累积 4 个工作包的代码改动，全部合入 `main` 但**不打 tag、不发 Release、
+不升 versionName/versionCode、不部署官网版本卡片**；待电视机真机回归后统一发
+`v1.3.0`（versionCode 44）。当前 `dist` 中的测试包仍为 1.2.7 / 43，可覆盖安装。
+
+- **WP5 开机与常驻**：新增 `ReviveReceiver`（`USER_PRESENT` / `SCREEN_ON` /
+  `MY_PACKAGE_REPLACED` / `CONNECTIVITY_CHANGE` / 自定义 `REVIVE`）、
+  `GuardWatchdog`（`JobScheduler.setPersisted` + `AlarmManager` 双 15 分钟兜底）、
+  `onTaskRemoved` 2 秒拉起、`stopWithTask=false`；`BootPolicy` 扩厂商开机广播白名单，
+  新增 `shouldRevive()` 纯逻辑；`SettingsStore.lastStartVia()` 记录启动来源。
+  单独 receiver 是为了绕开 `RECEIVE_BOOT_COMPLETED` permission 对非保护广播的过滤。
+- **WP5 HOME 抗性**：`ACTION_CLOSE_SYSTEM_DIALOGS` 检测后调用既有
+  `rebuildOverlay()` 重抢窗口焦点；新增**默认关闭**的 `GuardAccessibilityService`
+  作为系统常驻看门狗（`canRetrieveWindowContent=false`），家长可到系统
+  「设置 → 无障碍 → 答题守护」手动开启。**HOME 键本身由系统保留，第三方无法拦截**；
+  不开启无障碍时只能做到检测 + 重抢焦点，不能保证盖住桌面。
+- **WP1 按组答题**：新增纯 Java `RoundPolicy`（默认一组 5 题、答对 60% 通过、
+  `CONTINUE/PASS/FAIL` 三态、整数 `minCorrect()`）；`SettingsStore` 加
+  `roundMode`（默认按组）/ `questionsPerRound` / `passPercent`；
+  `QuizOverlayService.answer()` 改为组结算，策略对象放 Service 层（跨 `bind()` 保留），
+  同组题目用 `usedInRound` 去重；`SettingsActivity` 新增「每组题量」「通过正确率」
+  两行（沿用 `addRow` + `track`，不禁用任何按钮，焦点链不变）；`OverlayQuizView`
+  的 `metaFor()` 显示第几题 / 需答对几题。答完未达标会重开一组，不会放行。
+- **门禁**：JVM 单测 `RoundPolicyTest`（21 项，总计 358）；`layout_contract` 新增
+  20 条断言（含「测试构建必须保持 1.2.7 / 43」）；`mutation_suite` 新增
+  CG/CH/CI/CJ/CK 五条负向变异。
+- **未验证**：小米电视关机→开机、待机→唤醒、运行中按 Home、切 App、强杀进程、
+  拔 WAN 六项真机场景；无障碍服务在厂商省电策略下的存活率；二维码与局域网
+  双后台（WP3）、文档重构（WP4）尚未落地。
+
 ## v1.2.7 (versionCode 43) — full per-question bank review, bank-v5, eleventh release
 
 Display version 1.2.6 -> **1.2.7**, `versionCode` 41 -> **43** (42 reserved

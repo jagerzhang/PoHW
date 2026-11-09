@@ -78,6 +78,12 @@ public final class SettingsStore implements PinGate.Store {
     // ---------- 开机自启 / 启动即守护 ----------
 
     /** 是否响应开机广播。默认关闭：是否随系统开机拉起，必须由家长显式选择并放行厂商自启动权限。 */
+    /** v1.3.0 未发布：最近一次守护由哪条路径拉起，供「自启可能被拦截」诊断。 */
+    public String lastStartVia() { return sp.getString("lastStartVia", "app"); }
+    public void lastStartVia(String v) {
+        sp.edit().putString("lastStartVia", v).commit();
+    }
+
     public boolean bootAutostart() { return sp.getBoolean("bootAutostart", false); }
     public void bootAutostart(boolean v) {
         sp.edit().putBoolean("bootAutostart", v).commit();
@@ -146,6 +152,27 @@ public final class SettingsStore implements PinGate.Store {
     public boolean autoContinueOnCorrect() { return sp.getBoolean("autoContinueOnCorrect", true); }
     public void autoContinueOnCorrect(boolean v) {
         sp.edit().putBoolean("autoContinueOnCorrect", v).commit();
+    }
+
+    /** v1.3.0 未发布：答题模式 0=单题 1=连续答对 2=按组（默认）。 */
+    public static final int ROUND_SINGLE = 0;
+    public static final int ROUND_STREAK = 1;
+    public static final int ROUND_GROUP = 2;
+    public int roundMode() { return clamp(sp.getInt("roundMode", ROUND_GROUP), 0, 2); }
+    public void roundMode(int v) {
+        sp.edit().putInt("roundMode", clamp(v, 0, 2)).commit();
+    }
+    /** 每组题量，默认 5，范围 1–20。 */
+    public int questionsPerRound() {
+        return clamp(sp.getInt("questionsPerRound", 5), 1, 20);
+    }
+    public void questionsPerRound(int v) {
+        sp.edit().putInt("questionsPerRound", clamp(v, 1, 20)).commit();
+    }
+    /** 通过正确率（百分比），默认 60。 */
+    public int passPercent() { return clamp(sp.getInt("passPercent", 60), 1, 100); }
+    public void passPercent(int v) {
+        sp.edit().putInt("passPercent", clamp(v, 1, 100)).commit();
     }
 
     public int difficultyLevel() { return clamp(sp.getInt("difficultyLevel", 0), 0, 3); }

@@ -69,6 +69,8 @@ public class SettingsActivity extends Activity {
     private Button rowBoot, rowAutoGuard, rowPause, rowResume;
     /** v1.2.5 在线版本更新：自动检查开关 / 状态 / 手动下载安装。 */
     private Button rowUpdate, btnUpdateInstall;
+    /** v1.3.0 未发布：按组答题的两项设置。 */
+    private Button rowRoundSize, rowPassRate;
     private TextView updateStatus;
     /** 防重入标志：绝不用 setEnabled(false) 禁用已登记焦点链的按钮。 */
     private boolean updateChecking = false, updateDownloading = false;
@@ -390,6 +392,32 @@ public class SettingsActivity extends Activity {
                 st.autoContinueOnCorrect(!st.autoContinueOnCorrect()); refreshRows();
             }
         });
+        rowRoundSize = addRow(quiz, "每组题量", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                int[] opts = {3, 5, 8, 10};
+                int cur = st.questionsPerRound();
+                int next = opts[0];
+                for (int i = 0; i < opts.length; i++) {
+                    if (opts[i] == cur) next = opts[(i + 1) % opts.length];
+                }
+                st.questionsPerRound(next);
+                refreshRows();
+            }
+        });
+        rowPassRate = addRow(quiz, "通过正确率", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                int[] opts = {60, 70, 80, 100};
+                int cur = st.passPercent();
+                int next = opts[0];
+                for (int i = 0; i < opts.length; i++) {
+                    if (opts[i] == cur) next = opts[(i + 1) % opts.length];
+                }
+                st.passPercent(next);
+                refreshRows();
+            }
+        });
+        note(quiz, "每组题量与通过正确率仅对「按组答题」生效，默认一组 5 题、答对 60% 通过；"
+                + "在「连续答对」行把门槛调回 1 题即可恢复旧版单题解锁。");
         note(quiz, "点击右侧取值即可循环切换，离开设置页时统一保存。");
         note(quiz, "题目难度为倾向加权（约 80% 按所选档抽题），默认「不限」不改变原有抽题行为；站点难度系数存在噪声，不保证绝对分档。");
         note(quiz, "默认：答对 1 题即过关、严格模式关、无冷却惩罚、全部题目、答对自动继续。「严格模式 / 冷却惩罚 / 出题偏好 / 题目难度」是可选开关，不动就和旧版一样。");
@@ -808,6 +836,8 @@ public class SettingsActivity extends Activity {
         rowDifficulty.setText(new String[]{"不限（默认）", "低 · 偏易", "中", "高 · 偏难"}[st.difficultyLevel()]);
         rowAutoContinue.setText(st.autoContinueOnCorrect()
                 ? "开启（答对直接继续）" : "关闭（需点继续观看）");
+        rowRoundSize.setText(st.questionsPerRound() + " 题 / 组（默认 5）");
+        rowPassRate.setText(st.passPercent() + "% 答对即通过（默认 60%）");
         rowSource.setText(st.questionSource() == SettingsStore.SOURCE_KNOWLEDGE_ONLY
                 ? "仅知识/计算题" : "全部题目");
         rowScope.setText(st.allSubjects() ? "全学科（含物理/历史等）" : "仅数 / 语 / 英");

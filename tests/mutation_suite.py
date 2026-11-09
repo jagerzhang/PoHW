@@ -46,10 +46,15 @@ PA = os.path.join(SRC, "PracticeActivity.java")
 PC = os.path.join(SRC, "PracticeConfig.java")
 UI = os.path.join(SRC, "UpdateInstaller.java")
 UCFG = os.path.join(SRC, "UpdateConfig.java")
+RP = os.path.join(SRC, "RoundPolicy.java")
+GW = os.path.join(SRC, "GuardWatchdog.java")
+OVL = os.path.join(SRC, "QuizOverlayService.java")
+AXML = os.path.join(ROOT, "app/res/xml/guard_accessibility.xml")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
 for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
-           RM, CH, SJS, CI, APNG, UP, CD, DP, MP, PA, PC, UI, UCFG):
+           RM, CH, SJS, CI, APNG, UP, CD, DP, MP, PA, PC, UI, UCFG,
+           RP, GW, OVL, AXML):
     BK[p] = os.path.join(BK_DIR, os.path.basename(p) + ".bk")
     shutil.copyfile(p, BK[p])
 ORIG = {p: hashlib.sha256(open(p, "rb").read()).hexdigest() for p in BK}
@@ -253,7 +258,8 @@ MUTATIONS = [
     ("BC", "unlock always returns true",
      lambda: replace(UP, 'return streak >= required;', 'return true;'), False, True, False),
     ("BD", "wrong answer no longer resets streak",
-     lambda: replace(O, '        unlock.onWrong();\n', '        // unlock.onWrong();\n'), False, True, False),
+     lambda: replace(O, 'if (roundMode == SettingsStore.ROUND_STREAK) unlock.onWrong();', ''),
+     False, True, False),
     ("BE", "question preference bypassed",
      lambda: replace(O, 'engine.setKnowledgeOnly(knowledgeOnly);', 'engine.setKnowledgeOnly(false);'), False, True, False),
     ("BF", "knowledge-only fallback loses the source constraint",
@@ -320,6 +326,19 @@ MUTATIONS = [
     ("CF", "update button disabled again, breaking the DPAD chain",
      lambda: replace(S, 'btnUpdateInstall.setText(p == null',
                      'btnUpdateInstall.setEnabled(p != null);\n              btnUpdateInstall.setText(p == null'), False, True, False),
+    ("CG", "group quiz falls back to a single question",
+     lambda: replace(RP, "DEFAULT_TARGET = 5", "DEFAULT_TARGET = 1"), False, True, False),
+    ("CH", "AlarmManager revive fallback removed",
+     lambda: replace(OVL, "GuardWatchdog.scheduleAlarm(this);", ""), False, True, False),
+    ("CI", "accessibility service starts reading window content",
+     lambda: replace(AXML, 'canRetrieveWindowContent="false"',
+                     'canRetrieveWindowContent="true"'), False, True, False),
+    ("CJ", "HOME detection removed",
+     lambda: replace(OVL, "Intent.ACTION_CLOSE_SYSTEM_DIALOGS",
+                     "Intent.ACTION_BATTERY_CHANGED"), False, True, False),
+    ("CK", "test build accidentally bumps the published version",
+     lambda: replace(MF, 'android:versionCode="43"', 'android:versionCode="44"'),
+     False, True, False),
 ]
 
 print("--- baseline ---")

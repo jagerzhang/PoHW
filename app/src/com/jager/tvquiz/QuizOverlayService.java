@@ -4,8 +4,10 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
@@ -42,6 +44,8 @@ public class QuizOverlayService extends Service {
     public static final String ACTION_SYNC = "com.jager.tvquiz.SYNC";
     /** 一次性 STOP 令牌；绝不把「已验证」布尔值作为授权依据。 */
     public static final String EXTRA_STOP_TOKEN = "com.jager.tvquiz.STOP_TOKEN";
+    /** 仅用于诊断：记录本次守护由哪条路径拉起（boot/revive/job/accessibility/taskRemoved）。 */
+    public static final String EXTRA_VIA = "com.jager.tvquiz.VIA";
 
     private static final String TAG = "PoHW.Guard";
     private static final int NOTIF_ID = 1;
@@ -51,6 +55,28 @@ public class QuizOverlayService extends Service {
     private static volatile boolean running = false;
     private static volatile boolean quizShowing = false;
     private static volatile int remainSec = 0;
+
+    /**
+     * v1.3.0 未发布：供 ReviveReceiver / GuardWatchdog / 无障碍服务复用的安全拉起入口。
+     * 家长主动关闭守护后（guardEnabled=false）不会被任何兜底擅自重新开启。
+     */
+    public static void ensureRunning(Context c, String via) {
+        if (isRunning()) return;
+        SettingsStore st = new SettingsStore(c);
+        if (!st.guardEnabled()) return;
+        if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(c)) return;
+        Intent i = new Intent(c, QuizOverlayService.class).setAction(ACTION_START);
+        if (via != null) i.putExtra(EXTRA_VIA, via);
+        try {
+            if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i);
+            else c.startService(i);
+            st.lastStartVia(via == null ? "unknown" : via);
+        } catch (Exception e) {
+            // SCREEN_ON / USER_PRESENT 不在 Android 12+ 后台启动 FGS 豁免白名单里，
+            // 被拒是预期行为：静默等下一次 Job / Alarm 兜底，不弹崩溃提示。
+            Log.w(TAG, "revive refused: " + e.getClass().getSimpleName());
+        }
+    }
 
     public static boolean isRunning() { return running; }
     public static boolean isQuizShowing() { return quizShowing; }
@@ -94,6 +120,12 @@ public class QuizOverlayService extends Service {
 
     // ---- v1.1.0 可选加固：四个开关默认全关，默认路径与 v1.0.2 逐字等价 ----
     private UnlockPolicy unlock = new UnlockPolicy(UnlockPolicy.DEFAULT_STREAK);
+    /** v1.3.0 未发布：按组答题策略对象，跨题保存在 Service 层。 */
+    private int roundMode = SettingsStore.ROUND_GROUP;
+    private RoundPolicy round = new RoundPolicy(RoundPolicy.DEFAULT_TARGET,
+            RoundPolicy.DEFAULT_PASS_PERCENT);
+    private final java.util.HashSet<String> usedInRound = new java.util.HashSet<String>();
+    private String pendingSwapHint = null;
     private final CooldownPolicy cooldown = new CooldownPolicy();
     private boolean strictOneShot = false;
     private boolean cooldownEnabled = false;
@@ -104,7 +136,11 @@ public class QuizOverlayService extends Service {
     private final Runnable pendingSwapTask = new Runnable() {
         @Override public void run() {
             pendingSwap = false;
-            if (quizShowing && quizView != null) swapQuestion(null);
+            if (quizShowing && quizView != null) {
+                String h = pendingSwapHint;
+                pendingSwapHint = null;
+                swapQuestion(h);
+            }
         }
     };
 
@@ -112,6 +148,23 @@ public class QuizOverlayService extends Service {
     private int focusRetry = 0;
     private boolean focusRecovering = false;
     private boolean overlayRebuilt = false;
+
+    /**
+     * v1.3.0 未发布：HOME 无法被第三方拦截（KEYCODE_HOME 由系统保留），
+     * 但系统按下时会广播 ACTION_CLOSE_SYSTEM_DIALOGS。收到后立即重建遮罩窗口，
+     * 让 WMS 重新评估层级并抢回遥控器焦点；倒计时在 Service 的 tick 里，不受影响。
+     */
+    private final BroadcastReceiver homeReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context c, Intent i) {
+            if (!quizShowing || quizView == null) return;
+            handler.post(new Runnable() {
+                @Override public void run() {
+                    if (quizShowing && quizView != null) rebuildOverlay();
+                }
+            });
+        }
+    };
+    private boolean homeReceiverRegistered = false;
 
     private final OverlayQuizView.Listener listener = new OverlayQuizView.Listener() {
         @Override public void onAnswer(int idx) { answer(idx); }
@@ -222,7 +275,17 @@ public class QuizOverlayService extends Service {
 
     @Override public IBinder onBind(Intent i) { return null; }
 
+    /** 最近任务划掉时部分系统会连带停止服务，2 秒后由前台服务通道拉回。 */
+    @Override public void onTaskRemoved(Intent rootIntent) {
+        GuardWatchdog.scheduleRestart(this, 2000L);
+        super.onTaskRemoved(rootIntent);
+    }
+
     @Override public void onDestroy() {
+        if (homeReceiverRegistered) {
+            try { unregisterReceiver(homeReceiver); } catch (Exception ignored) { }
+            homeReceiverRegistered = false;
+        }
         handler.removeCallbacks(tick);
         handler.removeCallbacks(focusCheck);
         handler.removeCallbacks(pendingSwapTask);
@@ -262,6 +325,15 @@ public class QuizOverlayService extends Service {
         }
         running = true;
         st.guardEnabled(true);
+        if (!homeReceiverRegistered) {
+            try {
+                registerReceiver(homeReceiver,
+                        new IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+                homeReceiverRegistered = true;
+            } catch (Exception e) { Log.w(TAG, "home receiver register failed", e); }
+        }
+        GuardWatchdog.schedule(this);
+        GuardWatchdog.scheduleAlarm(this);
         reload(true);
         // 冷却截止时间戳在进程重启后仍生效：把剩余秒数接回倒计时，
         // 不让 force-stop / 重启直接洗掉惩罚（仅当家长开启冷却）。
@@ -312,6 +384,8 @@ public class QuizOverlayService extends Service {
         if (first) BankRepository.installBuiltin(this, st);
         interval = st.intervalSec();
         unlock = new UnlockPolicy(st.unlockStreak());
+        roundMode = st.roundMode();
+        round = new RoundPolicy(st.questionsPerRound(), st.passPercent());
         strictOneShot = st.strictOneShot();
         cooldownEnabled = st.cooldownEnabled();
         knowledgeOnly = st.questionSource() == SettingsStore.SOURCE_KNOWLEDGE_ONLY;
@@ -375,9 +449,17 @@ public class QuizOverlayService extends Service {
     }
 
     private String metaFor(QuizEngine.Question q) {
-        int n = unlock.required();
-        String gate = n > 1 ? ("连续答对 " + n + " 题解锁 " + interval + " 秒")
-                            : ("答对解锁 " + interval + " 秒");
+        String gate;
+        if (roundMode == SettingsStore.ROUND_STREAK) {
+            int n = unlock.required();
+            gate = n > 1 ? ("连续答对 " + n + " 题解锁 " + interval + " 秒")
+                         : ("答对解锁 " + interval + " 秒");
+        } else if (roundMode == SettingsStore.ROUND_SINGLE) {
+            gate = "答对解锁 " + interval + " 秒";
+        } else {
+            gate = "一组 " + round.target() + " 题 · 需答对 " + round.minCorrect()
+                    + " 题 · 当前第 " + Math.min(round.answered() + 1, round.target()) + " 题";
+        }
         return st.gradeLabel() + " · " + Subjects.name(q.subject) + " "
                 + st.editionFor(q.subject) + " · " + gate;
     }
@@ -399,6 +481,10 @@ public class QuizOverlayService extends Service {
         final OverlayQuizView view = new OverlayQuizView(this, listener);
         view.setStrict(strictOneShot);
         unlock.reset();
+        round.reset();
+        usedInRound.clear();
+        usedInRound.add(current.key());
+        pendingSwapHint = null;
         cancelPendingSwap();
         view.bind(current, metaFor(current));
         quizView = view;
@@ -486,54 +572,81 @@ public class QuizOverlayService extends Service {
         QuizFlow flow = quizView.flow();
         int outcome = flow.submit(idx, current.answerIndex);
         if (outcome == QuizFlow.IGNORE) return;
+        boolean needSwap = (outcome == QuizFlow.SWAP);
+
         if (outcome == QuizFlow.CORRECT) {
             st.bumpCorrect();
             cancelPendingSwap();
             cooldown.reset();
             st.clearCooldown();
-            // 默认 required=1：第一次答对即解锁，与 v1.0.2 逐字等价。
-            if (!unlock.onCorrect()) {
-                swapQuestion(unlock.progress());
-                return;
+            if (roundMode == SettingsStore.ROUND_STREAK) {
+                if (!unlock.onCorrect()) { swapQuestion(unlock.progress()); return; }
+            } else if (roundMode == SettingsStore.ROUND_GROUP) {
+                int r = round.onAnswer(true);
+                if (r == RoundPolicy.CONTINUE) { swapQuestion(round.progress()); return; }
+                if (r == RoundPolicy.FAIL) {
+                    String msg = round.result(false);
+                    round.reset();
+                    usedInRound.clear();
+                    swapQuestion(msg);
+                    return;
+                }
             }
-            if (autoContinue) {
-                // 答对即继续：不显示「继续观看」按钮，且必须 post 出按键分发栈，
-                // 否则同步 removeViewImmediate() 会 detach 当前 ViewRootImpl。
-                quizView.correctAuto("✓ 答对啦！自动继续观看 " + interval + " 秒",
-                        current.explain);
-                handler.post(new Runnable() {
-                    @Override public void run() {
-                        if (quizShowing) finishQuiz();
-                    }
-                });
-                return;
-            }
-            quizView.correct("✓ 答对啦！继续观看 " + interval + " 秒", current.explain);
+            grantUnlock("✓ 答对啦！");
             return;
         }
+
         recordWrong(idx);
-        unlock.onWrong();
+        if (roundMode == SettingsStore.ROUND_STREAK) unlock.onWrong();
         int wait = applyCooldown();
-        boolean needSwap = (outcome == QuizFlow.SWAP);
+        String hint = AnswerPolicy.wrongHint(flow.wrongAttempts(), flow.wrongLimit());
+        if (needSwap && roundMode == SettingsStore.ROUND_GROUP) {
+            int r = round.onAnswer(false);
+            if (r == RoundPolicy.CONTINUE) {
+                hint = hint + " · " + round.progress();
+            } else if (r == RoundPolicy.FAIL) {
+                hint = round.result(false);
+                round.reset();
+                usedInRound.clear();
+            } else {
+                // 本组最后一道答错，但正确率已达标：仍按通过处理。
+                grantUnlock("✓ 本组通过！");
+                return;
+            }
+        }
         if (needSwap && wait > 0) {
             // 冷却只延迟「换题」，不拦截「答对」：遮罩仍在，答对通道始终开放。
             pendingSwap = true;
+            pendingSwapHint = hint;
             quizView.cooldown("✗ 答错了，" + wait + " 秒后换新题（答对可直接继续）");
             handler.removeCallbacks(pendingSwapTask);
             handler.postDelayed(pendingSwapTask, wait * 1000L);
             return;
         }
-        if (needSwap) {
-            swapQuestion(AnswerPolicy.wrongHint(flow.wrongAttempts(), flow.wrongLimit()));
-            return;
+        if (needSwap) { swapQuestion(hint); return; }
+        quizView.wrong(idx, hint);
+    }
+
+    /** 组任务达标的统一解锁出口；答对自动继续时必须 post 出按键分发栈。 */
+    private void grantUnlock(String prefix) {
+        if (autoContinue) {
+            quizView.correctAuto(prefix + "自动继续观看 " + interval + " 秒", current.explain);
+            handler.post(new Runnable() {
+                @Override public void run() { if (quizShowing) finishQuiz(); }
+            });
+        } else {
+            quizView.correct(prefix + "继续观看 " + interval + " 秒", current.explain);
         }
-        quizView.wrong(idx, AnswerPolicy.wrongHint(flow.wrongAttempts(), flow.wrongLimit()));
     }
 
     /** 原地换题：窗口不 remove/add，避免再次触发窗口焦点状态机。 */
     private void swapQuestion(String hintMsg) {
         cancelPendingSwap();
         QuizEngine.Question next = drawFresh();
+        for (int i = 0; i < 8 && next != null && usedInRound.contains(next.key()); i++) {
+            next = drawFresh();
+        }
+        if (next != null) usedInRound.add(next.key());
         if (next != null && !next.key().equals(current.key())) {
             current = next;
             st.bumpQuestioned();
@@ -589,6 +702,9 @@ public class QuizOverlayService extends Service {
         cooldown.reset();
         st.clearCooldown();
         unlock.reset();
+        round.reset();
+        usedInRound.clear();
+        pendingSwapHint = null;
         hideQuiz();
         if (media != null) media.quizFinished(st);
         remainSec = interval;

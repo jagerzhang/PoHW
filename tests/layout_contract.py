@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="43"' in _mf, "manifest versionCode advances to 43")
-check('VERSION_CODE="43"' in b, "build script versionCode advances to 43")
+check('android:versionCode="44"' in _mf, "manifest versionCode advances to 44")
+check('VERSION_CODE="44"' in b, "build script versionCode advances to 44")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -354,8 +354,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="43"' in _mf, "manifest versionCode advances to 43")
-check('VERSION_CODE="43"' in b, "build script versionCode advances to 43")
+check('android:versionCode="44"' in _mf, "manifest versionCode advances to 44")
+check('VERSION_CODE="44"' in b, "build script versionCode advances to 44")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -405,8 +405,8 @@ check("保留所有权利 · Proof of Homework" in _site and "jagerzhang · PoHW
       "footer copyright uses the new wording")
 check('id="year"' not in _site and 'getElementById("year")' not in _site_js,
       "footer year is fixed in HTML, not overwritten by JS")
-check("versionCode 43" in _site and "versionCode 21" in _site_js,
-      "site reports the latest build 43 and keeps the v1.0.2 card note")
+check("versionCode 44" in _site and "versionCode 21" in _site_js,
+      "site reports the latest build 44 and keeps the v1.0.2 card note")
 check("addView(bankRow, rowLp())" in s,
       "bank update and auto-update share one side-by-side row")
 check("track(btnCheck, rowSync)" in s,
@@ -433,10 +433,11 @@ _ch21 = read(os.path.join(ROOT, "CHANGELOG.md"))
 _rm21 = read(os.path.join(ROOT, "README.md"))
 _ci21 = os.path.join(ROOT, ".github/workflows/ci.yml")
 _ci_text = read(_ci21) if os.path.isfile(_ci21) else ""
-check('android:versionName="1.2.7"' in _mf21
-      and 'VERSION_NAME="1.2.7"' in _b21,
-      "display version is 1.2.7 in both manifest and build script")
-check(_site_js.count('version: "v1.2.7"') == 1
+check('android:versionName="1.3.0"' in _mf21
+      and 'VERSION_NAME="1.3.0"' in _b21,
+      "display version is 1.3.0 in both manifest and build script")
+check(_site_js.count('version: "v1.3.0"') == 1
+      and _site_js.count('version: "v1.2.7"') == 1
       and _site_js.count('version: "v1.2.6"') == 1
       and _site_js.count('version: "v1.2.5"') == 1
       and _site_js.count('version: "v1.2.4"') == 1
@@ -447,9 +448,10 @@ check(_site_js.count('version: "v1.2.7"') == 1
       and _site_js.count('version: "v1.0.2"') == 1
       and _site_js.count('version: "v1.0.1"') == 1
       and _site_js.count('version: "v1.0.0"') == 1
-      and _site_js.count('version: "') == 11,
-      "site release notes expose exactly eleven distinct release versions")
-check(_ch21.count("\n## v1.2.7") == 1
+      and _site_js.count('version: "') == 12,
+      "site release notes expose exactly twelve distinct release versions")
+check(_ch21.count("\n## v1.3.0") == 1
+      and _ch21.count("\n## v1.2.7") == 1
       and _ch21.count("\n## v1.2.6") == 1
       and _ch21.count("\n## v1.2.5") == 1
       and _ch21.count("\n## v1.2.4") == 1 and _ch21.count("\n## v1.2.3") == 1 and _ch21.count("\n## v1.2.2") == 1
@@ -458,7 +460,7 @@ check(_ch21.count("\n## v1.2.7") == 1
       and _ch21.count("\n## v1.0.2") == 1 and _ch21.count("\n## v1.0.1") == 1
       and _ch21.count("\n## v1.0.0") == 1
       and _ch21.count("\n## v0.9.0-re") == 1,
-      "changelog groups builds into eleven releases plus one dev archive")
+      "changelog groups builds into twelve releases plus one dev archive")
 check("## Dev build v6.0.0" not in _ch21 and "## Dev build v5.0.0" not in _ch21
       and "## v4.1.0" not in _ch21 and "## v1 - v3" not in _ch21,
       "pre-1.0 dev-build sections are collapsed into the 0.9.0-re archive")
@@ -780,8 +782,8 @@ check('canRetrieveWindowContent="false"' in _ax130
       "accessibility watchdog is read-only and permission bound")
 check('stopWithTask="false"' in _mf130,
       "guard service survives task removal")
-check('android:versionName="1.2.7"' in _mf130 and 'android:versionCode="43"' in _mf130,
-      "unreleased test build keeps the published version numbers")
+check('android:versionName="1.3.0"' in _mf130 and 'android:versionCode="44"' in _mf130,
+      "v1.3.0 is the published version in manifest")
 
 
 # ---- v1.3.0 未发布：答题选项长文本不得被固定高度网格裁切 ----
@@ -824,8 +826,9 @@ check("text.length() == 0) return -1" in _qr131,
       "QR encoder rejects empty input")
 check(os.path.isfile(os.path.join(ROOT, "tests/src/QrEncoderTest.java")),
       "QR encoder has a standard-library matrix comparison test")
-check("ServerSocket(PORT)" in _lan131 and "PORT = 8099" in _lan131,
-      "LAN admin listens on a fixed local port only")
+check("ServerSocket(p)" in _lan131 and "PORT = 8099" in _lan131
+      and "PORT_TRIES" in _lan131,
+      "LAN admin prefers 8099 and only falls back when the port is occupied")
 check("github.com" not in _lan131 and "http://" not in _api131,
       "LAN admin has no outbound internet endpoints")
 check("authorized(" in _api131 and "lockUntil" in _api131
@@ -854,5 +857,23 @@ check("QuizTextSizer.optionsFitTv(q.options)" in _o130,
       "guard skips questions whose options cannot fit a TV four-choice card")
 check("TV_OPTION_MAX_CHARS = 48" in _qts130,
       "TV option length limit is pinned")
+
+
+# ---- v1.3.0：手机管理后台回归修复 ----
+_api130b = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/AdminApi.java"))
+_lan130 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/LanServer.java"))
+check("getPackageManager().getPackageInfo(" in _api130b
+      and '\"version\":\"1.3.0\"' not in _api130b,
+      "LAN status reads the real app version instead of a hardcoded string")
+check("Character.isWhitespace(body.charAt(k))" in _api130b,
+      "config API parses every numeric field, not just the last one")
+check("PORT_TRIES" in _lan130 and "activePort" in _lan130,
+      "LAN server falls back to another port when 8099 is occupied")
+check('"/".equals(path) || "/index.html".equals(path)' in _lan130
+      and 'lowPath.contains("%2e")' in _lan130,
+      "LAN server only serves whitelisted paths and rejects traversal")
+check("QuizTextSizer.questionFitTv(q.text)" in strip_comments(read(os.path.join(
+        ROOT, "app/src/com/jager/tvquiz/QuizOverlayService.java"))),
+      "guard skips stems that cannot be shown or answered on TV")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

@@ -95,7 +95,8 @@ public class PairActivity extends Activity {
                     + "数据只在本机与局域网内流转，不访问互联网、不上传任何数据。");
         } else {
             qr.setImageBitmap(null);
-            hint.setText("默认关闭；开启后仅监听局域网 8099 端口，随时可关闭。\n"
+            hint.setText("默认关闭；开启后仅监听局域网 " + LanServer.port()
+                    + " 端口（被占用会自动顺延），随时可关闭。\n"
                     + "原来的电视端家长设置完整保留，可继续作为备用。");
         }
     }

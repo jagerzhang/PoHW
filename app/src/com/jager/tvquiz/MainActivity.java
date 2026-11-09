@@ -74,6 +74,8 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 100);
         }
         readVersion();
+        // v1.3.0: 家长已开启的局域网后台在 APP 重启后自动恢复。
+        if (st.lanAdminEnabled()) LanServer.start(this);
         startUpdateCheck(false);
         setContentView(buildView());
         render();

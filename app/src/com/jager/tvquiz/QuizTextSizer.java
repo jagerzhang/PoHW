@@ -4,6 +4,13 @@ public final class QuizTextSizer {
 
     /** 遥控器四选一卡片能完整显示的最长选项字数；超过则在抽题时跳过。 */
     public static final int TV_OPTION_MAX_CHARS = 48;
+    /** 题干超过此长度在 1080p 卡片里放不下；依赖课文原文、多子项的题也无法独立作答。 */
+    public static final int TV_STEM_MAX_CHARS = 90;
+    private static final String[] STEM_DEPENDENT = {"本文结尾", "第四节诗",
+            "加横线", "加线", "这段材料", "上文"};
+    private static final java.util.regex.Pattern MULTI_SUBITEM =
+            java.util.regex.Pattern.compile(
+                    "(^|[^0-9.])\\d{1,2}\\s*[.．、]\\s*[^，。]{0,10}[（(]\\s*[）)]");
 
     private QuizTextSizer() {}
 
@@ -46,6 +53,14 @@ public final class QuizTextSizer {
             if (s != null && s.length() > TV_OPTION_MAX_CHARS) return false;
         }
         return true;
+    }
+
+    /** 只挡可确证的显示/结构问题，不按学科内容判超纲（需教材目录才能签认）。 */
+    public static boolean questionFitTv(String text) {
+        if (text == null) return true;
+        if (text.length() > TV_STEM_MAX_CHARS) return false;
+        for (String k : STEM_DEPENDENT) if (text.contains(k)) return false;
+        return !MULTI_SUBITEM.matcher(text).find();
     }
 
     /** 选项网格内单个按钮的可用文字高度（dp），用于 JVM 回归估算。 */

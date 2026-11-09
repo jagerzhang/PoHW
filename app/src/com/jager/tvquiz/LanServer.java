@@ -22,6 +22,9 @@ import java.util.Collections;
 public final class LanServer {
 
     public static final int PORT = 8099;
+    /** 8099 被同设备其它应用占用时依次顺延，二维码与提示都用实际端口。 */
+    private static final int PORT_TRIES = 10;
+    private static volatile int activePort = PORT;
     private static final String TAG = "PoHW.Lan";
     private static volatile ServerSocket server = null;
     private static volatile Thread acceptThread = null;
@@ -31,7 +34,14 @@ public final class LanServer {
     public static synchronized boolean start(final Context c) {
         if (server != null) return true;
         try {
-            server = new ServerSocket(PORT);
+            for (int p = PORT; p < PORT + PORT_TRIES; p++) {
+                try {
+                    server = new ServerSocket(p);
+                    activePort = p;
+                    break;
+                } catch (Exception ignored) { }
+            }
+            if (server == null) throw new IllegalStateException("no free LAN port");
             AdminApi.reset();
             acceptThread = new Thread(new Runnable() {
                 @Override public void run() {
@@ -84,7 +94,8 @@ public final class LanServer {
         return "127.0.0.1";
     }
 
-    public static String url() { return "http://" + localIp() + ":" + PORT + "/"; }
+    public static int port() { return activePort; }
+    public static String url() { return "http://" + localIp() + ":" + activePort + "/"; }
 
     private static void handle(Context c, Socket s) {
         BufferedReader r = null;
@@ -130,12 +141,22 @@ public final class LanServer {
                 out = res.json.getBytes("UTF-8");
                 type = "application/json; charset=utf-8";
             } else {
-                String name = "index.html";
-                if ("/app.js".equals(path)) name = "app.js";
+                String name = null;
+                if ("/".equals(path) || "/index.html".equals(path)) name = "index.html";
+                else if ("/app.js".equals(path)) name = "app.js";
                 else if ("/style.css".equals(path)) name = "style.css";
-                out = AdminAssets.read(c, name);
-                type = AdminAssets.type(name);
-                if (out == null) { code = 404; out = "not found".getBytes("UTF-8"); }
+                String lowPath = path.toLowerCase(java.util.Locale.ROOT);
+                if (path.contains("..") || lowPath.contains("%2e")
+                        || lowPath.contains("%5c")) name = null;
+                if (name == null) {
+                    code = 404;
+                    out = "not found".getBytes("UTF-8");
+                    type = "text/plain; charset=utf-8";
+                } else {
+                    out = AdminAssets.read(c, name);
+                    type = AdminAssets.type(name);
+                    if (out == null) { code = 404; out = "not found".getBytes("UTF-8"); }
+                }
             }
             OutputStream os = s.getOutputStream();
             String head = "HTTP/1.1 " + code + " " + (code == 200 ? "OK" : "Error") + "\r\n"

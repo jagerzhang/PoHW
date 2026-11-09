@@ -1,9 +1,10 @@
 # Changelog
 
-> **版本口径**：对外发布 11 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 12 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
 > **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）、
-> **v1.2.4**（37）、**v1.2.5**（39）、**v1.2.6**（41）、**v1.2.7**（43）。
+> **v1.2.4**（37）、**v1.2.5**（39）、**v1.2.6**（41）、**v1.2.7**（43）、
+> **v1.3.0**（44）。
 > `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
@@ -12,12 +13,23 @@
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
 
-### 未发布（main 上的测试构建，不对应任何 Release / tag）
+## v1.3.0 (versionCode 44) — LAN admin, group quiz, wake resilience, UI regression
 
-本段累积 4 个工作包的代码改动，全部合入 `main` 但**不打 tag、不发 Release、
-不升 versionName/versionCode、不部署官网版本卡片**；待电视机真机回归后统一发
-`v1.3.0`（versionCode 44）。当前 `dist` 中的测试包仍为 1.2.7 / 43，可覆盖安装。
+Display version 1.2.7 -> **1.3.0**, `versionCode` 43 -> **44**, same release
+keystore (SHA-256 `76eb6063b574...26172`). Twelfth published release.
+This release collects four work packages that were merged into `main` as
+unpublished test builds, plus the fixes found by the first full emulator UI
+regression. The question bank stays at bank-v5 / 3989 questions.
 
+- **手机管理后台回归修复**：局域网管理页 18 项自动化回归发现并修复
+  ① `/api/config` 只有最后一个数字字段生效（`jsonInt` 会把下一个 key 的
+  引号当值）；② 路径穿越请求返回 200 首页（现只放行白名单路径并拒绝 `..`
+  与编码变体）；③ 状态接口版本硬编码 1.2.7（改为读取真实 versionName）；
+  ④ 8099 被同设备其它应用占用时后台静默启动失败（现自动顺延到 8100–8108，
+  二维码与实际端口一致）。另补上「家长开启后 APP 重启自动恢复后台」。
+- **题库题干兜底**：`questionFitTv()` 在抽题层挡掉 >90 字题干、依赖课文原文
+  与多子项编号的题（均为逐题复核已确证的结构问题），不按学科内容判超纲。
+- **README 开源化**：首屏补协议/技术栈/快速导航/双后台说明，弱化版本台账。
 - **UI 回归补修（模拟器实测）**：局域网模拟器调试通道抓到 4 个选项 54–71 字的
   极端题，18sp + 3 行上限仍把末行裁成半截。`QuizTextSizer.optionSp()` 增加
   14/16/19/22sp 分档（>48 字降到 14sp），选项放宽到 4 行；新增 O13–O15 JVM

@@ -1,9 +1,9 @@
 # Changelog
 
-> **版本口径**：对外发布 10 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 11 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
 > **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）、
-> **v1.2.4**（37）、**v1.2.5**（39）、**v1.2.6**（41）。
+> **v1.2.4**（37）、**v1.2.5**（39）、**v1.2.6**（41）、**v1.2.7**（43）。
 > `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
@@ -11,6 +11,59 @@
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.2.7 (versionCode 43) — full per-question bank review, bank-v5, eleventh release
+
+Display version 1.2.6 -> **1.2.7**, `versionCode` 41 -> **43** (42 reserved
+for the Android 4.0 legacy branch), same release keystore
+(SHA-256 `76eb6063b574...26172`). Eleventh published release.
+
+**Scope**: question bank only. No app logic, guard, settings or update flow
+changed. Bank `pohw-2026.11.07-bank-v4` -> **`pohw-2026.11.09-bank-v5`**,
+3964 -> **3989** questions.
+
+**Method**: all 3964 rows were flagged individually, 169 suspicious items were
+read one by one (stem / four options / answer / explanation), 46 drop
+candidates were re-read, over-broad rules were tightened, and 14 false-positive
+drops were restored by hand. The signed per-question ledger, the flag dump and
+the 60 original multiple-choice supplement are committed under
+`tools/quizbank/review/`. `tools/quizbank/apply_review.py` reproduces bank-v5
+from bank-v4 plus that ledger (idempotent).
+
+**Applied in this release**:
+
+- Drop 34 rows: 32 confirmed-broken items (senior-high Chinese appreciation
+  questions that depend on unseen source texts, options spliced with later
+  sub-items or a fifth option, multi-part letter questions, one wrong answer),
+  one item with an ambiguous answer, and one duplicate transcription.
+- Relocate 12 first-stage pinyin / alphabetical-order items from grades 4-5
+  down to grade 2, with their difficulty labels re-set.
+- Repair glued English tokens in 4 questions that the wordlist rules could not catch
+  (`Look!LiMing`, `onhisT-shirt`, `At4:00`, `Lucyhas`, `Jackhas`), 2 typos,
+  17 `[]` placeholders, 775 whitespace / underscore stem noise, and 270
+  `topic` entries whose volume label contradicted the grade label.
+- Insert 59 original four-option questions (one more was merged as an upgraded
+  three-step explanation because the same stem already existed). Every new
+  item carries a content domain, ability dimension, a curriculum-stage
+  difficulty label, a neutral `通用(课标)` edition with empty term/unit, and a
+  `判据 → 步骤 → 迁移` explanation. Thin cells: grade 6 Chinese 5 -> 17,
+  grade 2 English 14 -> 26, grade 3 Chinese 67 -> 75.
+- Recompute `qhash` / `qtype` / `meta` / `knowledge` / `chapters`.
+- Two same-stem-different-options pairs keep their original bracket marker so
+  that normalising it would not collapse distinct questions into one.
+
+**Deliberately not done in this release** (no rule-based mass rewriting):
+65 items whose correct option is much longer than the distractors still need
+hand-authored distractors; ~3.5k one-line explanations still need upgrading;
+57 possible out-of-stage items (mainly clock-angle questions) are kept and
+marked `待核` pending a curriculum check; trailing `( )` blanks are kept
+because removing them without semantic rewriting produces half sentences;
+textbook edition / unit alignment still needs the student's actual textbook
+table of contents.
+
+- Gates: `BANK_QUALITY_OK questions=3989 qtype=3975/14 practice_combos=144`,
+  `BANK_DISTRIBUTION_OK`, `STUDY_SCOPE_OK`, `LAYOUT_CONTRACT_OK 285`,
+  `JVM_TESTS_OK 337`, `MUTATION_SUITE_OK 84/84`, `BUILD_OK version=1.2.7 code=43`.
 
 ## v1.2.6 (versionCode 41) — update card focus chain and feedback fix
 

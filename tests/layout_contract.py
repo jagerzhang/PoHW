@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="41"' in _mf, "manifest versionCode advances to 41")
-check('VERSION_CODE="41"' in b, "build script versionCode advances to 41")
+check('android:versionCode="43"' in _mf, "manifest versionCode advances to 43")
+check('VERSION_CODE="43"' in b, "build script versionCode advances to 43")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -354,8 +354,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="41"' in _mf, "manifest versionCode advances to 41")
-check('VERSION_CODE="41"' in b, "build script versionCode advances to 41")
+check('android:versionCode="43"' in _mf, "manifest versionCode advances to 43")
+check('VERSION_CODE="43"' in b, "build script versionCode advances to 43")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -405,8 +405,8 @@ check("保留所有权利 · Proof of Homework" in _site and "jagerzhang · PoHW
       "footer copyright uses the new wording")
 check('id="year"' not in _site and 'getElementById("year")' not in _site_js,
       "footer year is fixed in HTML, not overwritten by JS")
-check("versionCode 41" in _site and "versionCode 21" in _site_js,
-      "site reports the latest build 41 and keeps the v1.0.2 card note")
+check("versionCode 43" in _site and "versionCode 21" in _site_js,
+      "site reports the latest build 43 and keeps the v1.0.2 card note")
 check("addView(bankRow, rowLp())" in s,
       "bank update and auto-update share one side-by-side row")
 check("track(btnCheck, rowSync)" in s,
@@ -433,10 +433,11 @@ _ch21 = read(os.path.join(ROOT, "CHANGELOG.md"))
 _rm21 = read(os.path.join(ROOT, "README.md"))
 _ci21 = os.path.join(ROOT, ".github/workflows/ci.yml")
 _ci_text = read(_ci21) if os.path.isfile(_ci21) else ""
-check('android:versionName="1.2.6"' in _mf21
-      and 'VERSION_NAME="1.2.6"' in _b21,
-      "display version is 1.2.6 in both manifest and build script")
-check(_site_js.count('version: "v1.2.6"') == 1
+check('android:versionName="1.2.7"' in _mf21
+      and 'VERSION_NAME="1.2.7"' in _b21,
+      "display version is 1.2.7 in both manifest and build script")
+check(_site_js.count('version: "v1.2.7"') == 1
+      and _site_js.count('version: "v1.2.6"') == 1
       and _site_js.count('version: "v1.2.5"') == 1
       and _site_js.count('version: "v1.2.4"') == 1
       and _site_js.count('version: "v1.2.3"') == 1
@@ -446,9 +447,10 @@ check(_site_js.count('version: "v1.2.6"') == 1
       and _site_js.count('version: "v1.0.2"') == 1
       and _site_js.count('version: "v1.0.1"') == 1
       and _site_js.count('version: "v1.0.0"') == 1
-      and _site_js.count('version: "') == 10,
-      "site release notes expose exactly ten distinct release versions")
-check(_ch21.count("\n## v1.2.6") == 1
+      and _site_js.count('version: "') == 11,
+      "site release notes expose exactly eleven distinct release versions")
+check(_ch21.count("\n## v1.2.7") == 1
+      and _ch21.count("\n## v1.2.6") == 1
       and _ch21.count("\n## v1.2.5") == 1
       and _ch21.count("\n## v1.2.4") == 1 and _ch21.count("\n## v1.2.3") == 1 and _ch21.count("\n## v1.2.2") == 1
       and _ch21.count("\n## v1.2.1") == 1
@@ -456,7 +458,7 @@ check(_ch21.count("\n## v1.2.6") == 1
       and _ch21.count("\n## v1.0.2") == 1 and _ch21.count("\n## v1.0.1") == 1
       and _ch21.count("\n## v1.0.0") == 1
       and _ch21.count("\n## v0.9.0-re") == 1,
-      "changelog groups builds into ten releases plus one dev archive")
+      "changelog groups builds into eleven releases plus one dev archive")
 check("## Dev build v6.0.0" not in _ch21 and "## Dev build v5.0.0" not in _ch21
       and "## v4.1.0" not in _ch21 and "## v1 - v3" not in _ch21,
       "pre-1.0 dev-build sections are collapsed into the 0.9.0-re archive")
@@ -717,5 +719,15 @@ check('https://github.com/jagerzhang/PoHW/releases"' in _dl125
       "historical releases remain reachable")
 check('must-revalidate' in _edge125,
       "latest APK aliases are revalidated so the CDN never serves a stale package")
+
+
+# ---- v1.2.7：逐题复核成果必须真的随 APK 发布 ----
+_bv127 = read(os.path.join(ROOT, "app/assets/quiz.db.version")).strip()
+check("bank-v5" in _bv127, "shipped bank is the reviewed bank-v5")
+check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/apply_review.py")),
+      "bank-v5 has a reproducible review-apply script")
+for _f127 in ("disposition-final.csv", "supplement-v1.json", "per-question-flags.csv"):
+    check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/review", _f127)),
+          "review evidence file " + _f127 + " is committed")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

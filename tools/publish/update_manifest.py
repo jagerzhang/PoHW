@@ -127,7 +127,9 @@ def check(strict=False):
             fail('%s bad latest url' % key)
         if not isinstance(ch['size'], int) or ch['size'] <= 0:
             fail('%s bad size' % key)
-    apk = os.path.join(ROOT, 'dist', 'PoHW-%s.apk' % name)
+    apk = os.path.join(ROOT, 'dist', 'PoHW-v%s.apk' % name)
+    if strict and not os.path.isfile(apk):
+        fail('missing build artifact: ' + apk)
     if strict and os.path.isfile(apk):
         sha, size = sha_and_size(apk)
         if sha != m['sha256'] or size != m['size']:

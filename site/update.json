@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "publishedAt": "2026-11-07",
+  "publishedAt": "2026-11-09",
   "main": {
-    "versionName": "1.2.6",
-    "versionCode": 41,
+    "versionName": "1.2.7",
+    "versionCode": 43,
     "minSdk": 21,
     "latest": "https://pohw.zhangge.net/dl/latest-main.apk",
-    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.2.6.apk",
-    "sha256": "0099b4cab0821430612e497140cc5e3d8c2101689b3bbba96933990608fcdc4c",
-    "size": 1029632,
-    "notes": "家长设置版本更新交互修复"
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.2.7.apk",
+    "sha256": "6ff6ddc09a085a7cf320ff5e1ed55d58f3ebbf64ce220507b4df194bcbdd05ec",
+    "size": 1037824,
+    "notes": "题库逐题复核与原创补题（bank-v5）"
   },
   "legacy": {
     "versionName": "1.2.4",

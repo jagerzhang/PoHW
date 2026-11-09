@@ -38,6 +38,10 @@ public class BootReceiver extends BroadcastReceiver {
             // BOOT_COMPLETED 属于后台启动 FGS 的豁免广播，Android 8+ 允许直接拉起。
             if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(s);
             else c.startService(s);
+            // 双兜底：国产电视常拦截开机广播或掐掉后台，持久化 Job + 重复闹钟
+            // 保证最迟约 15 分钟把守护拉回来。
+            GuardWatchdog.schedule(c);
+            GuardWatchdog.scheduleAlarm(c);
         } catch (Exception e) {
             Log.e(TAG, "开机拉起守护服务失败", e);
         }

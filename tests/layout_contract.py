@@ -730,4 +730,57 @@ for _f127 in ("disposition-final.csv", "supplement-v1.json", "per-question-flags
     check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/review", _f127)),
           "review evidence file " + _f127 + " is committed")
 
+
+# ---- v1.3.0 未发布：按组答题 + 休眠唤醒 / HOME 兜底 ----
+_src130 = os.path.join(ROOT, "app/src/com/jager/tvquiz")
+_rp130 = read(os.path.join(_src130, "RoundPolicy.java"))
+_gw130 = read(os.path.join(_src130, "GuardWatchdog.java"))
+_bp130 = read(os.path.join(_src130, "BootPolicy.java"))
+_o130 = strip_comments(read(os.path.join(_src130, "QuizOverlayService.java")))
+_sto130 = strip_comments(read(os.path.join(_src130, "SettingsStore.java")))
+_mf130 = read(os.path.join(ROOT, "app/AndroidManifest.xml"))
+_ax130 = read(os.path.join(ROOT, "app/res/xml/guard_accessibility.xml"))
+_sa130 = strip_comments(read(SET))
+check("DEFAULT_TARGET = 5" in _rp130 and "DEFAULT_PASS_PERCENT = 60" in _rp130,
+      "group quiz defaults to 5 questions at 60 percent")
+check("minCorrect()" in _rp130 and "CONTINUE" in _rp130
+      and "PASS" in _rp130 and "FAIL" in _rp130,
+      "round policy exposes three verdicts and integer pass threshold")
+check('getInt("roundMode", ROUND_GROUP)' in _sto130
+      and 'getInt("questionsPerRound", 5)' in _sto130
+      and 'getInt("passPercent", 60)' in _sto130,
+      "settings defaults enable group quiz of 5 at 60 percent")
+check("unlock.onWrong()" in _o130,
+      "wrong answer still resets the streak in streak mode")
+check("private RoundPolicy round" in _o130 and "round.onAnswer(" in _o130,
+      "group progress lives in the service, not the per-question view")
+check("grantUnlock(" in _o130 and "usedInRound" in _o130,
+      "group pass has one unlock path and avoids repeating questions")
+check("rowRoundSize = addRow" in _sa130 and "rowPassRate = addRow" in _sa130,
+      "both group setting rows are declared")
+check("rowRoundSize.setText" in _sa130 and "rowPassRate.setText" in _sa130,
+      "both group setting rows refresh their values")
+check("shouldRevive(" in _bp130 and "USER_PRESENT" in _bp130,
+      "revive actions have their own policy")
+check('android.intent.action.USER_PRESENT' in _mf130
+      and 'com.jager.tvquiz.REVIVE' in _mf130,
+      "revive receiver listens for wake, unlock and self-check")
+check('.ReviveReceiver' in _mf130
+      and 'android:permission="android.permission.RECEIVE_BOOT_COMPLETED"' in _mf130,
+      "revive receiver is separate from the protected boot receiver")
+check("setPersisted(true)" in _gw130 and "setInexactRepeating" in _gw130,
+      "watchdog uses both JobScheduler and AlarmManager")
+check("GuardWatchdog.schedule(this)" in _o130
+      and "GuardWatchdog.scheduleAlarm(this)" in _o130,
+      "guard service actually schedules both watchdog paths")
+check("ACTION_CLOSE_SYSTEM_DIALOGS" in _o130 and "rebuildOverlay()" in _o130,
+      "HOME is detected and the overlay is rebuilt to regain focus")
+check('canRetrieveWindowContent="false"' in _ax130
+      and "BIND_ACCESSIBILITY_SERVICE" in _mf130,
+      "accessibility watchdog is read-only and permission bound")
+check('stopWithTask="false"' in _mf130,
+      "guard service survives task removal")
+check('android:versionName="1.2.7"' in _mf130 and 'android:versionCode="43"' in _mf130,
+      "unreleased test build keeps the published version numbers")
+
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

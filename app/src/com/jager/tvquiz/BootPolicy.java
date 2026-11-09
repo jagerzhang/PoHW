@@ -12,9 +12,35 @@ public final class BootPolicy {
     public static final String BOOT = "android.intent.action.BOOT_COMPLETED";
     public static final String QUICKBOOT = "android.intent.action.QUICKBOOT_POWERON";
     public static final String HTC_QUICKBOOT = "com.htc.intent.action.QUICKBOOT_POWERON";
+    public static final String LOCKED_BOOT = "android.intent.action.LOCKED_BOOT_COMPLETED";
+    public static final String TCL_BOOT = "com.tcl.android.intent.action.BOOT_COMPLETED";
+    public static final String HISENSE_BOOT = "com.hisense.intent.action.BOOT_COMPLETED";
+
+    public static final String USER_PRESENT = "android.intent.action.USER_PRESENT";
+    public static final String SCREEN_ON = "android.intent.action.SCREEN_ON";
+    public static final String MY_PACKAGE_REPLACED = "android.intent.action.MY_PACKAGE_REPLACED";
+    public static final String CONNECTIVITY_CHANGE = "android.net.conn.CONNECTIVITY_CHANGE";
+    public static final String REVIVE = "com.jager.tvquiz.REVIVE";
 
     public static boolean isBootAction(String action) {
-        return BOOT.equals(action) || QUICKBOOT.equals(action) || HTC_QUICKBOOT.equals(action);
+        return BOOT.equals(action) || QUICKBOOT.equals(action) || HTC_QUICKBOOT.equals(action)
+                || LOCKED_BOOT.equals(action) || TCL_BOOT.equals(action) || HISENSE_BOOT.equals(action);
+    }
+
+    /** 非开机类「复活」广播：待机唤醒、解锁、覆盖安装、网络变化、定时自检。 */
+    public static boolean isReviveAction(String action) {
+        return USER_PRESENT.equals(action) || SCREEN_ON.equals(action)
+                || MY_PACKAGE_REPLACED.equals(action) || CONNECTIVITY_CHANGE.equals(action)
+                || REVIVE.equals(action);
+    }
+
+    /**
+     * 只在家长此前已开启守护、且悬浮窗可用时才恢复；家长主动关闭守护后不擅自拉起。
+     * 与 isBootAction 分开：开机路径还要看 bootAutostart / autoGuardOnBoot 两个开关。
+     */
+    public static boolean shouldRevive(boolean guardEnabled, boolean canDrawOverlays,
+                                       String action) {
+        return isReviveAction(action) && guardEnabled && canDrawOverlays;
     }
 
     /**

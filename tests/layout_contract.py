@@ -794,9 +794,12 @@ check("optionSp(" in _qts130 and "optionFits(" in _qts130,
 check("QuizTextSizer.optionSp(q.options)" in _ov130
       and "opts[i].setTextSize(" in _ov130,
       "all four option buttons share the dynamic size")
-check("setMaxLines(3)" in _ov130 and "setIncludeFontPadding(false)" in _ov130
+check("setMaxLines(4)" in _ov130 and "setIncludeFontPadding(false)" in _ov130
       and "setEllipsize(null)" in _ov130,
-      "option buttons allow three lines without font padding or ellipsis")
+      "option buttons allow four lines without font padding or ellipsis")
+check("if (max > 48) return 14;" in _qts130
+      and "if (max > 24) return 16;" in _qts130,
+      "long options use the safe 16sp/14sp bands, never 19sp+")
 check("Ui.dp(c, 200)" in _ov130 and "Ui.dp(c, 186)" not in _ov130,
       "option grid has enough height for wrapped text")
 check(os.path.isfile(os.path.join(ROOT, "tests/src/QuizTextSizerTest.java")),
@@ -842,5 +845,14 @@ check("QrEncoder.encode(url)" in _pair131 and "Bitmap.createBitmap" in _pair131,
       "pairing screen renders the QR locally")
 check("不访问互联网" in read(os.path.join(ROOT, "site/index.html")),
       "site copy no longer claims zero network traffic")
+
+
+# ---- v1.3.0：遥控器四选一不接收会被裁切的超长选项题 ----
+_o130 = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/QuizOverlayService.java")))
+check("QuizTextSizer.optionsFitTv(q.options)" in _o130,
+      "guard skips questions whose options cannot fit a TV four-choice card")
+check("TV_OPTION_MAX_CHARS = 48" in _qts130,
+      "TV option length limit is pinned")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

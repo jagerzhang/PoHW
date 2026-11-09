@@ -21,12 +21,12 @@ public class QuizTextSizerTest {
 
         ok("O01 短选项保持 24sp",
                 QuizTextSizer.optionSp(new String[]{"15", "16", "17", "18"}) == 24);
-        ok("O02 中长选项 22sp",
-                QuizTextSizer.optionSp(new String[]{longText(25), "B", "C", "D"}) == 22);
-        ok("O03 长选项 20sp",
-                QuizTextSizer.optionSp(new String[]{longText(36), "B", "C", "D"}) == 20);
-        ok("O04 超长选项 18sp",
-                QuizTextSizer.optionSp(new String[]{longText(50), "B", "C", "D"}) == 18);
+        ok("O02 中长选项 16sp",
+                QuizTextSizer.optionSp(new String[]{longText(25), "B", "C", "D"}) == 16);
+        ok("O03 长选项 16sp",
+                QuizTextSizer.optionSp(new String[]{longText(40), "B", "C", "D"}) == 16);
+        ok("O04 超长选项 14sp",
+                QuizTextSizer.optionSp(new String[]{longText(50), "B", "C", "D"}) == 14);
         ok("O05 空选项不崩", QuizTextSizer.optionSp(null) == 24);
         ok("O06 含 null 不崩",
                 QuizTextSizer.optionSp(new String[]{null, "B", null, "D"}) == 24);
@@ -40,6 +40,24 @@ public class QuizTextSizerTest {
         ok("O12 超长选项在 200dp 内安全",
                 QuizTextSizer.optionFits(200, 8, 8,
                         QuizTextSizer.optionSp(new String[]{longText(50)}), 3));
+
+        ok("O13 71 字极端选项降到 14sp",
+                QuizTextSizer.optionSp(new String[]{longText(71), "B", "C", "D"}) == 14);
+        ok("O14 极端选项 4 行 14sp 放得下",
+                QuizTextSizer.optionFits(200, 8, 8,
+                        QuizTextSizer.optionSp(new String[]{longText(71)}), 4));
+        ok("O15 24sp 四行放不下",
+                !QuizTextSizer.optionFits(200, 8, 8, 24, 4));
+
+        ok("O16 48 字选项适合 TV",
+                QuizTextSizer.optionsFitTv(new String[]{longText(48), "B", "C", "D"}));
+        ok("O17 82 字选项被过滤",
+                !QuizTextSizer.optionsFitTv(new String[]{longText(82), "B", "C", "D"}));
+        ok("O18 null 选项不崩", QuizTextSizer.optionsFitTv(null));
+
+        ok("O19 35 字题 16sp 三行放得下",
+                QuizTextSizer.optionFits(200, 8, 8,
+                        QuizTextSizer.optionSp(new String[]{longText(35)}), 3));
 
         System.out.println("VERIFY=" + (fail == 0 ? "PASS" : "FAIL")
                 + " total=" + pass);

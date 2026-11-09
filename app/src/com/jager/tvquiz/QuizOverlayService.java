@@ -433,19 +433,18 @@ public class QuizOverlayService extends Service {
 
     /** 每次弹题都换一道与上一题不同的题；单题题库会退回同一题，由 answer() 处理。 */
     private QuizEngine.Question drawFresh() {
-        QuizEngine.Question q = null;
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 12; i++) {
             if (engine == null) break;
-            q = engine.next();
+            QuizEngine.Question q = engine.next();
             if (q == null) break;
             String k = q.key();
-            if (!k.equals(lastKey)) {
-                lastKey = k;
-                return q;
-            }
+            if (k.equals(lastKey)) continue;
+            // 选项过长在遥控器四选一里必然被固定高度裁切，直接跳过换一道。
+            if (!QuizTextSizer.optionsFitTv(q.options)) continue;
+            lastKey = k;
+            return q;
         }
-        if (q != null) lastKey = q.key();
-        return q;
+        return null;
     }
 
     private String metaFor(QuizEngine.Question q) {

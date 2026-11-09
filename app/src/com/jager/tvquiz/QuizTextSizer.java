@@ -2,6 +2,9 @@ package com.jager.tvquiz;
 
 public final class QuizTextSizer {
 
+    /** 遥控器四选一卡片能完整显示的最长选项字数；超过则在抽题时跳过。 */
+    public static final int TV_OPTION_MAX_CHARS = 48;
+
     private QuizTextSizer() {}
 
     public static int sp(String s) {
@@ -26,10 +29,23 @@ public final class QuizTextSizer {
                 if (s != null) max = Math.max(max, s.length());
             }
         }
-        if (max > 44) return 18;
-        if (max > 32) return 20;
-        if (max > 20) return 22;
+        // 模拟器 ADB 回归抓到 54-71 字的极端选项：18sp 需要 4 行，3 行上限
+        // 会把末行裁成半截。按长度继续降档，配合 4 行上限保证整段可读。
+        // 19sp/22sp 档在 3 行时仍会顶出固定高度按钮（模拟器 35 字题实测）。
+        // 统一压到 16sp：3 行 16sp 约 56dp，按钮文字区约 68dp，留足余量。
+        if (max > 48) return 14;
+        if (max > 24) return 16;
+        if (max > 14) return 20;
         return 24;
+    }
+
+    /** 超长选项题不适合 TV 四选一：字号再小也会被固定高度的按钮裁掉末行。 */
+    public static boolean optionsFitTv(String[] options) {
+        if (options == null) return true;
+        for (String s : options) {
+            if (s != null && s.length() > TV_OPTION_MAX_CHARS) return false;
+        }
+        return true;
     }
 
     /** 选项网格内单个按钮的可用文字高度（dp），用于 JVM 回归估算。 */

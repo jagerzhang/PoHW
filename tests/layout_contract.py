@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="45"' in _mf, "manifest versionCode advances to 45")
-check('VERSION_CODE="45"' in b, "build script versionCode advances to 45")
+check('android:versionCode="46"' in _mf, "manifest versionCode advances to 46")
+check('VERSION_CODE="46"' in b, "build script versionCode advances to 46")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -354,8 +354,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
       "runtime regression asserts the fallback order, not just final answers")
-check('android:versionCode="45"' in _mf, "manifest versionCode advances to 45")
-check('VERSION_CODE="45"' in b, "build script versionCode advances to 45")
+check('android:versionCode="46"' in _mf, "manifest versionCode advances to 46")
+check('VERSION_CODE="46"' in b, "build script versionCode advances to 46")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -405,8 +405,8 @@ check("保留所有权利 · Proof of Homework" in _site and "jagerzhang · PoHW
       "footer copyright uses the new wording")
 check('id="year"' not in _site and 'getElementById("year")' not in _site_js,
       "footer year is fixed in HTML, not overwritten by JS")
-check("versionCode 45" in _site and "versionCode 21" in _site_js,
-      "site reports the latest build 45 and keeps the v1.0.2 card note")
+check("versionCode 46" in _site and "versionCode 21" in _site_js,
+      "site reports the latest build 46 and keeps the v1.0.2 card note")
 check("addView(bankRow, rowLp())" in s,
       "bank update and auto-update share one side-by-side row")
 check("track(btnCheck, rowSync)" in s,
@@ -433,10 +433,11 @@ _ch21 = read(os.path.join(ROOT, "CHANGELOG.md"))
 _rm21 = read(os.path.join(ROOT, "README.md"))
 _ci21 = os.path.join(ROOT, ".github/workflows/ci.yml")
 _ci_text = read(_ci21) if os.path.isfile(_ci21) else ""
-check('android:versionName="1.3.1"' in _mf21
-      and 'VERSION_NAME="1.3.1"' in _b21,
-      "display version is 1.3.1 in both manifest and build script")
-check(_site_js.count('version: "v1.3.1"') == 1
+check('android:versionName="1.3.2"' in _mf21
+      and 'VERSION_NAME="1.3.2"' in _b21,
+      "display version is 1.3.2 in both manifest and build script")
+check(_site_js.count('version: "v1.3.2"') == 1
+      and _site_js.count('version: "v1.3.1"') == 1
       and _site_js.count('version: "v1.3.0"') == 1
       and _site_js.count('version: "v1.2.7"') == 1
       and _site_js.count('version: "v1.2.6"') == 1
@@ -449,9 +450,10 @@ check(_site_js.count('version: "v1.3.1"') == 1
       and _site_js.count('version: "v1.0.2"') == 1
       and _site_js.count('version: "v1.0.1"') == 1
       and _site_js.count('version: "v1.0.0"') == 1
-      and _site_js.count('version: "') == 13,
-      "site release notes expose exactly thirteen distinct release versions")
-check(_ch21.count("\n## v1.3.1") == 1
+      and _site_js.count('version: "') == 14,
+      "site release notes expose exactly fourteen distinct release versions")
+check(_ch21.count("\n## v1.3.2") == 1
+      and _ch21.count("\n## v1.3.1") == 1
       and _ch21.count("\n## v1.3.0") == 1
       and _ch21.count("\n## v1.2.7") == 1
       and _ch21.count("\n## v1.2.6") == 1
@@ -462,7 +464,7 @@ check(_ch21.count("\n## v1.3.1") == 1
       and _ch21.count("\n## v1.0.2") == 1 and _ch21.count("\n## v1.0.1") == 1
       and _ch21.count("\n## v1.0.0") == 1
       and _ch21.count("\n## v0.9.0-re") == 1,
-      "changelog groups builds into thirteen releases plus one dev archive")
+      "changelog groups builds into fourteen releases plus one dev archive")
 check("## Dev build v6.0.0" not in _ch21 and "## Dev build v5.0.0" not in _ch21
       and "## v4.1.0" not in _ch21 and "## v1 - v3" not in _ch21,
       "pre-1.0 dev-build sections are collapsed into the 0.9.0-re archive")
@@ -727,9 +729,11 @@ check('must-revalidate' in _edge125,
 
 # ---- v1.2.7：逐题复核成果必须真的随 APK 发布 ----
 _bv127 = read(os.path.join(ROOT, "app/assets/quiz.db.version")).strip()
-check("bank-v5" in _bv127, "shipped bank is the reviewed bank-v5")
+check("bank-v6" in _bv127, "shipped bank is the reviewed bank-v6")
 check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/apply_review.py")),
-      "bank-v5 has a reproducible review-apply script")
+      "bank-v5 review-apply script is still committed as history")
+check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/apply_drop_v132.py")),
+      "bank-v6 has a reproducible per-question drop script")
 for _f127 in ("disposition-final.csv", "supplement-v1.json", "per-question-flags.csv"):
     check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/review", _f127)),
           "review evidence file " + _f127 + " is committed")
@@ -784,8 +788,8 @@ check('canRetrieveWindowContent="false"' in _ax130
       "accessibility watchdog is read-only and permission bound")
 check('stopWithTask="false"' in _mf130,
       "guard service survives task removal")
-check('android:versionName="1.3.1"' in _mf130 and 'android:versionCode="45"' in _mf130,
-      "v1.3.1 is the published version in manifest")
+check('android:versionName="1.3.2"' in _mf130 and 'android:versionCode="46"' in _mf130,
+      "v1.3.2 is the published version in manifest")
 
 
 # ---- v1.3.0 未发布：答题选项长文本不得被固定高度网格裁切 ----
@@ -904,5 +908,26 @@ check("手机扫码管理" in _mf131v and "LanServer.url()" in _mf131v,
       "home screen shows the QR entry path and the live LAN URL")
 check(os.path.isfile(os.path.join(ROOT, "tests/src/StartGuardTest.java")),
       "first-use PIN gate has a JVM test")
+
+# ---- v1.3.2：逐题签认剔除真的落到 shipped bank ----
+import csv as _csv132
+import sqlite3 as _sq132
+_drop132 = os.path.join(ROOT, "tools/quizbank/review/drop-v132.csv")
+_qts132 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizTextSizer.java"))
+check(os.path.isfile(_drop132), "signed-off drop list is committed")
+with io.open(_drop132, encoding="utf-8-sig") as _fh132:
+    _ids132 = [r["id"] for r in _csv132.DictReader(_fh132)]
+check(len(_ids132) == 54 and len(set(_ids132)) == 54,
+      "drop list contains 54 distinct signed-off questions")
+_db132 = _sq132.connect(os.path.join(ROOT, "app/assets/quiz.db"))
+_alive132 = [i for i in _ids132
+             if _db132.execute("select 1 from questions where id=?", (i,)).fetchone()]
+check(not _alive132, "all signed-off questions are absent from the shipped bank")
+check(_db132.execute("select count(*) from questions").fetchone()[0] == 3935,
+      "shipped bank holds exactly 3935 questions after bank-v6 cleanup")
+_db132.close()
+check("NUMBERED_ITEM" in _qts132 and "countMatches" in _qts132
+      and "TV_MAX_NUMBERED_ITEMS" in _qts132,
+      "TV layer filters numbered-sequence questions beyond the data cleanup")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

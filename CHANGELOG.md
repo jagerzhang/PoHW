@@ -1,10 +1,10 @@
 # Changelog
 
-> **版本口径**：对外发布 13 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 14 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
 > **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）、
 > **v1.2.4**（37）、**v1.2.5**（39）、**v1.2.6**（41）、**v1.2.7**（43）、
-> **v1.3.0**（44）、**v1.3.1**（45）。
+> **v1.3.0**（44）、**v1.3.1**（45）、**v1.3.2**（46）。
 > `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
@@ -12,6 +12,33 @@
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.3.2 (versionCode 46) — bank-v6 per-question cleanup
+
+Display version 1.3.1 -> **1.3.2**, `versionCode` 45 -> **46**, same release
+keystore (SHA-256 `76eb6063b574...26172`). Fourteenth published release.
+
+Two user-reported questions (a grade-3 clock-angle item with a 77.5 degree
+answer, and a 7-item numbered Chinese pinyin-order item) triggered a full
+re-read of the review ledger. Root cause: v1.2.7 explicitly deferred 57
+`REVIEW_SUPERGRADE` items to "the next round"; `apply_review.py` never applied
+them, so all 57 were still shipped with their historical low grades.
+
+- **逐题签认剔除 54 道**：69 道候选逐题核读，54 道确证剔除 —— 31 道钟表
+  角度/半度角、4 道编号排序题、以及三角形三边关系、百分数、圆面积、镜面
+  钟表、《论语》通假、五选项残缺题等；15 道规则误报的合理题（3 时整成直角、
+  分针从 4 走到 8 经过 20 分钟等）保留。题库 **3989 -> 3935**，版本戳
+  `pohw-2026.11.10-bank-v6`。
+- **处置可重放**：`tools/quizbank/review/drop-v132.csv` +
+  `tools/quizbank/apply_drop_v132.py`（`--apply` / `--check` / `--ledger`），
+  布局契约直接查 shipped `quiz.db` 断言 54 道 id 全部不存在、总题数 3935，
+  避免下次重建把处置洗掉。
+- **抽题层兜底**：`QuizTextSizer` 新增 `NUMBERED_ITEM` 计数，题干或选项出现
+  >=3 个 `(1)(2)(3)` 编号序列时跳过；补 5 项 JVM 用例。只按呈现结构判断，
+  不按学科内容判超纲。
+- **回归**：LAYOUT_CONTRACT 351、JVM_TESTS 413、BANK_QUALITY 3935 /
+  qtype 3921-14 / practice_combos 144、题库分布与进度门禁、MUTATION 97/97、
+  模拟器实抽复核全绿。低年级各格无空洞（g1 334 / g2 229 / g3 549）。
 
 ## v1.3.1 (versionCode 45) — own LAN port, mandatory first-use PIN, visible QR
 

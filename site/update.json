@@ -2,14 +2,14 @@
   "schema": 1,
   "publishedAt": "2026-11-10",
   "main": {
-    "versionName": "1.3.1",
-    "versionCode": 45,
+    "versionName": "1.3.2",
+    "versionCode": 46,
     "minSdk": 21,
     "latest": "https://pohw.zhangge.net/dl/latest-main.apk",
-    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.1.apk",
-    "sha256": "4295730d7c31c4ce1b870f4a75d4acda8bb40a09dd23cb504e0f6f21cef18c5f",
-    "size": 1054487,
-    "notes": "v1.3.1 独立局域网端口 18730、首次开启守护强制设置密码、二维码入口与自动展示修复"
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.2.apk",
+    "sha256": "f3da74df1c2739c859efbd04cf294bd2c3d2d5f493b6ad4d6f0236c3751cf2aa",
+    "size": 1046295,
+    "notes": "v1.3.2 逐题剔除 54 道学段错配 / TV 不适配题，题库 bank-v6 / 3,935 道"
   },
   "legacy": {
     "versionName": "1.2.4",

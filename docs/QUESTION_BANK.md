@@ -2,7 +2,7 @@
 
 ## 一句话结论
 
-`app/assets/quiz.db` 当前为 **`pohw-2026.11.09-bank-v5`**，共 **3989 道题**，
+`app/assets/quiz.db` 当前为 **`pohw-2026.11.10-bank-v6`**，共 **3935 道题**，
 覆盖小学 1–6 年级语数外，每题带明确的 `grade`、`difficulty` 与 `difficulty_level`。
 题目由本项目按课标自编的低年级题，与整理自互联网公开渠道、经逐题校验清洗后的题目组成。
 

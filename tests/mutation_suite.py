@@ -52,6 +52,10 @@ OVL = os.path.join(SRC, "QuizOverlayService.java")
 AXML = os.path.join(ROOT, "app/res/xml/guard_accessibility.xml")
 OVLQ = os.path.join(SRC, "OverlayQuizView.java")
 ADMAS = os.path.join(SRC, "AdminAssets.java")
+API = os.path.join(SRC, "AdminApi.java")
+AIDX = os.path.join(ROOT, "app/assets/admin/index.html")
+AJS = os.path.join(ROOT, "app/assets/admin/app.js")
+ACSS = os.path.join(ROOT, "app/assets/admin/style.css")
 QRJ = os.path.join(SRC, "QrEncoder.java")
 QTS = os.path.join(SRC, "QuizTextSizer.java")
 GP = os.path.join(SRC, "GuardPolicy.java")
@@ -62,11 +66,13 @@ LAN = os.path.join(SRC, "LanServer.java")
 SGT = os.path.join(ROOT, "tests/src/StartGuardTest.java")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
-for p in (M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
+for _i, p in enumerate((M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
            RM, CH, SJS, CI, APNG, UP, CD, DP, MP, PA, PC, UI, UCFG,
            RP, GW, OVL, AXML, OVLQ, ADMAS, QRJ, QTS,
-           GP, BR, PV, PAIR, LAN, SGT):
-    BK[p] = os.path.join(BK_DIR, os.path.basename(p) + ".bk")
+           GP, BR, PV, PAIR, LAN, SGT, API, AIDX, AJS, ACSS)):
+    # 不同目录下的同名文件（site/index.html 与 admin/index.html）必须用不同备份名，
+    # 否则 restore() 会把手机管理页写回官网首页。
+    BK[p] = os.path.join(BK_DIR, "%03d_%s.bk" % (_i, os.path.basename(p)))
     shutil.copyfile(p, BK[p])
 ORIG = {p: hashlib.sha256(open(p, "rb").read()).hexdigest() for p in BK}
 FAIL = []
@@ -216,9 +222,8 @@ MUTATIONS = [
     ("AJ", "service drops study scope injection",
      lambda: replace(O, "engine.setStudyScope(SyllabusAssets.get(this), st.termIndex(), st.unitLimit());",
                      "// study scope dropped"), False, True, False),
-    ("AK", "edition isolation removed from unit filter",
-     lambda: replace(D, 'unitW += " AND edition_family = ?";',
-                     'unitW += "";'), True, False, False),
+    ("AK", "edition-system isolation removed from quiz pools",
+     lambda: replace(D, 'if (fams.length > 0) {', 'if (false) {'), False, True, False),
     ("AL", "legacy 30-minute slogan restored",
      lambda: replace(SITE, '<p class="hero-tagline">答对题目，无限续租！</p>',
                      '<p class="hero-tagline">答对一题，续租 30 分钟。</p>'),
@@ -377,6 +382,22 @@ MUTATIONS = [
     ("CS", "guard stops skipping over-long TV options",
      lambda: replace(OVL, "QuizTextSizer.optionsFitTv(q.options)", "true"),
      False, True, False),
+    ("CU", "edition-system injection removed from guard service",
+     lambda: replace(O, 'engine.setEditionMode(st.editionMode());',
+                     '// edition mode dropped'), False, True, False),
+    ("CV", "QR entry button loses its visible label",
+     lambda: replace(S, 'rowQr.setText("点开扫码 ›");',
+                     '// no label'), False, True, False),
+    ("CW", "setting rows clipped back to two lines",
+     lambda: replace(S, 'b.setMaxLines(4);', 'b.setMaxLines(2);'), False, True, False),
+    ("CX", "LAN config drops numeric range validation",
+     lambda: replace(os.path.join(SRC, "AdminApi.java"),
+                     'st.questionsPerRound(clamp(v, 1, 10))',
+                     'st.questionsPerRound(v)'), False, True, False),
+    ("CY", "LAN admin exposes the online bank URL",
+     lambda: replace(os.path.join(SRC, "AdminApi.java"),
+                     '"w0", "w1", "w2", "w3"',
+                     '"w0", "w1", "w2", "w3", "bankUrl"'), False, True, False),
 ]
 
 print("--- baseline ---")
@@ -387,7 +408,14 @@ if base.returncode != 0:
 
 for name, label, apply_mut, with_build, need_contract, need_distro in MUTATIONS:
     restore()
-    apply_mut()
+    try:
+        apply_mut()
+    except Exception as _e:
+        # 锚点失配时也必须还原，绝不能把变异态留在工作区污染后续构建。
+        restore()
+        print("MUT_%s_ANCHOR_FAIL: %s" % (name, _e))
+        FAIL.append(name + " anchor")
+        break
     c = contract()
     if need_contract:
         if c.returncode == 0:

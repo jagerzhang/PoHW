@@ -1031,11 +1031,60 @@ _qd134 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizDb.java"))
 check(_db134.execute("select count(*) from questions where term in ('上','下')")
       .fetchone()[0] == 9544,
       "every shipped question carries a real textbook term")
-check("edition_family = ?" in _qd134,
-      "unit filtering is isolated by edition family")
+check("familiesFor(" in _qd134 and "editionWhere(" in _qd134
+      and "if (fams.length > 0) {" in _qd134,
+      "quiz pools are isolated by the selected edition system")
+check("EDITION_SIX_THREE" in read(os.path.join(ROOT, "app/src/com/jager/tvquiz/Syllabus.java"))
+      and "EDITION_FIVE_FOUR" in read(os.path.join(ROOT, "app/src/com/jager/tvquiz/Syllabus.java"))
+      and "systemFamilies" in read(os.path.join(ROOT, "app/src/com/jager/tvquiz/Syllabus.java")),
+      "syllabus carries independent per-system unit tables")
 check("WHERE grade<=? AND subject=?" in _qd134
       and _qd134.count("grade<=?") >= 4,
       "quiz pools still cap by grade and keep subject isolation")
 _db134.close()
+
+
+# ---- v1.3.4：手机端全量设置 / 学制切换 / 二维码文案 / 长文案不裁切 ----
+_api134 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/AdminApi.java"))
+_set134 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsActivity.java"))
+_svc134 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizOverlayService.java"))
+_syl134 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/Syllabus.java"))
+_js134 = read(os.path.join(ROOT, "app/assets/admin/app.js"))
+_html134 = read(os.path.join(ROOT, "app/assets/admin/index.html"))
+_css134 = read(os.path.join(ROOT, "app/assets/admin/style.css"))
+_keys134 = ("grade", "interval", "questionsPerRound", "passPercent", "roundMode",
+            "termIndex", "unitLimit", "editionMode", "unlockStreak",
+            "questionSource", "difficultyLevel", "syncIndex",
+            "w0", "w1", "w2", "w3", "allSubjects", "strictOneShot",
+            "cooldownEnabled", "autoContinueOnCorrect", "bootAutostart",
+            "autoGuardOnBoot", "pauseOnQuiz", "resumePlayback", "autoCheckUpdate")
+check(all(('"' + k + '"') in _api134 for k in _keys134)
+      and _api134.count("NUM_KEYS") >= 2 and "BOOL_KEYS" in _api134
+      and "statusJson(" in _api134 and "applyConfig(" in _api134,
+      "LAN admin reads and writes almost every parent setting")
+check(all(('f_' + k) in _js134 or ('"' + k + '"') in _js134 for k in _keys134),
+      "phone admin page exposes a control for every writable setting")
+check('clamp(v, 1, 10)' in _api134 and 'clamp(v, 1, 100)' in _api134
+      and 'Syllabus.EDITION_LABELS.length - 1' in _api134
+      and "for (int x : SettingsStore.INTERVALS)" in _api134,
+      "LAN admin validates ranges and enumerations before writing")
+check('"bankUrl"' not in _api134 and "clearWrong" not in _api134
+      and "setPin(" not in _api134 and "lanAdminEnabled(" not in _api134,
+      "LAN admin never exposes destructive or security-sensitive operations")
+check("jsonBool(" in _api134 and "jsonInt(" in _api134
+      and "Character.isWhitespace(body.charAt(k))" in _api134,
+      "LAN admin parses numbers and booleans field by field")
+check("editionMode" in _api134 and "教材学制" in _js134
+      and "EDITION_LABELS" in _syl134 and "EDITION_LABELS" in _api134
+      and 'setEditionMode(st.editionMode())' in _svc134,
+      "edition system is switchable from both TV and phone")
+check('rowQr.setText("点开扫码 ›")' in _set134
+      and 'addRow(quiz, "手机扫码管理"' in _set134,
+      "QR entry button carries a visible label")
+check(_set134.count("setMaxLines(4)") >= 4 and "setMaxLines(2)" not in _set134,
+      "long setting values are never clipped to two lines")
+check("word-break:break-word" in _css134 and "white-space:normal" in _css134
+      and 'id="form"' in _html134 and "保存并生效" in _html134,
+      "phone page wraps long labels and renders the full form")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

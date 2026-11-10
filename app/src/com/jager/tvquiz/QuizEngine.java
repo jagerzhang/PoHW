@@ -107,6 +107,7 @@ public final class QuizEngine {
     private Syllabus syllabus;
     private int termIndex = Syllabus.TERM_ALL;
     private int unitLimit = 0;
+    private int editionMode = 0;
 
     /** 兼容旧调用：第 4 槽为 0（不出其他学科）。 */
     public QuizEngine(int grade, String edition, int mathW, int chineseW, int englishW) {
@@ -159,6 +160,12 @@ public final class QuizEngine {
     public int termIndex() { return termIndex; }
     public int unitLimit() { return unitLimit; }
 
+    /** 学制切换独立于学期/单元注入，保持 setStudyScope 原签名不变。 */
+    public void setEditionMode(int v) {
+        editionMode = (v == Syllabus.EDITION_SIX_THREE || v == Syllabus.EDITION_FIVE_FOUR)
+                ? v : Syllabus.EDITION_AUTO;
+    }
+
     /** true: allow the other-subject pool; the ratio still comes from SubjectWeights. */
     public void setAllSubjects(boolean v) {
         this.allSubjects = v;
@@ -196,7 +203,7 @@ public final class QuizEngine {
         if (hasDb) {
             boolean matchLevel = DifficultyPolicy.useLevel(difficultyLevel, r.nextInt(100));
             Question q = db.random(grade, s, allSubjects, syllabus, termIndex, unitLimit,
-                    knowledgeOnly, difficultyLevel, matchLevel);
+                    knowledgeOnly, difficultyLevel, matchLevel, editionMode);
             if (q != null) return q;
         }
         if (hasBank) return list.get(r.nextInt(list.size()));

@@ -9,12 +9,13 @@
 <section id="login"><h2>验证家长密码</h2>
 <input id="pin" type="password" inputmode="numeric" placeholder="4-8 位数字密码" maxlength="8">
 <button id="loginBtn">进入管理</button><p id="loginMsg" class="msg"></p></section>
-<section id="panel" hidden><h2>当前状态</h2>
-<div id="status" class="grid"></div>
-<h2>答题设置</h2>
-<label>每组题量 <input id="n" type="number" min="1" max="20"></label>
-<label>通过正确率 % <input id="p" type="number" min="1" max="100"></label>
-<label>出题频率（秒） <input id="i" type="number" min="15" max="1800"></label>
-<button id="saveBtn">保存并生效</button><p id="saveMsg" class="msg"></p>
-<p class="tip">设置会立即通知电视上的守护服务；电视端家长设置仍可继续使用。</p>
+<section id="panel" hidden>
+  <h2>当前状态</h2>
+  <div id="status" class="grid"></div>
+  <div id="form"></div>
+  <button id="saveBtn">保存并生效</button>
+  <button id="reloadBtn" class="ghost">重新读取电视设置</button>
+  <p id="saveMsg" class="msg"></p>
+  <p class="tip">设置会立即通知电视上的守护服务；电视端家长设置仍可继续使用。
+  家长密码、错题库清空、关闭手机管理、在线题库地址等敏感项只能在电视上操作。</p>
 </section></main><script src="/app.js"></script></body></html>

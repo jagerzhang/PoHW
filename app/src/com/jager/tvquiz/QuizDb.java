@@ -309,6 +309,15 @@ public final class QuizDb {
                                       Syllabus syllabus, int termIndex, int unitLimit,
                                       boolean knowledgeOnly, int difficultyLevel,
                                       boolean matchLevel) {
+        return random(grade, subject, allSubjects, syllabus, termIndex, unitLimit,
+                knowledgeOnly, difficultyLevel, matchLevel, Syllabus.EDITION_AUTO);
+    }
+
+    /** 学制（自动 / 六三制 / 五四制）独立于单元限制，进入除最终保底外的所有层。 */
+    public QuizEngine.Question random(int grade, int subject, boolean allSubjects,
+                                      Syllabus syllabus, int termIndex, int unitLimit,
+                                      boolean knowledgeOnly, int difficultyLevel,
+                                      boolean matchLevel, int editionMode) {
         String diffW = matchLevel ? DifficultyPolicy.predicate(difficultyLevel) : "";
         String diffRoot = matchLevel ? DifficultyPolicy.rootPredicate(difficultyLevel) : "";
         int s = Subjects.norm(subject);
@@ -334,22 +343,27 @@ public final class QuizDb {
 
         // bank-v9 起每题都有真实册次与单元：进度谓词由两条出题路径共用，
         // 偏好模式也必须遵守家长选的上/下册与已学单元，绝不偷偷放宽到别的册次。
+        int em = (editionMode == Syllabus.EDITION_SIX_THREE
+                || editionMode == Syllabus.EDITION_FIVE_FOUR)
+                ? editionMode : Syllabus.EDITION_AUTO;
         String termW = Syllabus.termWhere(termIndex);
         // 其他学科池与未覆盖的册没有有序单元表：只做学期过滤，绝不假装精确。
+        // 同一 (年级,册次,学科) 下可能有多套教材，U1 完全不是一回事；
+        // 单元别名取自当前学制自己的进度表，版本族约束已在基础池里。
         String[] names = (syllabus != null && unitLimit > 0 && !other)
-                ? syllabus.matchNames(grade, termIndex, s, unitLimit) : new String[0];
+                ? syllabus.matchNames(grade, termIndex, s, unitLimit, em) : new String[0];
         String unitW = Syllabus.unitWhere(names);
         String[] unitA = Syllabus.unitArgs(names);
-        if (names.length > 0) {
-            // 同一 (年级,册次,学科) 下可能有多套教材，U1 完全不是一回事；
-            // 按进度表选定的版本族隔离，绝不把别的教材同一单元序号的题串进来。
-            unitW += " AND edition_family = ?";
-            String ed = syllabus == null ? ""
-                    : syllabus.editionFor(grade, termIndex, s);
-            String[] withEd = new String[unitA.length + 1];
-            System.arraycopy(unitA, 0, withEd, 0, unitA.length);
-            withEd[unitA.length] = ed;
-            unitA = withEd;
+
+        // 学制约束并入基础池：即便「已学单元 = 不限」，选了六三制也不会出五四制题。
+        String[] fams = (syllabus != null && !other)
+                ? syllabus.familiesFor(grade, termIndex, s, em) : new String[0];
+        if (fams.length > 0) {
+            String edW = Syllabus.editionWhere(fams.length);
+            where = where + edW;
+            poolWhere = poolWhere + edW;
+            args = concat(args, fams);
+            poolArgs = concat(poolArgs, fams);
         }
 
         if (knowledgeOnly) {

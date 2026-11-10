@@ -9,22 +9,21 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 方案 B：学期 + 单元进度表。
+ * 学期 + 单元进度表（按学制与教材版本隔离）。
  *
- * <p>assets/syllabus.json 人工维护「年级 × 学期 × 学科 → 按教学顺序排列的单元」，
- * 每个单元记录它在题库 topic 里可能出现的所有别名（例如「时、分、秒」与「时分秒」）。
- * 家长选「上册 / 已学到第 N 单元」后，本题负责生成附加到 QuizDb 池谓词之后的
- * SQL 片段与参数；QuizDb 再按「单元 -> 学期 -> 年级」逐级放宽，始终保留学科约束。
+ * <p>assets/syllabus.json 由 tools/quizbank/build_syllabus.py 从题库生成：
+ * 顶层是「自动」视图（每格选题量最多的版本族），systems 下另有「六三制」
+ * 「五四制」两套独立视图，各自有自己的有序单元表与代表族。
+ * 家长选「上册 / 已学到第 N 单元 / 学制」后，本题负责生成附加到 QuizDb
+ * 池谓词之后的 SQL 片段与参数；QuizDb 再按「单元 -> 学期 -> 年级」逐级放宽，
+ * 始终保留学科约束。
  *
  * <p>本类是纯 Java，不引用任何 android.*：Json 解析器也是纯 Java，
  * 所以单元表能在 JVM 单测里用真实 assets/syllabus.json 直接跑。
- * 读取 assets 的动作留在 QuizOverlayService / SettingsActivity（它们才有 Context）。
  *
- * <p>诚实边界：题库没有出版社教材版本、册次（term 全为空）和单元序号；
- * 本表只是把题库真实出现的课标纲目名按常见教学顺序归并，覆盖小学 1–6 年级数学，
- * 不等于任何教材版本的真实单元进度。语文是课文名、英语是主题词，不做单元过滤。
- * 运行时 QuizDb 还会把 syllabus_scope='generic' 的通用题（无教材版本）排除在单元过滤之外。
- * 未覆盖的组合返回空名单，绝不假装精确。
+ * <p>诚实边界：题库有真实教材册次、单元与课标知识点，但**没有学制字段**；
+ * 六三制 / 五四制按教材名归类（systemFamilies）。未覆盖的组合返回空名单，
+ * 绝不假装精确到单元。
  */
 public final class Syllabus {
 
@@ -34,6 +33,14 @@ public final class Syllabus {
     public static final String[] TERM_LABELS = {"全学年", "上册", "下册"};
     /** 家长可选的最大单元序号；也是 SettingsStore.unitLimit() 的合法上界。 */
     public static final int MAX_UNITS = 24;
+
+    /** 学制：0=自动（题量最多的版本族）、1=六三制、2=五四制。 */
+    public static final int EDITION_AUTO = 0;
+    public static final int EDITION_SIX_THREE = 1;
+    public static final int EDITION_FIVE_FOUR = 2;
+    public static final String[] EDITION_LABELS = {"自动（题量最多）", "六三制", "五四制"};
+    public static final String SYSTEM_SIX_THREE = "六三制";
+    public static final String SYSTEM_FIVE_FOUR = "五四制";
 
     public static final class Unit {
         public final String name;
@@ -49,41 +56,135 @@ public final class Syllabus {
         }
     }
 
-    private final Map<String, List<Unit>> books;
-    /** (年级|册次|学科) -> 该格子自动匹配的教材版本族，用于按单元过滤时隔离版本。 */
-    private final Map<String, String> editionByCell;
+    /** index = editionMode；0 是顶层自动视图，1/2 是 systems 下的学制视图。 */
+    private final List<Map<String, List<Unit>>> books;
+    private final List<Map<String, String>> editionByCell;
+    /** 学制名 -> 该学制包含的版本族（用于 edition_family 谓词）。 */
+    private final Map<String, String[]> systemFamilies;
 
-    private Syllabus(Map<String, List<Unit>> books,
-                     Map<String, String> editionByCell) {
+    private Syllabus(List<Map<String, List<Unit>>> books,
+                     List<Map<String, String>> editionByCell,
+                     Map<String, String[]> systemFamilies) {
         this.books = books;
         this.editionByCell = editionByCell;
+        this.systemFamilies = systemFamilies;
     }
 
     /** 进度表缺失/损坏时的安全降级：不做任何单元过滤，学期过滤仍然可用。 */
     public static Syllabus empty() {
-        return new Syllabus(Collections.<String, List<Unit>>emptyMap(),
-                Collections.<String, String>emptyMap());
+        List<Map<String, List<Unit>>> b = new ArrayList<Map<String, List<Unit>>>();
+        List<Map<String, String>> e = new ArrayList<Map<String, String>>();
+        for (int i = 0; i < 3; i++) {
+            b.add(Collections.<String, List<Unit>>emptyMap());
+            e.add(Collections.<String, String>emptyMap());
+        }
+        return new Syllabus(Collections.unmodifiableList(b),
+                Collections.unmodifiableList(e),
+                Collections.<String, String[]>emptyMap());
+    }
+
+    private static int mode(int m) {
+        return (m == EDITION_SIX_THREE || m == EDITION_FIVE_FOUR) ? m : EDITION_AUTO;
     }
 
     /** 该格子自动匹配的教材版本族；无表（如全学年）返回空串。 */
     public String editionFor(int grade, int term, int subject) {
-        String v = editionByCell.get(key(grade, term, subject));
+        return editionFor(grade, term, subject, EDITION_AUTO);
+    }
+
+    public String editionFor(int grade, int term, int subject, int editionMode) {
+        String v = editionByCell.get(mode(editionMode)).get(key(grade, term, subject));
         return v == null ? "" : v;
+    }
+
+    /** 该学制下此格子是否有可用的单元表（用于设置页如实提示）。 */
+    public boolean hasCell(int grade, int term, int subject, int editionMode) {
+        int m = mode(editionMode);
+        if (m == EDITION_AUTO) return books.get(0).containsKey(key(grade, term, subject));
+        return editionByCell.get(m).containsKey(key(grade, term, subject));
+    }
+
+    /**
+     * 该学制要附加到 SQL 的 edition_family 值。
+     * 自动模式返回该格代表族（1 个）；学制模式返回该学制的全部族，
+     * 这样同一格子里的多套六三制教材（人教 / 统编 / 2026秋版）都能抽到。
+     */
+    public String[] familiesFor(int grade, int term, int subject, int editionMode) {
+        int m = mode(editionMode);
+        if (m == EDITION_AUTO) {
+            String one = editionFor(grade, term, subject, EDITION_AUTO);
+            return one.isEmpty() ? new String[0] : new String[]{one};
+        }
+        String[] f = systemFamilies.get(m == EDITION_SIX_THREE
+                ? SYSTEM_SIX_THREE : SYSTEM_FIVE_FOUR);
+        return f == null ? new String[0] : f.clone();
+    }
+
+    /** 版本族谓词；参数个数必须与 familiesFor() 返回值一致。 */
+    public static String editionWhere(int familyCount) {
+        if (familyCount <= 0) return "";
+        if (familyCount == 1) return " AND edition_family = ?";
+        StringBuilder sb = new StringBuilder(" AND edition_family IN (");
+        for (int i = 0; i < familyCount; i++) {
+            if (i > 0) sb.append(',');
+            sb.append('?');
+        }
+        return sb.append(')').toString();
     }
 
     public static Syllabus fromJson(String json) {
         Map<String, Object> top = asObject(Json.parse(json), "root");
-        HashMap<String, String> editions = new HashMap<String, String>();
-        Object edObj = top.get("editionByCell");
-        if (edObj != null) {
-            for (Map.Entry<String, Object> e : asObject(edObj, "editionByCell").entrySet()) {
-                editions.put(e.getKey(), asString(e.getValue(), "editionByCell[]"));
+        List<Map<String, List<Unit>>> bs = new ArrayList<Map<String, List<Unit>>>();
+        List<Map<String, String>> es = new ArrayList<Map<String, String>>();
+        bs.add(parseBooks(top.get("grades"), true));
+        es.add(parseEditions(top.get("editionByCell")));
+
+        Map<String, String[]> fams = new HashMap<String, String[]>();
+        Object famObj = top.get("systemFamilies");
+        if (famObj != null) {
+            for (Map.Entry<String, Object> e : asObject(famObj, "systemFamilies").entrySet()) {
+                List<Object> arr = asArray(e.getValue(), "systemFamilies[]");
+                ArrayList<String> v = new ArrayList<String>();
+                for (Object o : arr) v.add(asString(o, "systemFamilies[][]"));
+                fams.put(e.getKey(), v.toArray(new String[0]));
             }
         }
-        Object gradesObj = top.get("grades");
-        if (gradesObj == null) throw new IllegalArgumentException("syllabus: missing grades");
-        Map<String, Object> grades = asObject(gradesObj, "grades");
+        Object sysObj = top.get("systems");
+        Map<String, Object> systems = sysObj == null
+                ? Collections.<String, Object>emptyMap() : asObject(sysObj, "systems");
+        for (int m = 1; m <= 2; m++) {
+            String name = m == EDITION_SIX_THREE ? SYSTEM_SIX_THREE : SYSTEM_FIVE_FOUR;
+            Object view = systems.get(name);
+            if (view == null) {
+                bs.add(Collections.<String, List<Unit>>emptyMap());
+                es.add(Collections.<String, String>emptyMap());
+                continue;
+            }
+            Map<String, Object> v = asObject(view, "systems." + name);
+            bs.add(parseBooks(v.get("grades"), false));
+            es.add(parseEditions(v.get("editionByCell")));
+        }
+        return new Syllabus(Collections.unmodifiableList(bs),
+                Collections.unmodifiableList(es),
+                Collections.unmodifiableMap(fams));
+    }
+
+    private static Map<String, String> parseEditions(Object edObj) {
+        HashMap<String, String> editions = new HashMap<String, String>();
+        if (edObj == null) return Collections.unmodifiableMap(editions);
+        for (Map.Entry<String, Object> e : asObject(edObj, "editionByCell").entrySet()) {
+            editions.put(e.getKey(), asString(e.getValue(), "editionByCell[]"));
+        }
+        return Collections.unmodifiableMap(editions);
+    }
+
+    private static Map<String, List<Unit>> parseBooks(Object gradesObj, boolean required) {
         HashMap<String, List<Unit>> out = new HashMap<String, List<Unit>>();
+        if (gradesObj == null) {
+            if (required) throw new IllegalArgumentException("syllabus: missing grades");
+            return Collections.unmodifiableMap(out);
+        }
+        Map<String, Object> grades = asObject(gradesObj, "grades");
         for (Map.Entry<String, Object> ge : grades.entrySet()) {
             int grade = intKey(ge.getKey(), "grade");
             Map<String, Object> terms = asObject(ge.getValue(), "grade " + grade);
@@ -131,27 +232,39 @@ public final class Syllabus {
                 }
             }
         }
-        return new Syllabus(Collections.unmodifiableMap(out),
-                Collections.unmodifiableMap(editions));
+        return Collections.unmodifiableMap(out);
     }
 
-    public int bookCount() { return books.size(); }
+    /** 自动视图的单元数（契约与 JVM 单测沿用）。 */
+    public int bookCount() { return books.get(EDITION_AUTO).size(); }
+
+    public List<Unit> book(int grade, int term, int subject) {
+        return book(grade, term, subject, EDITION_AUTO);
+    }
 
     /** 该册全部有序单元；未覆盖的组合返回空表（只做学期过滤）。 */
-    public List<Unit> book(int grade, int term, int subject) {
-        List<Unit> v = books.get(key(grade, term, subject));
+    public List<Unit> book(int grade, int term, int subject, int editionMode) {
+        List<Unit> v = books.get(mode(editionMode)).get(key(grade, term, subject));
         return v == null ? Collections.<Unit>emptyList() : v;
     }
 
     public int unitCount(int grade, int term, int subject) {
-        return book(grade, term, subject).size();
+        return unitCount(grade, term, subject, EDITION_AUTO);
+    }
+
+    public int unitCount(int grade, int term, int subject, int editionMode) {
+        return book(grade, term, subject, editionMode).size();
     }
 
     /** 当前年级 / 学期下三科里最大的单元数，用于限制家长可点的序号上界。 */
     public int maxUnits(int grade, int term) {
+        return maxUnits(grade, term, EDITION_AUTO);
+    }
+
+    public int maxUnits(int grade, int term, int editionMode) {
         int max = 0;
         for (int s = 0; s < Subjects.COUNT; s++) {
-            int n = unitCount(grade, term, s);
+            int n = unitCount(grade, term, s, editionMode);
             if (n > max) max = n;
         }
         return max;
@@ -159,7 +272,11 @@ public final class Syllabus {
 
     /** 前 limit 个单元展开成题库别名；limit<=0 或该册无表时返回空数组。 */
     public String[] matchNames(int grade, int term, int subject, int limit) {
-        List<Unit> b = book(grade, term, subject);
+        return matchNames(grade, term, subject, limit, EDITION_AUTO);
+    }
+
+    public String[] matchNames(int grade, int term, int subject, int limit, int editionMode) {
+        List<Unit> b = book(grade, term, subject, editionMode);
         if (limit <= 0 || b.isEmpty()) return new String[0];
         int n = Math.min(limit, b.size());
         ArrayList<String> out = new ArrayList<String>();
@@ -171,17 +288,19 @@ public final class Syllabus {
 
     /** 设置页回显「已学到第 N 单元 · 单元名」；无表时返回空串。 */
     public String unitLabel(int grade, int term, int subject, int limit) {
-        List<Unit> b = book(grade, term, subject);
+        return unitLabel(grade, term, subject, limit, EDITION_AUTO);
+    }
+
+    public String unitLabel(int grade, int term, int subject, int limit, int editionMode) {
+        List<Unit> b = book(grade, term, subject, editionMode);
         if (limit <= 0 || b.isEmpty()) return "";
         int n = Math.min(limit, b.size());
         return b.get(n - 1).label(n);
     }
 
     /**
-     * 学期谓词：题库 term 有 上 / 下 / 全 / '' 四种值。
-     * 选上/下册时包含「全一册」，并排除 term='' 的 810 道综合练习
-     * （它们没有学期与单元，三年级样本里混有质数 / 百分数等超纲题）。
-     * 全学年返回空串，保持旧版行为完全不变，兼容覆盖安装。
+     * 学期谓词：题库 term 有 上 / 下 两种真实值；
+     * 兼容旧库的「全」与空串写法。全学年返回空串，覆盖安装行为不变。
      */
     public static String termWhere(int term) {
         if (term == TERM_FIRST) return " AND term IN ('上','全')";

@@ -169,7 +169,9 @@ grep -q 'Syllabus.TERM_LABELS' "$SET"
 grep -q 'setStudyScope' "$SVC"
 grep -q 'SyllabusAssets.get' "$SVC"
 grep -qF 'String strict = where + termW + unitW' "$DB"
-grep -qF 'edition_family = ?' "$DB"
+grep -qF 'familiesFor(' "$DB"
+grep -qF 'editionWhere(' "$DB"
+grep -qF 'setEditionMode(st.editionMode())' "$SVC"
 # 负向禁词只看代码行，注释里提到旧实现不应误拦构建。
 if grep -v -e '^[[:space:]]*//' -e '^[[:space:]]*\*' -e '^[[:space:]]*/\*' "$ENG" "$DB" \
     | grep -q -e 'gradeWide' -e 'nextInt(100) < 15' -e 'fromBank(subject,'; then

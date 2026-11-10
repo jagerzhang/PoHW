@@ -186,12 +186,12 @@ public final class SettingsStore implements PinGate.Store {
     public void roundMode(int v) {
         sp.edit().putInt("roundMode", clamp(v, 0, 2)).commit();
     }
-    /** 每组题量，默认 5，范围 1–20。 */
+    /** 每组题量，默认 5，范围 1–10（20 题一组对电视太久）。 */
     public int questionsPerRound() {
-        return clamp(sp.getInt("questionsPerRound", 5), 1, 20);
+        return clamp(sp.getInt("questionsPerRound", 5), 1, 10);
     }
     public void questionsPerRound(int v) {
-        sp.edit().putInt("questionsPerRound", clamp(v, 1, 20)).commit();
+        sp.edit().putInt("questionsPerRound", clamp(v, 1, 10)).commit();
     }
     /** 通过正确率（百分比），默认 60。 */
     public int passPercent() { return clamp(sp.getInt("passPercent", 60), 1, 100); }

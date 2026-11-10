@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""运行时回归：题库已打平，抽题只按 年级 + 学科，不再有学期 / 单元 / 教材版本过滤。
+"""运行时回归：bank-v9 的教材进度（学期 / 版本族 / 单元）真实生效。
 
-从 QuizDb.java 抽取真实池谓词并实跑内置题库，断言：
-1. syllabus.json 是停用空表，题库 term 全空且无教材版本列；
-2. 按 grade<=g AND subject=? 实抽，学科 100% 一致且永不超年级上限；
-3. QuizDb 的四个池谓词与保底层仍带 grade<=?（防止打平改坏年级防超纲）。
-零第三方依赖，由 app/build.sh 的 [0/9] 调用。
+从 QuizDb.java / Syllabus.java 抽取真实谓词，实跑内置题库断言：
+1. syllabus.json 是按版本隔离的真实单元表，题库每题带 term 与 edition_family；
+2. 按 term 抽题，学科一致、年级不超、册次匹配；
+3. 按 (版本族 + 单元别名) 抽题，确实能命中且版本不串；
+4. 四个池谓词与保底层仍带 grade<=?。
 """
 import io
 import json
@@ -28,38 +28,61 @@ def fail(msg):
 
 
 def main():
-    if not os.path.isfile(DB) or not os.path.isfile(SYL):
-        fail("missing quiz.db or syllabus.json")
     table = json.load(io.open(SYL, encoding="utf-8"))
-    if table.get("grades") or "已停用" not in table.get("scope", ""):
-        fail("syllabus.json is not the flattened empty table")
-
+    cells = table.get("editionByCell") or {}
+    if len(table.get("grades") or {}) < 6 or len(cells) < 20:
+        fail("syllabus.json has no real per-edition progress table")
     conn = sqlite3.connect(DB)
     cols = [r[1] for r in conn.execute("pragma table_info(questions)")]
-    if any(c in cols for c in ("edition", "book", "press", "textbook", "unit")):
-        fail("textbook / unit columns are back in the shipped bank")
-    tagged = conn.execute("SELECT COUNT(*) FROM questions WHERE term IS NOT NULL "
-                          "AND term <> ?", ("",)).fetchone()[0]
-    if tagged:
-        fail("unexpected term-tagged rows %d" % tagged)
+    for c in ("term", "edition_family", "unit_no", "knowledge_point"):
+        if c not in cols:
+            fail("missing progress column " + c)
+    n = conn.execute("select count(*) from questions where term in ('上','下')").fetchone()[0]
+    total = conn.execute("select count(*) from questions").fetchone()[0]
+    if n != total:
+        fail("questions without a real textbook term: %d" % (total - n))
 
     random.seed(20261110)
     draws = 0
     for g in range(1, 7):
         for sub in CORE:
-            for _ in range(60):
-                r = conn.execute(
-                    "SELECT grade,subject FROM questions WHERE grade<=? AND subject=? "
-                    "ORDER BY RANDOM() LIMIT 1", (g, sub)).fetchone()
-                if r is None or r[1] != sub or r[0] > g:
-                    fail("flattened draw leaked grade=%s subject=%s at g%d"
-                         % (r[0] if r else None, r[1] if r else None, g))
-                draws += 1
+            for term in ("上", "下"):
+                for _ in range(30):
+                    r = conn.execute(
+                        "SELECT grade,subject,term FROM questions "
+                        "WHERE grade<=? AND subject=? AND term=? "
+                        "ORDER BY RANDOM() LIMIT 1", (g, sub, term)).fetchone()
+                    if r is None:
+                        # 小学英语三年级起点，1-2 年级无题是预期
+                        if sub == "英语" and g <= 2:
+                            continue
+                        fail("term-scoped pool empty g=%d %s %s" % (g, sub, term))
+                    if r[1] != sub or r[0] > g or r[2] != term:
+                        fail("term-scoped draw leaked %r at g=%d" % (r, g))
+                    draws += 1
+
+    # 单元层：取一个有真实单元的格子，验证版本隔离
+    fam = cells.get("3|1|0")
+    if fam:
+        alias = table["grades"]["3"]["1"]["数学"][0]["match"][0]
+        row = conn.execute(
+            "SELECT edition_family,topic FROM questions "
+            "WHERE grade<=3 AND subject='数学' AND term='上' "
+            "AND edition_family=? AND (topic LIKE ? OR topic=?) LIMIT 1",
+            (fam, "%：" + alias, alias)).fetchone()
+        if row is None:
+            fail("unit-scoped draw returned nothing for edition " + fam)
+        if row[0] != fam:
+            fail("unit filter leaked another edition family")
+
     qd = io.open(QUIZDB, encoding="utf-8").read()
     if "WHERE grade<=? AND subject=?" not in qd or qd.count("grade<=?") < 4:
-        fail("QuizDb lost the grade cap on its pools")
+        fail("QuizDb lost the grade cap")
+    if "edition_family = ?" not in qd:
+        fail("QuizDb lost the edition-family isolation")
     conn.close()
-    print("STUDY_SCOPE_OK FLATTENED books=0 draws=%d grade-capped subject-safe" % draws)
+    print("STUDY_SCOPE_OK PROGRESS cells=%d draws=%d edition-isolated grade-capped"
+          % (len(cells), draws))
     return 0
 
 

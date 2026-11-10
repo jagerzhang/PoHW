@@ -2,14 +2,15 @@
 
 ## 一句话结论
 
-`app/assets/quiz.db` 当前为 **`pohw-2026.11.10-bank-v8-r2`**，共 **3876 道题**，
-覆盖小学 1–6 年级语数外。`grade` 是「最低适用年级」的保守下界，不是精确年级；
-`syllabus_scope` 区分 `outline`（有课标纲目）与 `generic`（无教材版本，含外部整合题）；两类题都只按年级与学科抽，不参与教材进度过滤，
-`grade_basis` 记录该题的定级依据，`difficulty_level` 按题面复杂度分三档。
-题目由本项目按课标自编的低年级题，与整理自互联网公开渠道、经逐题校验清洗后的题目组成。
+`app/assets/quiz.db` 当前为 **`pohw-2026.11.10-bank-v9`**，共 **9544 道题**，
+覆盖小学 1–6 年级语数外的标准四选一题。`grade` 为教材年级；每题带
+`term`（上 / 下册）、`textbook`、`edition_family`、`unit_no` / `unit_title`、
+`knowledge_point` 与 `grade_basis`，`difficulty_level` 按题面复杂度分三档。
+进度表 `app/assets/syllabus.json` 按教材版本族隔离有序单元，抽题时按
+`(年级, 册次, 版本族, 单元)` 过滤，空池依次放宽到学期与年级。
 
 > 来源说明见 [DATA_SOURCES.md](DATA_SOURCES.md)；重建脚本见
-> [`tools/quizbank/rebuild_bank.py`](../tools/quizbank/rebuild_bank.py) 与 [`tools/quizbank/apply_review.py`](../tools/quizbank/apply_review.py)，门禁见
+> [`tools/quizbank/rebuild_bank_v9.py`](../tools/quizbank/rebuild_bank_v9.py) 与 [`tools/quizbank/build_syllabus.py`](../tools/quizbank/build_syllabus.py)，门禁见
 > [`tests/bank_quality_check.py`](../tests/bank_quality_check.py)。
 
 ## 表结构

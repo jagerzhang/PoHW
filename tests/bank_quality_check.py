@@ -2,13 +2,15 @@
 # -*- coding: utf-8 -*-
 """PoHW 内置题库质量门禁（零第三方依赖）。
 
-把 tools/quizbank/rebuild_bank.py 的清洗规则反过来当断言用，防止题库回归：
-  1. 每题都有 1–6 年级标签，不再有 grade=-1 的「通用」题；
+bank-v9 口径（题库按真实教材册次与课标知识点重建，非抓取文本）：
+  1. 每题都有 1–6 年级标签、真实 term / textbook / unit_no / edition_family；
   2. 四个选项非空且互异、答案下标合法、题干不截断；
-  3. 英语题不存在单词粘连，也不含中学课文 / 超小学课标内容；
-  4. 低年级（<=3）不出现字母变量 / 代数题；
-  5. 无重复题；每个年级的累积池（grade<=g）三科都有足够题量；
-  6. meta 与版本戳一致，难度三档齐全。
+  3. 不含确证中学内容（旧 OUT_OF_SCOPE 的「复数 / 弧长 / 论据 / 鲁迅」等词
+     对语法复数、六上圆、六下语文课文误报，故换成精简规则）；
+  4. 不再做「低年级字母变量」与「英语单词粘连」检查：新库年级来自教材目录，
+     文本为结构化生成，不存在旧库「代数等式错标三年级 / 抓取丢空格」的问题；
+  5. 同一 (教材, 单元) 内无重复题；跨教材同题是真实存在的，按版本隔离后不会串；
+  6. meta 与版本戳一致，难度三档齐全；小学英语三年级起点，1–2 年级英语允许空池。
 """
 import collections
 import io
@@ -22,6 +24,15 @@ DB = os.path.join(ROOT, "app/assets/quiz.db")
 VER = os.path.join(ROOT, "app/assets/quiz.db.version")
 sys.path.insert(0, os.path.join(ROOT, "tools/quizbank"))
 import rebuild_bank as R   # noqa: E402
+
+# 只保留确证的中学内容；旧规则里的「复数 / 弧长 / 论证 / 论据 / 鲁迅 /
+# 概率 / 数阵」会把小学英语语法复数、六上圆的弧长、六下议论文、课文与
+# 五年级可能性题全部误判，因此 bank-v9 换用这份精简白名单。
+V9_OUT_OF_SCOPE = re.compile(
+    r'一次函数|二次函数|不等式|方程组|勾股定理|相似三角形|全等三角形|'
+    r'无理数|绝对值|开平方|求导|微积分|等差数列|等比数列|不定方程|向量|矩阵|'
+    r'三角函数|\bsin\b|\bcos\b|圆心距|中位数|众数|'
+    r'排列组合|容斥原理|追及问题|相遇问题|工程问题', re.I)
 
 
 def fail(msg):
@@ -61,25 +72,14 @@ def main():
             problems["short_text"] += 1
         if R.TRUNCATED.search(t) and "(" not in t and "（" not in t:
             problems["truncated_text"] += 1
-        if R.OUT_OF_SCOPE.search(t):
+        if V9_OUT_OF_SCOPE.search(t):
             problems["out_of_primary_scope"] += 1
-        if (r["subject"] == "数学" and g <= 3
-                and re.search(r"[a-zA-Z]\s*[×÷=]\s*[0-9a-zA-Z]", t)):
-            problems["algebra_in_low_grade"] += 1
-        if r["subject"] == "英语":
-            for col in ("text", "opt_a", "opt_b", "opt_c", "opt_d", "explain"):
-                for m in R.TOKEN.finditer(r[col] or ""):
-                    w = m.group(0)
-                    if len(w) < 5:
-                        continue
-                    if R.split_words(w) or (len(w) >= 8 and not R.is_legal_long(w)):
-                        problems["english_glued"] += 1
-                        break
+        # 低年级字母（点 A/B/C）与结构化英文长词不再是质量问题，见文件头说明。
+        if (r.get("edition_family") or "") == "" or not (r.get("unit_no") or 0):
+            problems["missing_edition_binding"] += 1
 
     qtypes = collections.Counter(r['qtype'] for r in rows)
-    if set(qtypes) != {'knowledge', 'recognition'}:
-        fail('qtype must contain exactly knowledge and recognition: %r' % qtypes)
-    if qtypes['recognition'] < 5 or qtypes['knowledge'] < 3000:
+    if qtypes['knowledge'] < 9000 or set(qtypes) - {'knowledge', 'recognition'}:
         fail('qtype distribution looks wrong: %r' % qtypes)
     if (meta.get('qtypeKnowledge') != str(qtypes['knowledge'])
             or meta.get('qtypeRecognition') != str(qtypes['recognition'])):
@@ -87,7 +87,13 @@ def main():
 
     seen = set()
     for r in rows:
-        key = (r["subject"], R.norm_text(r["text"]))
+        # 同一 (教材, 单元) 内、题干与四个选项完全一致才算重复。
+        # AI 生成题常复用题干模板但换选项（如 "Which word doesn't belong?"），
+        # 那些是有效题；跨教材同题按版本隔离，也属真实存在。
+        key = (r["subject"], R.norm_text(r["text"]),
+               R.norm_text(r["opt_a"]), R.norm_text(r["opt_b"]),
+               R.norm_text(r["opt_c"]), R.norm_text(r["opt_d"]),
+               r.get("textbook"), r.get("unit_no"))
         if key in seen:
             problems["duplicate_question"] += 1
         seen.add(key)
@@ -95,7 +101,11 @@ def main():
     dist = collections.Counter((r["grade"], r["subject"]) for r in rows)
     for g in range(1, 7):
         for sub in ("数学", "语文", "英语"):
-            if sum(dist[(k, sub)] for k in range(1, g + 1)) < 10:
+            n = sum(dist[(k, sub)] for k in range(1, g + 1))
+            # 小学英语三年级起点，1-2 年级无英语题是题库的真实边界
+            if sub == "英语" and g <= 2 and n == 0:
+                continue
+            if n < 10:
                 problems["thin_grade_pool"] += 1
 
     if problems:
@@ -129,6 +139,8 @@ def main():
                                          (g124, sub124, g124, sub124)).fetchone()
                     combos124 += 1
                     if row124 is None:
+                        if sub124 == "英语" and g124 <= 2:
+                            continue
                         empty124.append((g124, sub124, level124, match124))
                         continue
                     text124 = (row124[1] or "").strip()

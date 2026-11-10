@@ -347,10 +347,18 @@ public final class QuizDb {
         String[] names = (syllabus != null && unitLimit > 0 && !other)
                 ? syllabus.matchNames(grade, termIndex, s, unitLimit) : new String[0];
         String unitW = Syllabus.unitWhere(names);
-        // 通用题（无教材版本、无册次，含 quiz-challenge 整合题）没有单元归属，
-        // 选了「已学单元」时不参与该过滤，避免把无纲目的题硬塞进某个教材单元。
-        if (names.length > 0) unitW += " AND syllabus_scope='outline'";
         String[] unitA = Syllabus.unitArgs(names);
+        if (names.length > 0) {
+            // 同一 (年级,册次,学科) 下可能有多套教材，U1 完全不是一回事；
+            // 按进度表选定的版本族隔离，绝不把别的教材同一单元序号的题串进来。
+            unitW += " AND edition_family = ?";
+            String ed = syllabus == null ? ""
+                    : syllabus.editionFor(grade, termIndex, s);
+            String[] withEd = new String[unitA.length + 1];
+            System.arraycopy(unitA, 0, withEd, 0, unitA.length);
+            withEd[unitA.length] = ed;
+            unitA = withEd;
+        }
 
         QuizEngine.Question q;
         String strict = where + termW + unitW + diffW;

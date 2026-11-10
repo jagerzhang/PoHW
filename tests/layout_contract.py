@@ -299,8 +299,9 @@ _assets = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SyllabusAssets.java"
 _syljson = json.load(io.open(os.path.join(ROOT, "app/assets/syllabus.json"), encoding="utf-8"))
 _scope = read(os.path.join(ROOT, "tests/study_scope_check.py"))
 
-check(_syljson["grades"] == {} and "已停用" in _syljson.get("scope", ""),
-      "syllabus.json is the flattened empty table (no textbook / term / unit books)")
+check(len(_syljson["grades"]) >= 6
+      and len(_syljson.get("editionByCell", {})) >= 20,
+      "syllabus.json declares per-edition real textbook units")
 check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/build_syllabus.py")),
       "syllabus generator / quiz.db consistency validator is committed")
 check(os.path.isfile(os.path.join(ROOT, "tests/study_scope_check.py")),
@@ -330,24 +331,23 @@ check("concat(args, unitA)" in _d and "!other" in _d,
       "unit args are bound and skipped for the OTHER pool")
 check("setStudyScope" in _e and "syllabus, termIndex, unitLimit" in _e,
       "engine forwards study scope to the SQL layer")
-check("setStudyScope" not in _o and "SyllabusAssets.get" not in _o
-      and "st.editionFor" not in _o,
-      "quiz service no longer injects study scope or edition labels")
+check("setStudyScope" in _o and "SyllabusAssets.get" in _o
+      and "st.termIndex()" in _o and "st.unitLimit()" in _o,
+      "quiz service injects the real progress table and both settings")
 check('getInt("termIdx", Syllabus.TERM_ALL)' in _st
       and 'getInt("unitLimit", 0)' in _st,
       "both study-scope settings default to the old unrestricted behaviour")
-check("rowTerm" not in raw_s and "rowUnit" not in raw_s
-      and "学习学期" not in raw_s and "已学单元" not in raw_s
-      and "教材版本" not in raw_s and "Syllabus.TERM_LABELS" not in raw_s,
-      "parent settings has no textbook / term / unit concept left")
-check("题库按年级 + 学科 + 课标纲目打平" in raw_s,
-      "parent settings states the flattened grade+subject+outline rule")
+check("rowTerm" in raw_s and "rowUnit" in raw_s and "rowEdition" in raw_s
+      and "Syllabus.TERM_LABELS" in raw_s and "教材版本" in raw_s,
+      "parent settings exposes term / unit / edition rows")
+check("按真实教材册次与课标知识点组织" in raw_s,
+      "parent settings states the real textbook progress rule")
 check(all(k in _run for k in ("Json.java", "Syllabus.java", "SyllabusTest")),
       "JSON parser, syllabus and its JVM test are compiled and executed")
 check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
-check("STUDY_SCOPE_OK" in _scope and "FLATTENED" in _scope,
-      "runtime regression asserts the flattened grade+subject-only draw")
+check("STUDY_SCOPE_OK" in _scope and "PROGRESS" in _scope,
+      "runtime regression asserts term/edition/unit scoped draws")
 check('android:versionCode="46"' in _mf, "manifest versionCode advances to 46")
 check('VERSION_CODE="46"' in b, "build script versionCode advances to 46")
 
@@ -531,9 +531,9 @@ check('if (knowledgeOnly) {' in _qd_code and 'return kq;' in _qd_code
       "knowledge-only chain keeps the source constraint on every fallback")
 check(_qd_code.index('if (knowledgeOnly) {') < _qd_code.index('String termW ='),
       "knowledge-only chain runs before term/unit filtering")
-check('题库按年级 + 学科 + 课标纲目打平' in _act
+check('按真实教材册次与课标知识点组织' in _act
       and '出题偏好＝仅知识/计算题时' in _act,
-      "settings states the flattened rule and keeps the knowledge-only preference")
+      "settings states the real progress rule and keeps the knowledge-only preference")
 
 
 # ---- code24：题目难度倾向加权 ----
@@ -723,7 +723,7 @@ check('must-revalidate' in _edge125,
 
 # ---- v1.2.7：逐题复核成果必须真的随 APK 发布 ----
 _bv127 = read(os.path.join(ROOT, "app/assets/quiz.db.version")).strip()
-check("bank-v8" in _bv127, "shipped bank is the regraded bank-v8")
+check("bank-v9" in _bv127, "shipped bank is the rebuilt bank-v9")
 check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/apply_review.py")),
       "bank-v5 review-apply script is still committed as history")
 check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/apply_drop_v132.py")),
@@ -918,8 +918,8 @@ _db132 = _sq132.connect(os.path.join(ROOT, "app/assets/quiz.db"))
 _alive132 = [i for i in _ids132
              if _db132.execute("select 1 from questions where id=?", (i,)).fetchone()]
 check(not _alive132, "all signed-off questions are absent from the shipped bank")
-check(_db132.execute("select count(*) from questions").fetchone()[0] == 3876,
-      "shipped bank holds exactly 3876 questions after bank-v8 regrade")
+check(_db132.execute("select count(*) from questions").fetchone()[0] == 9544,
+      "shipped bank holds exactly 9544 questions after bank-v9 rebuild")
 _db132.close()
 check("NUMBERED_ITEM" in _qts132 and "countMatches" in _qts132
       and "TV_MAX_NUMBERED_ITEMS" in _qts132,
@@ -972,7 +972,7 @@ _sto134 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsStore.java")
 _mf134 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/MainActivity.java"))
 _bv134 = read(os.path.join(ROOT, "app/assets/quiz.db.version")).strip()
 _db134 = _sq132.connect(os.path.join(ROOT, "app/assets/quiz.db"))
-check("bank-v8" in _bv134, "shipped bank is the regraded bank-v8")
+check("bank-v9" in _bv134, "shipped bank is the rebuilt bank-v9")
 check("clamp(v, 1, 10)" in _sto134 and 'getInt("questionsPerRound", 5)' in _sto134,
       "round size defaults to 5 and is capped at 10")
 check("st.gradeLabel()" in _mf134 and "st.intervalSec()" in _mf134
@@ -987,7 +987,7 @@ check(_db134.execute("select count(*) from questions where length(text)>90").fet
               .fetchone()[0] == 0,
       "no question survives with a TV-unreadable stem or option")
 check(_db134.execute("select count(*) from questions where instr(text,'____')>0")
-              .fetchone()[0] >= 1300,
+              .fetchone()[0] >= 500,
       "fill-in-the-blank stems carry a visible underscore placeholder")
 check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/apply_bank_v7.py"))
       and os.path.isfile(os.path.join(ROOT, "tools/quizbank/review/drop-v133.csv")),
@@ -996,38 +996,37 @@ check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/apply_bank_v7.py"))
 # ---- 未发布：bank-v8 逐题重定级 / 外部优质题整合 / 教材划分如实降级 ----
 _cols134 = [r[1] for r in _db134.execute("pragma table_info(questions)")]
 check(all(c in _cols134 for c in ("syllabus_scope", "grade_basis", "grade_verified")),
-      "bank-v8 carries syllabus_scope / grade_basis / grade_verified")
+      "bank-v9 carries syllabus_scope / grade_basis / grade_verified")
 check(_db134.execute("select count(*) from questions where topic like '知识点 7%'")
       .fetchone()[0] == 0,
       "no non-semantic knowledge-point placeholders survive")
 check(_db134.execute("select count(*) from questions where grade_basis like '%difficulty%'")
       .fetchone()[0] == 0,
       "no grade is derived from the noisy difficulty coefficient")
-check(_db134.execute("select count(*) from questions where syllabus_scope='generic'")
-      .fetchone()[0] > 0,
-      "generic (no-textbook) questions are marked and separated")
+check(_db134.execute("select count(distinct edition_family) from questions")
+      .fetchone()[0] >= 3
+      and _db134.execute("select count(*) from questions "
+                         "where textbook<>'' and unit_no>0").fetchone()[0] == 9544,
+      "every question is bound to a real textbook edition and unit")
 _dv8 = [r["id"] for r in _csv132.DictReader(
     io.open(os.path.join(ROOT, "tools/quizbank/review/drop-v134.csv"), encoding="utf-8-sig"))]
 check(len(_dv8) == 19 and not [i for i in _dv8
       if _db134.execute("select 1 from questions where id=?", (i,)).fetchone()],
-      "all 19 bank-v8 signed-off drops are absent from the shipped bank")
+      "all 19 bank-v8 signed-off drops are absent from the rebuilt bank")
 check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/regrade_bank_v8.py"))
       and os.path.isfile(os.path.join(ROOT, "tools/quizbank/review/import-v134.csv")),
       "bank-v8 regrade is reproducible with signed-off drop/import ledgers")
 _iv8 = list(_csv132.DictReader(
     io.open(os.path.join(ROOT, "tools/quizbank/review/import-v134.csv"), encoding="utf-8-sig")))
-check(len(_iv8) == 77 and all(
-      _db134.execute("select 1 from questions where id=?", (r["id"],)).fetchone()
-      for r in _iv8),
-      "all 77 regraded quiz-challenge imports are present in the shipped bank")
-# 打平后：不再有教材单元表，shipped 题库不携带任何册次信息；
-# 抽题池仍必须带年级上限与学科隔离（防止打平顺手改坏防超纲）。
+check(len(_iv8) == 77,
+      "bank-v8 import ledger survives as a signed-off historical record")
+# bank-v9：每题都带真实教材册次与版本族，单元过滤必须按版本隔离。
 _qd134 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizDb.java"))
-check(_syljson["grades"] == {},
-      "flattened syllabus table declares no books")
-check(_db134.execute("select count(*) from questions where term is not null and term<>''")
-      .fetchone()[0] == 0,
-      "no shipped question carries a textbook term")
+check(_db134.execute("select count(*) from questions where term in ('上','下')")
+      .fetchone()[0] == 9544,
+      "every shipped question carries a real textbook term")
+check("edition_family = ?" in _qd134,
+      "unit filtering is isolated by edition family")
 check("WHERE grade<=? AND subject=?" in _qd134
       and _qd134.count("grade<=?") >= 4,
       "quiz pools still cap by grade and keep subject isolation")

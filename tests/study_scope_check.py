@@ -98,11 +98,41 @@ def main():
     qd = io.open(QUIZDB, encoding="utf-8").read()
     if "WHERE grade<=? AND subject=?" not in qd or qd.count("grade<=?") < 4:
         fail("QuizDb lost the grade cap")
-    if "edition_family = ?" not in qd:
+    syl = io.open(os.path.join(ROOT, "app/src/com/jager/tvquiz/Syllabus.java"),
+                  encoding="utf-8").read()
+    if "familiesFor(" not in qd or "editionWhere(" not in qd \
+            or "editionWhere(int familyCount)" not in syl:
         fail("QuizDb lost the edition-family isolation")
+
+    # 学制视图：两套独立单元表、族集合互斥，且按学制抽题不串到另一学制
+    systems = table.get("systems") or {}
+    famsets = table.get("systemFamilies") or {}
+    if set(systems) != {"六三制", "五四制"} or set(famsets) != {"六三制", "五四制"}:
+        fail("syllabus.json must ship both edition systems")
+    a, b = set(famsets["六三制"]), set(famsets["五四制"])
+    if not a or not b or a & b:
+        fail("edition-system family sets must be non-empty and disjoint")
+    system_draws = 0
+    for name, families in famsets.items():
+        view = systems[name]
+        ph = ",".join("?" for _ in families)
+        for g in range(1, 7):
+            for sub in CORE:
+                for _ in range(8):
+                    r = conn.execute(
+                        "SELECT edition_family FROM questions "
+                        "WHERE grade<=? AND subject=? AND edition_family IN (" + ph + ") "
+                        "ORDER BY RANDOM() LIMIT 1", (g, sub) + tuple(families)).fetchone()
+                    if r is None:
+                        continue
+                    if r[0] not in families:
+                        fail("edition-system draw leaked %r into %s" % (r[0], name))
+                    system_draws += 1
+        if not view.get("grades") or not view.get("editionByCell"):
+            fail("edition system has no unit table: " + name)
     conn.close()
-    print("STUDY_SCOPE_OK PROGRESS cells=%d draws=%d ko-draws=%d edition-isolated grade-capped"
-          % (len(cells), draws, ko_draws))
+    print("STUDY_SCOPE_OK PROGRESS cells=%d draws=%d ko-draws=%d system-draws=%d "
+          "edition-isolated grade-capped" % (len(cells), draws, ko_draws, system_draws))
     return 0
 
 

@@ -429,6 +429,7 @@ public class QuizOverlayService extends Service {
         engine.setKnowledgeOnly(knowledgeOnly);
         engine.setDifficultyLevel(difficultyLevel);
         engine.setStudyScope(SyllabusAssets.get(this), st.termIndex(), st.unitLimit());
+        engine.setEditionMode(st.editionMode());
         QuizDb cached = QuizDb.peek();
         if (cached != null) {
             engine.setDb(cached);

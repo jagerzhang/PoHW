@@ -5,10 +5,14 @@ import android.content.Intent;
 import java.security.SecureRandom;
 
 /**
- * v1.3.0 未发布：局域网管理 API。所有写操作与状态读取都要 Bearer token。
+ * v1.3.4 未发布：局域网管理 API。所有写操作与状态读取都要 Bearer token。
  *
  * <p>token 只存内存、进程重启失效；PIN 连续失败 5 次锁 60 秒；
  * 只暴露白名单路径，不提供任意文件读取。数据全部留在设备本地。
+ *
+ * <p>手机端开放绝大部分家长设置（26 个键），每个值都做范围/枚举校验；
+ * 有意不开放：修改家长密码、清空错题库与统计、关闭手机管理自身、
+ * 在线题库地址、立即检查更新等破坏性或安全敏感操作。
  */
 public final class AdminApi {
 
@@ -17,12 +21,28 @@ public final class AdminApi {
     private static volatile long lockUntil = 0L;
     private static final SecureRandom RND = new SecureRandom();
 
+    private static final String[] NUM_KEYS = {
+            "grade", "interval", "questionsPerRound", "passPercent", "roundMode",
+            "termIndex", "unitLimit", "editionMode", "unlockStreak",
+            "questionSource", "difficultyLevel", "syncIndex",
+            "w0", "w1", "w2", "w3"
+    };
+    private static final String[] BOOL_KEYS = {
+            "allSubjects", "strictOneShot", "cooldownEnabled", "autoContinueOnCorrect",
+            "bootAutostart", "autoGuardOnBoot", "pauseOnQuiz", "resumePlayback",
+            "autoCheckUpdate"
+    };
+
     private AdminApi() { }
 
     public static void reset() { token = null; failures = 0; lockUntil = 0L; }
 
     public static boolean authorized(String auth) {
         return token != null && auth != null && auth.equals("Bearer " + token);
+    }
+
+    private static int clamp(int v, int lo, int hi) {
+        return v < lo ? lo : (v > hi ? hi : v);
     }
 
     /** 返回 HTTP 状态码与 JSON 正文。 */
@@ -49,29 +69,10 @@ public final class AdminApi {
 
         SettingsStore st = new SettingsStore(c);
         if ("/api/status".equals(path) && "GET".equals(method)) {
-            StringBuilder s = new StringBuilder();
-            s.append("{\"guard\":").append(QuizOverlayService.isRunning());
-            s.append(",\"grade\":").append(st.grade());
-            s.append(",\"interval\":").append(st.intervalSec());
-            s.append(",\"questionsPerRound\":").append(st.questionsPerRound());
-            s.append(",\"passPercent\":").append(st.passPercent());
-            s.append(",\"roundMode\":").append(st.roundMode());
-            s.append(",\"wrong\":").append(WrongBook.cachedCount());
-            String ver = "unknown";
-            try {
-                ver = c.getPackageManager().getPackageInfo(
-                        c.getPackageName(), 0).versionName;
-            } catch (Exception ignored) { }
-            s.append(",\"version\":\"").append(ver).append("\"}");
-            return new Result(200, s.toString());
+            return new Result(200, statusJson(c, st));
         }
         if ("/api/config".equals(path) && "POST".equals(method)) {
-            int n = jsonInt(body, "questionsPerRound");
-            int p = jsonInt(body, "passPercent");
-            int v = jsonInt(body, "interval");
-            if (n > 0) st.questionsPerRound(n);
-            if (p > 0) st.passPercent(p);
-            if (v > 0) st.intervalSec(v);
+            applyConfig(st, body);
             try {
                 Intent i = new Intent(c, QuizOverlayService.class)
                         .setAction(QuizOverlayService.ACTION_RELOAD);
@@ -80,6 +81,121 @@ public final class AdminApi {
             return new Result(200, "{\"ok\":true}");
         }
         return new Result(404, "{\"error\":\"unknown api\"}");
+    }
+
+    /** 手机端能读到的全部状态与枚举选项，保证页面与源码同源。 */
+    private static String statusJson(Context c, SettingsStore st) {
+        StringBuilder s = new StringBuilder();
+        s.append("{\"guard\":").append(QuizOverlayService.isRunning());
+        s.append(",\"wrong\":").append(WrongBook.cachedCount());
+        s.append(",\"grade\":").append(st.grade());
+        s.append(",\"interval\":").append(st.intervalSec());
+        s.append(",\"questionsPerRound\":").append(st.questionsPerRound());
+        s.append(",\"passPercent\":").append(st.passPercent());
+        s.append(",\"roundMode\":").append(st.roundMode());
+        s.append(",\"termIndex\":").append(st.termIndex());
+        s.append(",\"unitLimit\":").append(st.unitLimit());
+        s.append(",\"editionMode\":").append(st.editionMode());
+        s.append(",\"unlockStreak\":").append(st.unlockStreak());
+        s.append(",\"questionSource\":").append(st.questionSource());
+        s.append(",\"difficultyLevel\":").append(st.difficultyLevel());
+        s.append(",\"syncIndex\":").append(st.syncIndex());
+        s.append(",\"allSubjects\":").append(st.allSubjects());
+        s.append(",\"strictOneShot\":").append(st.strictOneShot());
+        s.append(",\"cooldownEnabled\":").append(st.cooldownEnabled());
+        s.append(",\"autoContinueOnCorrect\":").append(st.autoContinueOnCorrect());
+        s.append(",\"bootAutostart\":").append(st.bootAutostart());
+        s.append(",\"autoGuardOnBoot\":").append(st.autoGuardOnBoot());
+        s.append(",\"pauseOnQuiz\":").append(st.pauseOnQuiz());
+        s.append(",\"resumePlayback\":").append(st.resumePlayback());
+        s.append(",\"autoCheckUpdate\":").append(st.autoCheckUpdate());
+        for (int i = 0; i < Subjects.COUNT; i++) {
+            s.append(",\"w").append(i).append("\":").append(st.weight(i));
+        }
+        s.append(",\"intervals\":");
+        appendInts(s, SettingsStore.INTERVALS);
+        s.append(",\"intervalLabels\":");
+        appendStrings(s, SettingsStore.INTERVAL_LABELS);
+        s.append(",\"editionLabels\":");
+        appendStrings(s, Syllabus.EDITION_LABELS);
+        s.append(",\"syncLabels\":");
+        appendStrings(s, SettingsStore.SYNC_LABELS);
+        s.append(",\"maxWeight\":").append(SubjectWeights.MAX_WEIGHT);
+        s.append(",\"maxGrade\":").append(SettingsStore.MAX_GRADE);
+        String ver = "unknown";
+        try {
+            ver = c.getPackageManager().getPackageInfo(c.getPackageName(), 0).versionName;
+        } catch (Exception ignored) { }
+        s.append(",\"version\":\"").append(ver).append("\"}");
+        return s.toString();
+    }
+
+    private static void appendInts(StringBuilder s, int[] a) {
+        s.append('[');
+        for (int i = 0; i < a.length; i++) {
+            if (i > 0) s.append(',');
+            s.append(a[i]);
+        }
+        s.append(']');
+    }
+
+    private static void appendStrings(StringBuilder s, String[] a) {
+        s.append('[');
+        for (int i = 0; i < a.length; i++) {
+            if (i > 0) s.append(',');
+            s.append('"').append(a[i]).append('"');
+        }
+        s.append(']');
+    }
+
+    /** 逐字段校验后再落盘；缺失字段保持原值，方便手机端增量提交。 */
+    private static void applyConfig(SettingsStore st, String body) {
+        for (String key : NUM_KEYS) {
+            int v = jsonInt(body, key);
+            if (v < 0) continue;
+            if ("grade".equals(key)) st.grade(clamp(v, SettingsStore.MIN_GRADE,
+                    SettingsStore.MAX_GRADE));
+            else if ("interval".equals(key)) {
+                boolean allowed = false;
+                for (int x : SettingsStore.INTERVALS) if (x == v) allowed = true;
+                if (allowed) st.intervalSec(v);
+            }
+            else if ("questionsPerRound".equals(key)) st.questionsPerRound(clamp(v, 1, 10));
+            else if ("passPercent".equals(key)) st.passPercent(clamp(v, 1, 100));
+            else if ("roundMode".equals(key)) st.roundMode(clamp(v, 0, 2));
+            else if ("termIndex".equals(key)) st.termIndex(clamp(v, Syllabus.TERM_ALL,
+                    Syllabus.TERM_SECOND));
+            else if ("unitLimit".equals(key)) st.unitLimit(clamp(v, 0, Syllabus.MAX_UNITS));
+            else if ("editionMode".equals(key)) st.editionMode(clamp(v, 0,
+                    Syllabus.EDITION_LABELS.length - 1));
+            else if ("unlockStreak".equals(key)) st.unlockStreak(clamp(v,
+                    SettingsStore.STREAK_MIN, SettingsStore.STREAK_MAX));
+            else if ("questionSource".equals(key)) st.questionSource(clamp(v,
+                    SettingsStore.SOURCE_ALL, SettingsStore.SOURCE_KNOWLEDGE_ONLY));
+            else if ("difficultyLevel".equals(key)) st.difficultyLevel(clamp(v, 0, 3));
+            else if ("syncIndex".equals(key)) st.syncIndex(clamp(v, 0,
+                    SettingsStore.SYNC_HOURS.length - 1));
+            else if (key.length() == 2 && key.charAt(0) == 'w') {
+                int idx = key.charAt(1) - '0';
+                if (idx >= 0 && idx < Subjects.COUNT) {
+                    st.weight(idx, clamp(v, 0, SubjectWeights.MAX_WEIGHT));
+                }
+            }
+        }
+        for (String key : BOOL_KEYS) {
+            int v = jsonBool(body, key);
+            if (v < 0) continue;
+            boolean on = v == 1;
+            if ("allSubjects".equals(key)) st.allSubjects(on);
+            else if ("strictOneShot".equals(key)) st.strictOneShot(on);
+            else if ("cooldownEnabled".equals(key)) st.cooldownEnabled(on);
+            else if ("autoContinueOnCorrect".equals(key)) st.autoContinueOnCorrect(on);
+            else if ("bootAutostart".equals(key)) st.bootAutostart(on);
+            else if ("autoGuardOnBoot".equals(key)) st.autoGuardOnBoot(on);
+            else if ("pauseOnQuiz".equals(key)) st.pauseOnQuiz(on);
+            else if ("resumePlayback".equals(key)) st.resumePlayback(on);
+            else if ("autoCheckUpdate".equals(key)) st.autoCheckUpdate(on);
+        }
     }
 
     private static String jsonString(String body, String key) {
@@ -113,6 +229,22 @@ public final class AdminApi {
         }
         if (b.length() == 0) return -1;
         try { return Integer.parseInt(b.toString()); } catch (Exception e) { return -1; }
+    }
+
+    /** 缺失返回 -1，true/1 返回 1，false/0 返回 0。 */
+    private static int jsonBool(String body, String key) {
+        if (body == null) return -1;
+        int i = body.indexOf("\"" + key + "\"");
+        if (i < 0) return -1;
+        int c = body.indexOf(':', i);
+        if (c < 0) return -1;
+        int k = c + 1;
+        while (k < body.length() && Character.isWhitespace(body.charAt(k))) k++;
+        if (body.startsWith("true", k)) return 1;
+        if (body.startsWith("false", k)) return 0;
+        if (k < body.length() && body.charAt(k) == '1') return 1;
+        if (k < body.length() && body.charAt(k) == '0') return 0;
+        return -1;
     }
 
     public static final class Result {

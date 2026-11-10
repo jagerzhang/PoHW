@@ -57,7 +57,7 @@ public class SettingsActivity extends Activity {
     private TextView gateTitle, gateMask, gateMsg, gateState, bankStatus, pinState;
     private Button firstGateBtn;
     private EditText urlEdit;
-    private Button rowGrade, rowInterval, rowScope, rowSync, rowTerm, rowUnit, rowEdition;
+    private Button rowGrade, rowInterval, rowScope, rowSync, rowTerm, rowUnit, rowEdition, rowQr;
     /** v1.1.0 四项可选加固，默认全关。 */
     private Button rowStreak, rowStrict, rowCooldown, rowSource, rowDifficulty, rowAutoContinue;
     /** 在线源并排行：左检查题库更新 / 右自动更新，供行内左右焦点链使用。 */
@@ -259,7 +259,7 @@ public class SettingsActivity extends Activity {
                         ViewGroup.LayoutParams.WRAP_CONTENT));
         Button b = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 14);
         b.setSingleLine(false);
-        b.setMaxLines(2);
+        b.setMaxLines(4);
         b.setEllipsize(null);
         b.setMinHeight(Ui.dp(this, 44));
         b.setPadding(Ui.dp(this, 10), Ui.dp(this, 2), Ui.dp(this, 10), Ui.dp(this, 2));
@@ -307,11 +307,12 @@ public class SettingsActivity extends Activity {
         // ---- 01 出题基础 ----
         LinearLayout quiz = addCard(col, "01  出题基础");
         // v1.3.1：二维码入口从最底部的 06 卡片提到第一屏第一行。
-        addRow(quiz, "手机扫码管理", new View.OnClickListener() {
+        rowQr = addRow(quiz, "手机扫码管理", new View.OnClickListener() {
             @Override public void onClick(View v) {
                 startActivity(new Intent(SettingsActivity.this, PairActivity.class));
             }
         });
+        rowQr.setText("点开扫码 ›");
         note(quiz, "点开即显示二维码：手机与电视连同一 WiFi，扫码后输入家长密码即可管理；"
                 + "默认不监听，进入本页后开启，可随时关闭。");
         rowGrade = addRow(quiz, "所在年级", new View.OnClickListener() {
@@ -333,13 +334,13 @@ public class SettingsActivity extends Activity {
             @Override public void onClick(View v) {
                 st.termIndex((st.termIndex() + 1) % Syllabus.TERM_LABELS.length);
                 st.unitLimit(Math.min(st.unitLimit(),
-                        syllabus.maxUnits(st.grade(), st.termIndex())));
+                        syllabus.maxUnits(st.grade(), st.termIndex(), st.editionMode())));
                 refreshRows();
             }
         });
         rowUnit = addRow(quiz, "已学单元", new View.OnClickListener() {
             @Override public void onClick(View v) {
-                int max = syllabus.maxUnits(st.grade(), st.termIndex());
+                int max = syllabus.maxUnits(st.grade(), st.termIndex(), st.editionMode());
                 if (max == 0) {
                     Toast.makeText(SettingsActivity.this,
                             "本年级 / 学期暂无单元进度表，仅按学期抽题",
@@ -350,11 +351,13 @@ public class SettingsActivity extends Activity {
                 refreshRows();
             }
         });
-        rowEdition = addRow(quiz, "教材版本", new View.OnClickListener() {
+        rowEdition = addRow(quiz, "教材学制", new View.OnClickListener() {
             @Override public void onClick(View v) {
-                Toast.makeText(SettingsActivity.this,
-                        "按当前年级与册次自动匹配题库中题量最多的教材版本",
-                        Toast.LENGTH_SHORT).show();
+                int next = (st.editionMode() + 1) % Syllabus.EDITION_LABELS.length;
+                st.editionMode(next);
+                st.unitLimit(Math.min(st.unitLimit(),
+                        syllabus.maxUnits(st.grade(), st.termIndex(), next)));
+                refreshRows();
             }
         });
         rowStreak = addRow(quiz, "连续答对", new View.OnClickListener() {
@@ -423,8 +426,8 @@ public class SettingsActivity extends Activity {
         note(quiz, "「答对自动继续」默认开启：达到解锁门槛后直接关闭答题页，不用再按一次「继续观看」；关掉则保留原来的确认按钮。");
         note(quiz, "出题偏好＝仅知识/计算题时，仍按所选学期与已学单元抽题，绝不串到另一册；选不到题时交参数化生成器补位。");
         note(quiz, "题库按真实教材册次与课标知识点组织：先选上 / 下册，再选已学到第几单元；"
-                + "同一格子有多套教材时自动匹配题量最多的版本，单元过滤按版本隔离，绝不串题。"
-                + "选不到题时依次放宽单元 → 学期 → 年级，始终不换学科。默认全学年 / 不限。");
+                + "「教材学制」可切自动 / 六三制 / 五四制，每套学制有独立单元表，按版本族隔离，绝不串题。"
+                + "选不到题时依次放宽单元 → 学期 → 年级，始终不换学科。默认自动 / 全学年 / 不限。");
 
         // ---- 02 学科设置 ----
         LinearLayout subjects = addCard(col, "02  学科设置 · 题目配比");
@@ -513,7 +516,7 @@ public class SettingsActivity extends Activity {
         bankRow.setGravity(Gravity.CENTER_VERTICAL);
         Button btnCheck = Ui.button(this, "检查题库更新", 0xFF6C4F9E, 0xFFFFFFFF, 15);
         btnCheck.setSingleLine(false);
-        btnCheck.setMaxLines(2);
+        btnCheck.setMaxLines(4);
         btnCheck.setEllipsize(null);
         btnCheck.setMinHeight(Ui.dp(this, 44));
         btnCheck.setOnClickListener(new View.OnClickListener() {
@@ -546,7 +549,7 @@ public class SettingsActivity extends Activity {
 
         rowSync = Ui.button(this, "自动更新", Ui.BTN_BG, 0xFFF5F7FA, 14);
         rowSync.setSingleLine(false);
-        rowSync.setMaxLines(2);
+        rowSync.setMaxLines(4);
         rowSync.setEllipsize(null);
         rowSync.setMinHeight(Ui.dp(this, 44));
         rowSync.setPadding(Ui.dp(this, 10), Ui.dp(this, 2), Ui.dp(this, 10), Ui.dp(this, 2));
@@ -742,7 +745,7 @@ public class SettingsActivity extends Activity {
 
         Button wt = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 14);
         wt.setSingleLine(false);
-        wt.setMaxLines(2);
+        wt.setMaxLines(4);
         wt.setEllipsize(null);
         wt.setMinHeight(Ui.dp(this, 44));
         wt.setPadding(Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2));
@@ -811,7 +814,7 @@ public class SettingsActivity extends Activity {
         rowScope.setText(st.allSubjects() ? "全学科（含物理/历史等）" : "仅数 / 语 / 英");
         rowSync.setText("自动更新 · " + SettingsStore.SYNC_LABELS[st.syncIndex()]);
         rowTerm.setText(Syllabus.TERM_LABELS[st.termIndex()]);
-        int maxUnit = syllabus.maxUnits(st.grade(), st.termIndex());
+        int maxUnit = syllabus.maxUnits(st.grade(), st.termIndex(), st.editionMode());
         int lim = st.unitLimit();
         if (maxUnit == 0) {
             rowUnit.setText("本册暂无进度表 · 仅学期过滤");
@@ -819,10 +822,20 @@ public class SettingsActivity extends Activity {
             rowUnit.setText("不限（整册 " + maxUnit + " 单元）");
         } else {
             rowUnit.setText("已学到 " + syllabus.unitLabel(st.grade(), st.termIndex(),
-                    Subjects.MATH, Math.min(lim, maxUnit)));
+                    Subjects.MATH, Math.min(lim, maxUnit), st.editionMode()));
         }
-        String fam = syllabus.editionFor(st.grade(), st.termIndex(), Subjects.MATH);
-        rowEdition.setText(fam.isEmpty() ? "通用（全学年）" : fam);
+        int em = st.editionMode();
+        String fam = syllabus.editionFor(st.grade(), st.termIndex(), Subjects.MATH, em);
+        String edLabel = Syllabus.EDITION_LABELS[em];
+        if (em != Syllabus.EDITION_AUTO) {
+            // 全学年没有「某一册」的代表族，不能据此误报本册无题。
+            if (st.termIndex() == Syllabus.TERM_ALL) {
+                edLabel += "（全学年）";
+            } else {
+                edLabel += fam.isEmpty() ? "（本册暂无该学制题）" : (" · " + fam);
+            }
+        }
+        rowEdition.setText(edLabel);
         for (int s = 0; s < Subjects.COUNT; s++) {
             String w = "配比 " + st.weight(s);
             if (s == Subjects.OTHER && !st.allSubjects()) w += " · 未启用";

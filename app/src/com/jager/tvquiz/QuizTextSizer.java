@@ -11,6 +11,21 @@ public final class QuizTextSizer {
     private static final java.util.regex.Pattern MULTI_SUBITEM =
             java.util.regex.Pattern.compile(
                     "(^|[^0-9.])\\d{1,2}\\s*[.．、]\\s*[^，。]{0,10}[（(]\\s*[）)]");
+    /**
+     * v1.3.2：编号序列题（(1)接 (2)天 … / 选项 (7)(1)(3)…）要求孩子来回对照
+     * 7–10 个编号，TV 四选一上既读不清也答不动。题库层已按签认清单剔除，
+     * 这里再按「呈现结构」兜底，不按学科内容判超纲。
+     */
+    private static final java.util.regex.Pattern NUMBERED_ITEM =
+            java.util.regex.Pattern.compile("[（(]\\s*\\d{1,2}\\s*[）)]");
+    private static final int TV_MAX_NUMBERED_ITEMS = 3;
+
+    private static int countMatches(java.util.regex.Pattern p, String s) {
+        java.util.regex.Matcher m = p.matcher(s);
+        int n = 0;
+        while (m.find()) n++;
+        return n;
+    }
 
     private QuizTextSizer() {}
 
@@ -50,7 +65,9 @@ public final class QuizTextSizer {
     public static boolean optionsFitTv(String[] options) {
         if (options == null) return true;
         for (String s : options) {
-            if (s != null && s.length() > TV_OPTION_MAX_CHARS) return false;
+            if (s == null) continue;
+            if (s.length() > TV_OPTION_MAX_CHARS) return false;
+            if (countMatches(NUMBERED_ITEM, s) >= TV_MAX_NUMBERED_ITEMS) return false;
         }
         return true;
     }
@@ -60,6 +77,7 @@ public final class QuizTextSizer {
         if (text == null) return true;
         if (text.length() > TV_STEM_MAX_CHARS) return false;
         for (String k : STEM_DEPENDENT) if (text.contains(k)) return false;
+        if (countMatches(NUMBERED_ITEM, text) >= TV_MAX_NUMBERED_ITEMS) return false;
         return !MULTI_SUBITEM.matcher(text).find();
     }
 

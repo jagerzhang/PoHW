@@ -1,0 +1,70 @@
+﻿id,grade,subject,prior_disposition,audit_features,final_action,category,reason,stem,correct
+TK01593,2,数学,REVIEW_SUPERGRADE,,DROP,TRIANGLE_INEQUALITY,木条拼三角形考三边关系，二年级超纲,有四根木条，它们的长度分别是1厘米、2厘米、3厘米、4厘米，从它们当中选出3根木条拼成一个三角形，一共可以拼成不同的三角形有( ),一种
+TK01621,2,数学,REVIEW_SUPERGRADE,,DROP,TRIANGLE_INEQUALITY,五根木条拼三角形考三边关系，二年级超纲,有五根木条，它们的长度分别是1厘米、2厘米、3厘米、4厘米、5厘米，从它们当中选出3根木条拼成一个三角形，一共可以拼成 三角形．,三个
+TK02619,2,英语,RELOCATE,,KEEP,RULE_FALSE_POSITIVE,26 个字母中元音数量，字母入门常识，低年级英语合适,26个字母中有几个是元音字母？( ),5
+TK03679,2,英语,RELOCATE,,DROP,TV_UNFIT,大写字母一笔写完属书写题，四选一无法作答且答案依赖笔画约定,找出能用一笔写完的大写字母。( ),L
+TK02094,2,语文,RELOCATE,,KEEP,RULE_FALSE_POSITIVE,字母表顺序辨识，第一学段音序查字法前置内容,下面4组大写字母中，与字母表顺序一致的是( ),DEFGH
+TK02095,2,语文,RELOCATE,,KEEP,RULE_FALSE_POSITIVE,按字母表顺序排列，低年级合适,按“字母表”的顺序排列正确的一组是( ),D H Q W Z
+TK02096,2,语文,RELOCATE,,DROP,STRUCTURE,题干含双括号填空与选择混合，结构损坏,下面第( )组字母都是大写字母。( ),R T Q E Y H
+TK02097,2,语文,RELOCATE,,KEEP,RULE_FALSE_POSITIVE,首字母排列，音序查字法应用，低年级合适,“保定火车站”的首字母排列为( ),BCDHZ
+TK02098,2,语文,RELOCATE,,DROP,CHINESE_ADVANCED,嘹瞰鹤惰苞等生僻字辨音序，低年级不认字,下列各组汉字的大写字母完全正确的一项是( ),嘹L 瞰K 鹤H 惰D 苞B
+TK02099,2,语文,RELOCATE,,KEEP,RULE_FALSE_POSITIVE,音序顺序辨错，低年级合适,下列音序按字母顺序排列不正确的一组是( ),FHPMST
+TK02128,2,语文,RELOCATE,CN_ADVANCED,DROP,SEQUENCE_TV,6 项编号汉字音序排序，TV 四选一认知负荷过高,下列汉字按音序排列正确的一项是( ) ①肖 ②蚕 ③逝 ④溅 ⑤仪 ⑥懊,⑥②④③①⑤
+TK02132,2,语文,RELOCATE,CN_ADVANCED,DROP,SEQUENCE_TV,7 项编号汉字音序排序，TV 四选一认知负荷过高,下列汉字按音序排列正确的一组是 ①较②暂③酿④缭⑤割⑥仪⑦懊( ),⑦⑤①④③⑥②
+TK02216,2,语文,RELOCATE,NUMBERED_STEM|SEQ_OPTIONS|CN_ADVANCED,DROP,SEQUENCE_TV,用户反馈题：7 项编号音序排序，选项也是编号序列,下列的汉字按音序排列正确的一项是 (1)接 (2)天 (3)莲 (4)叶 (5)无 (6)穷 (7)碧,（7）（1）（3）（6）（2）（5）（4）
+TK02217,2,语文,RELOCATE,NUMBERED_STEM|SEQ_OPTIONS|CN_ADVANCED,DROP,SEQUENCE_TV,10 项国家名音序排序，选项超长且含编号序列,下列国家名按音序排列正确的一项是 (1)中 (2)美 (3)法 (4)英 (5)俄 (6)德 (7)日 (8)新加坡 (9)加拿大 (10)巴西,（10）（6）（5）（3）（9）（2）（7）（8）（4）（1）
+TK00002,3,数学,REVIEW_SUPERGRADE,,DROP,PERCENT,睡眠占一天 37.5%，百分数为高年级内容,青少年每天的睡眠时间是9小时，占一天时间的( ),37.5%
+TK00003,3,数学,REVIEW_SUPERGRADE,,DROP,CLOCK_ANGLE_CALC,1 小时两针转过角度差 330 度，需角速度计算,经过1小时，钟面上分针转过的角度与时针转过的角度相差( ),330 。
+TK00022,3,数学,REVIEW_SUPERGRADE,,KEEP,RULE_FALSE_POSITIVE,读钟面几时几分，二年级「认识时间」内容,时针在9和10之间，分针指着11，这时是,9时55分
+TK00027,3,数学,REVIEW_SUPERGRADE,,DROP,CLOCK_ANGLE_CALC,时针分针重合时段属追及问题，超出小学课标,时针与分针在下列哪个时段内重合过一次．,7：30-8：00
+TK01242,3,数学,REVIEW_SUPERGRADE,,DROP,CLOCK_ANGLE_CALC,三针角速度比 720:12:1，比例与角速度均超纲,钟面上有秒针、分针、时针，在相同的时间内，这三种指针转动的角度比是,720：12：1
+TK01405,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_DYNAMIC,1:20 夹角需计算时针动态位置，非整点直观题,钟面上的时刻是1：20，这时分针和时针形成的夹角是( ),锐角
+TK01406,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,KEEP,RULE_FALSE_POSITIVE,3 时整成直角，角的直观辨认，无需计算,3时整，钟面上时针和分针所成的角是( ),直角
+TK01414,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_DYNAMIC,3:15 夹角需计算时针动态位置,3时15分，时针和分针的夹角是( ),锐角
+TK01416,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,13:30 夹角 135 度含 24 时制与角度计算,13时30分，钟面上时针与分针所夹的角是( ),135°
+TK01420,3,数学,REVIEW_SUPERGRADE,,KEEP,RULE_FALSE_POSITIVE,3 时整成直角，角的直观辨认，无需计算,3时整，时针和分针成( ),直角
+TK01422,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,KEEP,RULE_FALSE_POSITIVE,3 时整成直角，角的直观辨认，无需计算,当3时整时，时针与分针所形成的角是( ),直角
+TK01428,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,3:30 夹角 75 度，需时针动态位置,时刻3：30时，钟面上时针与分针的夹角是( ),75度
+TK01430,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,10 分钟分针旋转 60 度，角度计算超纲,钟表上的分针旋转一周需要60分钟，那么经过10分钟分针旋转了 ( ),60°
+TK01431,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,20 分钟内两针分别旋转角度，角速度计算,从1点05分到1点25分，时针和分针旋转的角度分别为( ),10°和120°
+TK01436,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,9 点整夹角 90 度，度数表述超出第一学段,9点钟时，钟表的时针和分针之间的夹角是( ),90°
+TK01437,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,40 分钟两针旋转角度分别为 240 度和 20 度,钟表上的分针和时针经过40分钟，分针和时针旋转的角度分别是( ),240°和20°
+TK01441,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,8:30 夹角 75 度,八点三十分，这一时刻，时针与分针夹角是( ),75°
+TK01443,3,数学,REVIEW_SUPERGRADE,,DROP,CLOCK_ANGLE_CALC,下午四点半夹角 45 度,在下午四点半钟的时候，时针和分针所夹的角度是( ),45°
+TK01444,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE|DECIMAL_DEGREE,DROP,CLOCK_ANGLE_CALC,7:15 夹角 127.5 度，含半度角,7点15分，钟表的时针和分针所成的角为( ),127.5°
+TK01446,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE|DECIMAL_DEGREE,DROP,CLOCK_ANGLE_CALC,用户反馈题：2:25 夹角 77.5 度，三年级不会,时钟在2：25时，时针和分针所形成的夹角是( ),77.5°
+TK01447,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,7:20 夹角 100 度,钟表上7点20分，时针与分针的夹角为( ),100°
+TK01449,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,19:00 夹角 150 度，含 24 时制,小刚每晚19：00都要看央视的“新闻联播”节目，这时钟面上时针与分针夹角的度数为( ),150°
+TK01459,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,9:30 夹角 105 度,上午9时30分，时钟的时针和分针所成的角为( ),105°
+TK01464,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,8:30 夹角 75 度,在时刻8：30，时钟上的时针和分针之间的夹角为( ),75°
+TK01465,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,9:30 夹角 105 度,时钟9点30分时，分针和时针之间形成的角的度数等于( ),105°
+TK01485,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE|DECIMAL_DEGREE,DROP,CLOCK_ANGLE_CALC,12:15 夹角 82.5 度，含半度角,钟表上12时15分钟时，时针与分针的夹角为( ),82.5°
+TK01491,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,8:20 夹角 130 度,时针移到8点20分时，时针与分针所成的角是 ( ),130°
+TK01495,3,数学,REVIEW_SUPERGRADE,,DROP,DIRECTION_ANGLE,航向正北转东南 135 度，方位角超纲,船的航向从正北按顺时针方向转到东南方向，它转了( ),135°
+TK01504,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,9:30 夹角 105 度,钟表上的时间为9时30分，则时针与分针的夹角度数为( ),105°
+TK01512,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,3 点到 3:30 分针转平角,从3点到3点30分，钟表上分针转动的度数成( ),平角
+TK01513,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_DYNAMIC,6:15 夹角需时针动态位置,钟面上，6点15分时分针和时针所夹的角是=( ),钝角
+TK01517,3,数学,REVIEW_SUPERGRADE,,KEEP,RULE_FALSE_POSITIVE,9 时整成直角，角的直观辨认，无需计算,9时整，时钟的时针和分针成( ),直角
+TK01519,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_DYNAMIC,12:15 较小角需时针动态位置,12时15分，时针和分针所夹的较小角是( ),锐角
+TK01657,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,5 时夹角 150 度,早上5时在钟面上，时针和分针所夹的角的度数是( ),150°
+TK01658,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_DYNAMIC,3:30 较小角需时针动态位置,钟面上三点半时，时针与分针成的较小角是( ),锐角
+TK01662,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,分针转一周时针转 30 度，角速度比,时钟的分针旋转一周，时针就要旋转( ),30°
+TK01664,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,KEEP,RULE_FALSE_POSITIVE,分针指 12 时针指 9 成直角，整点直观题,分针指向12，时针指向9，分针与时针所成的角是( )角．,直角
+TK01667,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,6:00 到 9:00 时针旋转 90 度,从6：00到9：00，时针旋转了( ),90°
+TK01668,3,数学,REVIEW_SUPERGRADE,,DROP,CLOCK_DYNAMIC,7:30 夹角需时针动态位置,7时30分，时针和分针构成一个,锐角
+TK01670,3,数学,REVIEW_SUPERGRADE,,DROP,CLOCK_ANGLE_CALC,分针走一圈时针转 30 度,钟面上分针走一圈，时针转动的角度是,30°
+TK01671,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_DYNAMIC,12:15 夹角需时针动态位置,12时15分，分针与时针的夹角是,锐角
+TK01800,3,数学,REVIEW_SUPERGRADE,MATH_ADVANCED,DROP,CIRCLE_AREA,时针长 1 分米一昼夜扫过面积 2π，圆面积与π超纲,钟面上时针的长度1分米，一昼夜时针扫过的面积( )平方分米。,2π
+TK01816,3,数学,REVIEW_SUPERGRADE,,DROP,MIRROR,镜中钟表读数属镜面对称奥数题,从镜子中看到的钟表时针表示5：00时，实际钟表时针表示,7：00
+TK01821,3,数学,REVIEW_SUPERGRADE,CLOCK_ANGLE,DROP,CLOCK_ANGLE_CALC,3:00 到 9:00 时针旋转 180 度,时针从3：00到9：00是围绕钟面中心旋转了,180°
+TK01920,3,数学,REVIEW_SUPERGRADE,,DROP,STRUCTURE,篮球轮换题题干截断且出现第五个选项 E,在一场篮球比赛中，其中一个队在场上总是保持五名队员，在场还有三名候补队员(场上队员随时可以替换)．在整场比赛中这八个队员每人上场的时间相同．如果这场比赛持续的时间是48分钟，那么每个队员上场的时间是( ),30分
+TK02081,3,数学,REVIEW_SUPERGRADE,,KEEP,RULE_FALSE_POSITIVE,12 时整三针重合，钟面常识,( )时整，时针、分针、秒针重合在一处．,12时整
+TK02090,3,数学,REVIEW_SUPERGRADE,,KEEP,RULE_FALSE_POSITIVE,分针从 4 走到 8 经过 20 分钟，二年级认识时间,钟面上分针从数字“4”走到“8”，经过的时间是( ),20分钟
+TK01438,4,数学,REVIEW_SUPERGRADE,,KEEP,RULE_FALSE_POSITIVE,8 点整夹角 120 度，四年级已学角的度量，整点可分,钟表上的时间为晚上8 点，这时时针和分针之间的夹角(小于平角)的角的度数是( ),120°
+TK01460,4,数学,REVIEW_SUPERGRADE,,DROP,CLOCK_DYNAMIC,3:30 锐角 75 度需时针动态位置,钟表三点半时，时针与分针所成的锐角的度数为 ( ),75°
+TK01474,4,数学,REVIEW_SUPERGRADE,,DROP,CLOCK_DYNAMIC,两点半夹角 105 度需时针动态位置,钟表上的时间指示为两点半，这时时针和分针之间所形的成的(小于平角)角的度数是( ),105°
+TK01477,4,数学,REVIEW_SUPERGRADE,,KEEP,RULE_FALSE_POSITIVE,8 点整夹角 120 度，四年级已学角的度量，整点可分,钟表上的时间为晚上8点，这时时针和分针之间的夹角(小于平角)的度数是( ),120°
+TK01493,4,数学,REVIEW_SUPERGRADE,,DROP,CLOCK_DYNAMIC,8:30 锐角 75 度需时针动态位置,8点30分的时候，时针与分针所夹的锐角度数是( ),75°
+TK01919,4,数学,REVIEW_SUPERGRADE,,DROP,STRUCTURE,玻璃球倍数题题干截断且出现第五个选项 E,两个罐子中装有同样数量的玻璃球．玻璃球是红色或白色．第一个罐子中红色玻璃球的数量是白色玻璃球数量的7倍，第二个罐子中一种球是另一种球的9倍，若一共有90个白色玻璃球，则第二个罐子中有( )个红色玻璃球。,360
+TK02445,4,语文,REVIEW_SUPERGRADE,,DROP,CHINESE_ADVANCED,《论语》通假与文言实词，属初中内容,下列加横线的字解释错误的一项是( ),思而不学则殆 (通“怠”，懈怠)
+TK01472,6,数学,REVIEW_SUPERGRADE,,DROP,SEQUENCE_TV,5 项编号三角尺画角，多子项题不适 TV 四选一,下面一些角中，可以用一副三角尺画出来的角是 (1)15°的角，(2)65°的角，(3)75°的角，(4)135°的角，(5)145°的角． ( ),（1）（3）（4）

@@ -14,7 +14,7 @@
 Android platform-tools（`adb` 在 PATH 中），然后：
 
 ```bash
-TV_IP=192.168.1.50 APK=dist/PoHW-v1.3.1.apk \
+TV_IP=192.168.1.50 APK=dist/PoHW-v1.3.2.apk \
   bash tools/ui_check/overlay_check.sh
 ```
 

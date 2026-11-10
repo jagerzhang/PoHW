@@ -3,11 +3,11 @@
 #
 # 前置：电视与本机同一 WiFi，已开启「开发者选项 -> 网络 ADB 调试」，
 #       本机已装 Android platform-tools（adb 在 PATH 中）。
-# 用法：TV_IP=192.168.1.50 APK=dist/PoHW-v1.3.1.apk \
+# 用法：TV_IP=192.168.1.50 APK=dist/PoHW-v1.3.2.apk \
 #         bash tools/ui_check/overlay_check.sh
 set -e
 : "${TV_IP:?请设置 TV_IP，例如 TV_IP=192.168.1.50}"
-APK="${APK:-dist/PoHW-v1.3.1.apk}"
+APK="${APK:-dist/PoHW-v1.3.2.apk}"
 OUT="${OUT:-.build/ui_check}"
 mkdir -p "$OUT"
 

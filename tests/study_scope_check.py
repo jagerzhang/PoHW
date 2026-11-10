@@ -61,6 +61,26 @@ def main():
                         fail("term-scoped draw leaked %r at g=%d" % (r, g))
                     draws += 1
 
+    # 出题偏好（qtype='knowledge'）也必须遵守册次：选上册不得出下册题
+    ko_draws = 0
+    for g in range(1, 7):
+        for sub in CORE:
+            for want in ("上", "下"):
+                for _ in range(20):
+                    r = conn.execute(
+                        "SELECT grade,subject,term FROM questions "
+                        "WHERE grade<=? AND subject=? AND qtype='knowledge' "
+                        "AND term IN (?, '全') ORDER BY RANDOM() LIMIT 1",
+                        (g, sub, want)).fetchone()
+                    if r is None:
+                        # 小学英语三年级起点，1-2 年级无题是预期
+                        if sub == "英语" and g <= 2:
+                            continue
+                        fail("knowledge-only term pool empty g=%d %s %s" % (g, sub, want))
+                    if r[2] != want or r[1] != sub or r[0] > g:
+                        fail("knowledge-only draw leaked %r at g=%d %s" % (r, g, want))
+                    ko_draws += 1
+
     # 单元层：取一个有真实单元的格子，验证版本隔离
     fam = cells.get("3|1|0")
     if fam:
@@ -81,8 +101,8 @@ def main():
     if "edition_family = ?" not in qd:
         fail("QuizDb lost the edition-family isolation")
     conn.close()
-    print("STUDY_SCOPE_OK PROGRESS cells=%d draws=%d edition-isolated grade-capped"
-          % (len(cells), draws))
+    print("STUDY_SCOPE_OK PROGRESS cells=%d draws=%d ko-draws=%d edition-isolated grade-capped"
+          % (len(cells), draws, ko_draws))
     return 0
 
 

@@ -527,10 +527,13 @@ check('unlock.onWrong();' in _o_code,
 # ---- versionCode 23：出题偏好不得回退到含纲目题的全库 ----
 _qd_code = strip_comments(_qd)
 check('if (knowledgeOnly) {' in _qd_code and 'return kq;' in _qd_code
-      and _qd_code.count('KNOWLEDGE_ONLY_SQL') >= 3,
-      "knowledge-only chain keeps the source constraint on every fallback")
-check(_qd_code.index('if (knowledgeOnly) {') < _qd_code.index('String termW ='),
-      "knowledge-only chain runs before term/unit filtering")
+      and 'String koW = KNOWLEDGE_ONLY_SQL + termW + diffW;' in _qd_code,
+      "knowledge-only chain keeps the source, term and difficulty constraints")
+check(_qd_code.index('String termW =') < _qd_code.index('if (knowledgeOnly) {'),
+      "term/unit predicates are shared by both drawing paths")
+_ko = _qd_code[_qd_code.index('if (knowledgeOnly) {'):].split('QuizEngine.Question q;')[0]
+check(_ko.count('pick(') >= 3 and _ko.count('+ koW') >= 3,
+      "knowledge-only never falls back without the selected term")
 check('按真实教材册次与课标知识点组织' in _act
       and '出题偏好＝仅知识/计算题时' in _act,
       "settings states the real progress rule and keeps the knowledge-only preference")
@@ -561,8 +564,9 @@ check(_qd24.count("diffW") >= 6,
 check('String rootW = diffRoot.isEmpty() ? "WHERE grade<=?" : diffRoot + " AND grade<=?"' in _qd24
       and 'pick(rootW, new String[]{g})' in _qd24,
       "final fallback keeps both the difficulty predicate and the grade cap")
-check("KNOWLEDGE_ONLY_SQL + diffW" in _qd24,
-      "knowledge-only chain also keeps the difficulty predicate")
+check("String koW = KNOWLEDGE_ONLY_SQL + termW + diffW;" in _qd24
+      and _qd24.count("+ koW") >= 3,
+      "knowledge-only chain keeps source + term + difficulty on all three fallbacks")
 
 # ---- versionCode 28：答对自动继续 + 暂停信号互斥 ----
 _st28 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsStore.java")))

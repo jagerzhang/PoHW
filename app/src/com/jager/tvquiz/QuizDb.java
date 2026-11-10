@@ -41,7 +41,7 @@ public final class QuizDb {
             "WHERE grade<=? AND subject NOT IN ('数学','语文','英语')";
     private static final String POOL_CORE_GRADE = "WHERE grade<=? AND subject=?";
     private static final String POOL_CORE_ALL = "WHERE grade<=? AND subject=?";
-    /** 可选出题偏好：只优先抽真知识 / 计算题；空池时仍按原有五层兜底回退全库。 */
+    /** 可选出题偏好：只抽知识题；三层兜底都保留来源与册次约束，空池交参数化生成器。 */
     private static final String KNOWLEDGE_ONLY_SQL = " AND qtype='knowledge'";
 
     private static QuizDb instance;
@@ -332,16 +332,8 @@ public final class QuizDb {
             poolArgs = new String[]{g, name};
         }
 
-        if (knowledgeOnly) {
-            // 810 道程序出题全部 term=''、topic 是题型名，学期/单元条件会把它们全部排除。
-            // 所以偏好模式不用 termW/unitW；且每一层兜底都必须保留 source 约束。
-            // 两层都空时返回 null，交给 QuizEngine 的参数化生成器出真计算 / 词库题，
-            // 绝不回退到含 4319 道纲目定位题的全库。
-            QuizEngine.Question kq = pick(where + KNOWLEDGE_ONLY_SQL + diffW, args);
-            if (kq == null) kq = pick(poolWhere + KNOWLEDGE_ONLY_SQL + diffW, poolArgs);
-            return kq;
-        }
-
+        // bank-v9 起每题都有真实册次与单元：进度谓词由两条出题路径共用，
+        // 偏好模式也必须遵守家长选的上/下册与已学单元，绝不偷偷放宽到别的册次。
         String termW = Syllabus.termWhere(termIndex);
         // 其他学科池与未覆盖的册没有有序单元表：只做学期过滤，绝不假装精确。
         String[] names = (syllabus != null && unitLimit > 0 && !other)
@@ -358,6 +350,16 @@ public final class QuizDb {
             System.arraycopy(unitA, 0, withEd, 0, unitA.length);
             withEd[unitA.length] = ed;
             unitA = withEd;
+        }
+
+        if (knowledgeOnly) {
+            // 每一层都保留 source + termW + diffW：宁可返回 null 交给 QuizEngine 的
+            // 参数化生成器出真计算 / 词库题，也不回退到别的册次或全库。
+            String koW = KNOWLEDGE_ONLY_SQL + termW + diffW;
+            QuizEngine.Question kq = pick(where + unitW + koW, concat(args, unitA));
+            if (kq == null && unitW.length() > 0) kq = pick(where + koW, args);
+            if (kq == null) kq = pick(poolWhere + koW, poolArgs);
+            return kq;
         }
 
         QuizEngine.Question q;

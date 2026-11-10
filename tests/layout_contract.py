@@ -299,14 +299,8 @@ _assets = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SyllabusAssets.java"
 _syljson = json.load(io.open(os.path.join(ROOT, "app/assets/syllabus.json"), encoding="utf-8"))
 _scope = read(os.path.join(ROOT, "tests/study_scope_check.py"))
 
-books = [(g, t, subj) for g, terms in _syljson["grades"].items()
-         for t, subjs in terms.items() for subj in subjs]
-check(len(_syljson["grades"]) == 6 and len(books) == 12,
-      "syllabus.json declares 12 books (grades 1-6 x upper/lower term)")
-check(all(subj == "数学" for _, _, subj in books),
-      "only math has ordered units; chinese/english degrade honestly")
-check(all(t in ("1", "2") for _, t, _ in books),
-      "term keys are the same indices used by SettingsStore")
+check(_syljson["grades"] == {} and "已停用" in _syljson.get("scope", ""),
+      "syllabus.json is the flattened empty table (no textbook / term / unit books)")
 check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/build_syllabus.py")),
       "syllabus generator / quiz.db consistency validator is committed")
 check(os.path.isfile(os.path.join(ROOT, "tests/study_scope_check.py")),
@@ -336,24 +330,24 @@ check("concat(args, unitA)" in _d and "!other" in _d,
       "unit args are bound and skipped for the OTHER pool")
 check("setStudyScope" in _e and "syllabus, termIndex, unitLimit" in _e,
       "engine forwards study scope to the SQL layer")
-check("SyllabusAssets.get(this)" in _o and "st.termIndex()" in _o,
-      "service injects the real table and both settings")
+check("setStudyScope" not in _o and "SyllabusAssets.get" not in _o
+      and "st.editionFor" not in _o,
+      "quiz service no longer injects study scope or edition labels")
 check('getInt("termIdx", Syllabus.TERM_ALL)' in _st
       and 'getInt("unitLimit", 0)' in _st,
       "both study-scope settings default to the old unrestricted behaviour")
-check("rowTerm" in raw_s and "rowUnit" in raw_s and "学习进度" in raw_s,
-      "settings exposes term / unit rows with an honest scope note")
-check("SyllabusAssets.get(this)" in raw_s
-      and "maxUnits" in raw_s and "unitLabel" in raw_s,
-      "settings clamps the unit index to the real book size")
-check("Syllabus.TERM_LABELS" in raw_s and "学习进度" in raw_s,
-      "settings page reports the active study scope")
+check("rowTerm" not in raw_s and "rowUnit" not in raw_s
+      and "学习学期" not in raw_s and "已学单元" not in raw_s
+      and "教材版本" not in raw_s and "Syllabus.TERM_LABELS" not in raw_s,
+      "parent settings has no textbook / term / unit concept left")
+check("题库按年级 + 学科 + 课标纲目打平" in raw_s,
+      "parent settings states the flattened grade+subject+outline rule")
 check(all(k in _run for k in ("Json.java", "Syllabus.java", "SyllabusTest")),
       "JSON parser, syllabus and its JVM test are compiled and executed")
 check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
-check("STUDY_SCOPE_OK" in _scope and "FALLBACK_UNIT_TO_TERM_OK" in _scope,
-      "runtime regression asserts the fallback order, not just final answers")
+check("STUDY_SCOPE_OK" in _scope and "FLATTENED" in _scope,
+      "runtime regression asserts the flattened grade+subject-only draw")
 check('android:versionCode="46"' in _mf, "manifest versionCode advances to 46")
 check('VERSION_CODE="46"' in b, "build script versionCode advances to 46")
 
@@ -537,9 +531,9 @@ check('if (knowledgeOnly) {' in _qd_code and 'return kq;' in _qd_code
       "knowledge-only chain keeps the source constraint on every fallback")
 check(_qd_code.index('if (knowledgeOnly) {') < _qd_code.index('String termW ='),
       "knowledge-only chain runs before term/unit filtering")
-check('不适用（仅知识题模式）' in _act
-      and '仅知识/计算题模式不受学习进度限制' in _act,
-      "settings mark study scope as not applicable under the preference")
+check('题库按年级 + 学科 + 课标纲目打平' in _act
+      and '出题偏好＝仅知识/计算题时' in _act,
+      "settings states the flattened rule and keeps the knowledge-only preference")
 
 
 # ---- code24：题目难度倾向加权 ----
@@ -1026,22 +1020,17 @@ check(len(_iv8) == 77 and all(
       _db134.execute("select 1 from questions where id=?", (r["id"],)).fetchone()
       for r in _iv8),
       "all 77 regraded quiz-challenge imports are present in the shipped bank")
-# 负向校验：单元进度谓词只有加上 scope 约束才会排除通用题（无教材版本）；
-# 不加约束时该谓词确实能命中 generic 题 —— 证明约束真的生效，而不是空条件。
+# 打平后：不再有教材单元表，shipped 题库不携带任何册次信息；
+# 抽题池仍必须带年级上限与学科隔离（防止打平顺手改坏防超纲）。
 _qd134 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizDb.java"))
-check("syllabus_scope='outline'" in _qd134,
-      "unit progress filters exclude generic no-textbook questions")
-_al134 = _syljson["grades"]["2"]["1"]["数学"][0]["match"][0]
-_w134 = "grade<=2 AND subject='数学' AND (topic LIKE ? OR topic=?)"
-_p134 = ("%" + _al134 + "%", _al134)
-_n134 = _db134.execute("select count(*) from questions where " + _w134,
-                       _p134).fetchone()[0]
-_o134 = _db134.execute("select count(*) from questions where " + _w134
-                       + " AND syllabus_scope='outline'", _p134).fetchone()[0]
-_g134 = _db134.execute("select count(*) from questions where " + _w134
-                       + " AND syllabus_scope='generic'", _p134).fetchone()[0]
-check(_o134 > 0 and _g134 > 0 and _o134 + _g134 == _n134,
-      "scope isolation is real: generic questions appear without the constraint only")
+check(_syljson["grades"] == {},
+      "flattened syllabus table declares no books")
+check(_db134.execute("select count(*) from questions where term is not null and term<>''")
+      .fetchone()[0] == 0,
+      "no shipped question carries a textbook term")
+check("WHERE grade<=? AND subject=?" in _qd134
+      and _qd134.count("grade<=?") >= 4,
+      "quiz pools still cap by grade and keep subject isolation")
 _db134.close()
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

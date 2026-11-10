@@ -44,8 +44,6 @@ public class SettingsActivity extends Activity {
 
     private SettingsStore st;
     private PinGate gate;
-    /** 有序单元进度表；缺失时自动退化为「仅学期过滤」。 */
-    private Syllabus syllabus;
     private int presetIdx = 0;
     private boolean inSettings = false;
     /** 用户手输过在线源地址后，refreshRows() 不得再用持久化值覆盖掉未保存的输入。 */
@@ -57,15 +55,12 @@ public class SettingsActivity extends Activity {
     private TextView gateTitle, gateMask, gateMsg, gateState, bankStatus, pinState;
     private Button firstGateBtn;
     private EditText urlEdit;
-    private Button rowGrade, rowInterval, rowScope, rowSync, rowTerm, rowUnit;
+    private Button rowGrade, rowInterval, rowScope, rowSync;
     /** v1.1.0 四项可选加固，默认全关。 */
     private Button rowStreak, rowStrict, rowCooldown, rowSource, rowDifficulty, rowAutoContinue;
-    /** 学科设置复合行：左按钮切教材版本，右按钮切题目配比。 */
-    private Button[] rowEd = new Button[Subjects.COUNT];
     /** 在线源并排行：左检查题库更新 / 右自动更新，供行内左右焦点链使用。 */
     private Button[] bankPair;
     private Button[] rowWt = new Button[Subjects.COUNT];
-    private final java.util.List<Button[]> subjectPairs = new java.util.ArrayList<Button[]>();
     private Button rowBoot, rowAutoGuard, rowPause, rowResume;
     /** v1.2.5 在线版本更新：自动检查开关 / 状态 / 手动下载安装。 */
     private Button rowUpdate, btnUpdateInstall;
@@ -81,7 +76,6 @@ public class SettingsActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         st = new SettingsStore(this);
-        syllabus = SyllabusAssets.get(this);
         BankRepository.installBuiltin(this, st);
         gate = new PinGate(st);
         gateView = buildGate();
@@ -332,40 +326,6 @@ public class SettingsActivity extends Activity {
         rowScope = addRow(quiz, "出题范围", new View.OnClickListener() {
             @Override public void onClick(View v) { st.allSubjects(!st.allSubjects()); refreshRows(); }
         });
-        rowTerm = addRow(quiz, "学习学期", new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                if (st.questionSource() == SettingsStore.SOURCE_KNOWLEDGE_ONLY) {
-                    Toast.makeText(SettingsActivity.this,
-                            "仅知识/计算题模式不受学习进度限制，请先切回「全部题目」",
-                            Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                st.termIndex((st.termIndex() + 1) % Syllabus.TERM_LABELS.length);
-                // 换册后单元数可能变少，把已选序号收敛到新册的最大单元数。
-                st.unitLimit(Math.min(st.unitLimit(),
-                        syllabus.maxUnits(st.grade(), st.termIndex())));
-                refreshRows();
-            }
-        });
-        rowUnit = addRow(quiz, "已学单元", new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                if (st.questionSource() == SettingsStore.SOURCE_KNOWLEDGE_ONLY) {
-                    Toast.makeText(SettingsActivity.this,
-                            "仅知识/计算题模式不受学习进度限制，请先切回「全部题目」",
-                            Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                int max = syllabus.maxUnits(st.grade(), st.termIndex());
-                if (max == 0) {
-                    Toast.makeText(SettingsActivity.this,
-                            "本年级 / 学期暂无单元进度表，仅按学期抽题",
-                            Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                st.unitLimit((st.unitLimit() + 1) % (max + 1));
-                refreshRows();
-            }
-        });
         rowStreak = addRow(quiz, "连续答对", new View.OnClickListener() {
             @Override public void onClick(View v) {
                 st.unlockStreak(st.unlockStreak() % SettingsStore.STREAK_MAX + 1);
@@ -430,19 +390,15 @@ public class SettingsActivity extends Activity {
         note(quiz, "题目难度为倾向加权（约 80% 按所选档抽题），默认「不限」不改变原有抽题行为；站点难度系数存在噪声，不保证绝对分档。");
         note(quiz, "默认：答对 1 题即过关、严格模式关、无冷却惩罚、全部题目、答对自动继续。「严格模式 / 冷却惩罚 / 出题偏好 / 题目难度」是可选开关，不动就和旧版一样。");
         note(quiz, "「答对自动继续」默认开启：达到解锁门槛后直接关闭答题页，不用再按一次「继续观看」；关掉则保留原来的确认按钮。");
-        note(quiz, "出题偏好＝仅知识/计算题时，只抽 810 道真知识/计算题（数学算式、语文古诗/词语、英语词汇/句型）；这类题没有学期与单元信息，学习学期/已学单元显示「不适用」，全学科模式的其他学科池交给参数化生成器。");
-        note(quiz, "学习进度：离线题库按课标纲目组织，不含出版社版本与册次（term 为空），"
-                + "所以「学期」过滤对内置题不适用；「已学单元」只按 1–6 年级数学的课标纲目别名匹配，"
-                + "不代表任何教材版本的真实单元顺序。标为通用题（无教材版本，含外部整合题）的题目不参与单元过滤，"
-                + "语文 / 英语无可靠纲目顺序，只按年级与学科抽。"
-                + "选不到题时依次放宽单元 → 学期 → 年级，始终不换学科。默认全学年 / 不限，覆盖安装不改变原有范围。");
+        note(quiz, "出题偏好＝仅知识/计算题时，只抽 810 道真知识/计算题（数学算式、语文古诗/词语、英语词汇/句型）；全学科模式的其他学科池交给参数化生成器。");
+        note(quiz, "题库按年级 + 学科 + 课标纲目打平：抽题只按年级上限、学科配比与难度倾向，"
+                + "空池时只放宽年级上限，绝不换学科。");
 
         // ---- 02 学科设置 ----
-        LinearLayout subjects = addCard(col, "02  学科设置 · 教材版本 / 题目配比");
+        LinearLayout subjects = addCard(col, "02  学科设置 · 题目配比");
         for (int s = 0; s < Subjects.COUNT; s++) addSubjectRow(subjects, s);
         note(subjects, "配比按四科权重随机抽题，0 表示该科不出题；「其他学科」配比仅在「出题范围 = 全学科」且题库确有其他学科题时生效，"
-                + "关闭或题库不可用时显示「未启用」/ 自动跳过，但仍可预先设置。内置离线题库按课标纲目组织，不含出版社版本，"
-                + "教材版本用于在线题包筛选、题面标注与错题标记。");
+                + "关闭或题库不可用时显示「未启用」/ 自动跳过，但仍可预先设置。内置离线题库按课标纲目组织。");
 
         // ---- 03 开机与播放 ----
         LinearLayout boot = addCard(col, "03  开机与播放");
@@ -743,8 +699,7 @@ public class SettingsActivity extends Activity {
     }
 
     /**
-     * 学科设置复合行：学科名 + 教材版本 + 题目配比共占一行。
-     * 教材与配比按 2:1 分配窄栏宽度；四科都可配权，第 4 槽在全学科关闭时标注「未启用」。
+     * 学科设置行：学科名 + 题目配比。四科都可配权，第 4 槽在全学科关闭时标注「未启用」。
      */
     private void addSubjectRow(LinearLayout parent, final int subj) {
         LinearLayout row = Ui.hbox(this);
@@ -752,23 +707,6 @@ public class SettingsActivity extends Activity {
         row.addView(Ui.tv(this, Subjects.name(subj), 14, 0xFFC7D2E2, Gravity.LEFT),
                 new LinearLayout.LayoutParams(
                         Ui.dp(this, SUBJ_LABEL_DP), ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        Button ed = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 14);
-        ed.setSingleLine(false);
-        ed.setMaxLines(2);
-        ed.setEllipsize(null);
-        ed.setMinHeight(Ui.dp(this, 44));
-        ed.setPadding(Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2));
-        ed.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                st.setEditionIndexFor(subj,
-                        (st.editionIndexFor(subj) + 1) % SettingsStore.EDITIONS.length);
-                refreshRows();
-            }
-        });
-        Ui.focus(ed, this, Ui.BTN_BG, 0xFFF5F7FA);
-        row.addView(ed, new LinearLayout.LayoutParams(0,
-                ViewGroup.LayoutParams.WRAP_CONTENT, 2f));
 
         Button wt = Ui.button(this, "", Ui.BTN_BG, 0xFFF5F7FA, 14);
         wt.setSingleLine(false);
@@ -786,26 +724,14 @@ public class SettingsActivity extends Activity {
         Ui.focus(wt, this, Ui.BTN_BG, 0xFFF5F7FA);
         row.addView(wt, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        track(ed, wt);
+        track(wt);
 
         parent.addView(row, rowLp());
-        rowEd[subj] = ed;
         rowWt[subj] = wt;
-        subjectPairs.add(new Button[]{ed, wt});
     }
 
-    /** 学科行内部左右链：教材版本 ↔ 题目配比；其余行的左右键不再跨栏乱跳。 */
+    /** 在线源并排行：检查题库更新 ↔ 自动更新，左右键在本行内切换。 */
     private void wireSubjectRows() {
-        for (Button[] pair : subjectPairs) {
-            Button ed = pair[0], wt = pair[1];
-            if (ed == null || wt == null) continue;
-            int edId = ensureId(ed);
-            if (wt.isEnabled()) {
-                int wtId = ensureId(wt);
-                ed.setNextFocusRightId(wtId);
-                wt.setNextFocusLeftId(edId);
-            }
-        }
         // 在线源并排行：检查题库更新 ↔ 自动更新，左右键在本行内切换。
         if (bankPair != null && bankPair[0] != null && bankPair[1] != null
                 && bankPair[1].isEnabled()) {
@@ -852,22 +778,7 @@ public class SettingsActivity extends Activity {
                 ? "仅知识/计算题" : "全部题目");
         rowScope.setText(st.allSubjects() ? "全学科（含物理/历史等）" : "仅数 / 语 / 英");
         rowSync.setText("自动更新 · " + SettingsStore.SYNC_LABELS[st.syncIndex()]);
-        boolean prefOnly = st.questionSource() == SettingsStore.SOURCE_KNOWLEDGE_ONLY;
-        rowTerm.setText(prefOnly ? "不适用（仅知识题模式）" : Syllabus.TERM_LABELS[st.termIndex()]);
-        int maxUnit = syllabus.maxUnits(st.grade(), st.termIndex());
-        int lim = st.unitLimit();
-        if (prefOnly) {
-            rowUnit.setText("不适用（仅知识题模式）");
-        } else if (maxUnit == 0) {
-            rowUnit.setText("本册暂无进度表 · 仅学期过滤");
-        } else if (lim == 0) {
-            rowUnit.setText("不限（整册 " + maxUnit + " 单元）");
-        } else {
-            rowUnit.setText("已学到 " + syllabus.unitLabel(st.grade(), st.termIndex(),
-                    Subjects.MATH, Math.min(lim, maxUnit)));
-        }
         for (int s = 0; s < Subjects.COUNT; s++) {
-            rowEd[s].setText(st.editionFor(s));
             String w = "配比 " + st.weight(s);
             if (s == Subjects.OTHER && !st.allSubjects()) w += " · 未启用";
             rowWt[s].setText(w);

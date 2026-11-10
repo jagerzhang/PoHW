@@ -403,9 +403,10 @@ public class QuizOverlayService extends Service {
         return b.build();
     }
 
+    /** 教材版本概念已移除：在线题包统一按「通用(课标)」处理，不再按版本筛选。 */
     private String[] editions() {
         String[] out = new String[Subjects.COUNT];
-        for (int i = 0; i < out.length; i++) out[i] = st.editionFor(i);
+        for (int i = 0; i < out.length; i++) out[i] = "通用(课标)";
         return out;
     }
 
@@ -421,13 +422,13 @@ public class QuizOverlayService extends Service {
         difficultyLevel = st.difficultyLevel();
         autoContinue = st.autoContinueOnCorrect();
         cooldown.reset();
-        engine = new QuizEngine(st.grade(), st.edition(),
+        engine = new QuizEngine(st.grade(), "",
                 st.weight(Subjects.MATH), st.weight(Subjects.CHINESE),
                 st.weight(Subjects.ENGLISH), st.weight(Subjects.OTHER));
         engine.setAllSubjects(st.allSubjects());
         engine.setKnowledgeOnly(knowledgeOnly);
         engine.setDifficultyLevel(difficultyLevel);
-        engine.setStudyScope(SyllabusAssets.get(this), st.termIndex(), st.unitLimit());
+        // 题库已按年级 + 学科打平，不再注入学期 / 单元 / 教材版本过滤。
         QuizDb cached = QuizDb.peek();
         if (cached != null) {
             engine.setDb(cached);
@@ -489,8 +490,7 @@ public class QuizOverlayService extends Service {
             gate = "一组 " + round.target() + " 题 · 需答对 " + round.minCorrect()
                     + " 题 · 当前第 " + Math.min(round.answered() + 1, round.target()) + " 题";
         }
-        return st.gradeLabel() + " · " + Subjects.name(q.subject) + " "
-                + st.editionFor(q.subject) + " · " + gate;
+        return st.gradeLabel() + " · " + Subjects.name(q.subject) + " · " + gate;
     }
 
     private void showQuiz() {
@@ -733,7 +733,7 @@ public class QuizOverlayService extends Service {
     private void recordWrong(int picked) {
         if (current == null) return;
         WrongBook.Entry e = WrongBook.of(current, st.grade(), st.gradeLabel(),
-                st.editionFor(current.subject), picked);
+                "", picked);
         WrongBook.recordAsync(getApplicationContext(), e);
     }
 

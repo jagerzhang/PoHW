@@ -30,12 +30,13 @@ DB = os.path.join(ROOT, "app", "assets", "quiz.db")
 OUT = os.path.join(ROOT, "app", "assets", "syllabus.json")
 
 VERSION = "1.0"
-SCOPE = "小学 1-6 年级 · 上下册 · 数学（按课标 / 人教版常见教学顺序人工归并）"
+SCOPE = "小学 1-6 年级 · 数学 · 课标纲目顺序（无教材版本、无册次）"
 NOTE = (
-    "题库 topic 冒号后是教材单元名，但无序号、无版本、无教学顺序；本表按教学顺序"
-    "人工归并，match 收录题库中该单元的全部别名。语文是课文名、英语是主题词，"
-    "7-9 年级亦无可靠顺序，因此这些组合只做学期过滤、不做单元过滤。"
-    "编辑本表后请运行 python3 tools/quizbank/build_syllabus.py --check。"
+    "题库按课标纲目重定级，但不含出版社版本、册次(term 全为空)与单元序号；"
+    "本表把题库真实出现的纲目名按常见教学顺序归并，只做 topic 别名匹配，"
+    "不等于任何教材版本的真实单元进度，学期(上/下册)过滤对离线题库不适用。"
+    "语文是课文名、英语是主题词，不做单元过滤；标为 generic 的通用题(含外部整合题)"
+    "不参与单元过滤。编辑本表后请运行 python3 tools/quizbank/build_syllabus.py --check。"
 )
 
 # (name, [题库中该单元可能出现的 topic 单元名别名])
@@ -200,55 +201,57 @@ def question_count(conn, grade, term_idx, aliases):
     return total
 
 
+def coverage(conn, grade, aliases):
+    """统计该年级数学题中 topic 命中任一纲目别名的题数。
+
+    题库 term 全为空，无法按册次过滤，这里如实只按 grade + 别名统计，
+    并在输出里标明「无册次」，不再假装上下册各自覆盖了多少题。
+    """
+    rows = conn.execute(
+        "SELECT topic, COUNT(*) FROM questions WHERE grade=? AND subject='数学' "
+        "GROUP BY topic", (grade,)).fetchall()
+    return sum(n for topic, n in rows
+               if topic and any(a in topic for a in aliases))
+
+
 def build():
     if not os.path.isfile(DB):
         fail("missing quiz.db: " + DB)
     conn = sqlite3.connect(DB)
-    # bank-v2 题库没有 term / 教材单元数据：进度表保留兼容，但只校验自身结构。
-    bank_v2 = False
-    try:
-        bank_v2 = dict(conn.execute("SELECT k,v FROM meta")).get("schema") == "3"
-    except Exception:
-        pass
+    total = conn.execute("SELECT COUNT(*) FROM questions").fetchone()[0]
     grades = {}
+    hit_total = 0
     for (grade, term_idx), units in sorted(BOOKS.items()):
-        actual = set() if bank_v2 else topic_names(conn, grade, term_idx)
-        declared = []
-        seen_names = set()
-        out_units = []
+        declared, seen_names, out_units = [], set(), []
         for name, aliases in units:
             if not name or name in seen_names:
-                fail("duplicate/empty unit name: grade=%d term=%d name=%r" % (grade, term_idx, name))
+                fail("duplicate/empty unit name: grade=%d term=%d name=%r"
+                     % (grade, term_idx, name))
             seen_names.add(name)
             if not aliases:
                 fail("empty match list: %s" % name)
             for a in aliases:
                 if not a or a in declared:
-                    fail("duplicate/empty alias %r at grade=%d term=%d" % (a, grade, term_idx))
+                    fail("duplicate/empty alias %r at grade=%d term=%d"
+                         % (a, grade, term_idx))
                 if any(ch in a for ch in ("%", "_", "'")):
                     fail("alias contains SQL wildcard/quote: %r" % a)
-                if not bank_v2 and a not in actual:
-                    fail("alias %r not present in quiz.db for grade=%d term=%d" % (a, grade, term_idx))
                 declared.append(a)
             out_units.append({"name": name, "match": list(aliases)})
-        q = 0
-        if not bank_v2:
-            missing = sorted(actual - set(declared))
-            if missing:
-                fail("uncovered topic units grade=%d term=%d: %s" % (grade, term_idx, missing))
-            extra = sorted(set(declared) - actual)
-            if extra:
-                fail("stale aliases grade=%d term=%d: %s" % (grade, term_idx, extra))
-            q = question_count(conn, grade, term_idx, set(declared))
-            if q <= 0:
-                fail("no questions covered for grade=%d term=%d" % (grade, term_idx))
+        # 真校验：每个声明的册次必须真的能在题库里命中题目，否则门禁失败。
+        # （旧版用 schema=='3' 直接跳过此步，打印「仅结构校验」造成假通过。）
+        hit = coverage(conn, grade, set(declared))
+        if hit <= 0:
+            fail("no syllabus coverage for grade=%d term=%d (aliases=%d, total=%d)"
+                 % (grade, term_idx, len(declared), total))
+        hit_total += hit
         grades.setdefault(str(grade), {})[str(term_idx)] = {"数学": out_units}
-        if bank_v2:
-            print("  bank-v2 %d年级%s: %d 单元 / %d 别名（题库无单元数据，仅结构校验）" %
-                  (grade, "上" if term_idx == 1 else "下", len(out_units), len(declared)))
-        else:
-            print("  %d年级%s: %d 单元 / %d 别名 / %d 题" %
-                  (grade, "上" if term_idx == 1 else "下", len(out_units), len(declared), q))
+        print("  %d年级%s: %d 单元 / %d 别名 / %d 题命中（题库无册次，仅按纲目别名）"
+              % (grade, "上" if term_idx == 1 else "下",
+                 len(out_units), len(declared), hit))
+    print("SYLLABUS_COVERAGE questions=%d declared_books=%d alias_hits=%d "
+          "(同一题可命中上下册多个别名；离线题库无册次，学期过滤不适用)"
+          % (total, len(BOOKS), hit_total))
     conn.close()
     return {
         "version": VERSION,

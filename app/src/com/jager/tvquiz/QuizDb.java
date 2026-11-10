@@ -347,6 +347,9 @@ public final class QuizDb {
         String[] names = (syllabus != null && unitLimit > 0 && !other)
                 ? syllabus.matchNames(grade, termIndex, s, unitLimit) : new String[0];
         String unitW = Syllabus.unitWhere(names);
+        // 通用题（无教材版本、无册次，含 quiz-challenge 整合题）没有单元归属，
+        // 选了「已学单元」时不参与该过滤，避免把无纲目的题硬塞进某个教材单元。
+        if (names.length > 0) unitW += " AND syllabus_scope='outline'";
         String[] unitA = Syllabus.unitArgs(names);
 
         QuizEngine.Question q;

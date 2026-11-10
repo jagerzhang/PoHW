@@ -33,6 +33,8 @@
         <package android:name="com.oppo.safe" />
         <package android:name="com.huawei.systemmanager" />
         <package android:name="com.vivo.permissionmanager" />
+        <package android:name="com.hisense.tvsettings" />
+        <package android:name="com.tcl.settings" />
     </queries>
 
     <application

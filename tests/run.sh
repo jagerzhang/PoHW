@@ -37,6 +37,8 @@ mkdir -p "$OUT"
   app/src/com/jager/tvquiz/PracticeConfig.java \
   app/src/com/jager/tvquiz/UpdateConfig.java \
   app/src/com/jager/tvquiz/UpdateState.java \
+  app/src/com/jager/tvquiz/OverlayChannel.java \
+  app/src/com/jager/tvquiz/OverlayPermissionTracker.java \
   tests/src/PinGateTest.java \
   tests/src/QuizLayoutTest.java \
   tests/src/StopGuardTest.java \
@@ -54,13 +56,15 @@ mkdir -p "$OUT"
   tests/src/RoundPolicyTest.java \
   tests/src/QuizTextSizerTest.java \
   tests/src/QrEncoderTest.java \
-  tests/src/StartGuardTest.java
+  tests/src/StartGuardTest.java \
+  tests/src/OverlayChannelTest.java
 
 TOTAL=0
 for t in PinGateTest QuizLayoutTest StopGuardTest StopStateTest GradeScopeTest \
          FeatureV6Test BehaviorV601Test SubjectWeightsTest SyllabusTest \
          UnlockPolicyTest CooldownPolicyTest DifficultyPolicyTest PracticeConfigTest \
-         UpdateConfigTest RoundPolicyTest QuizTextSizerTest QrEncoderTest StartGuardTest; do
+         UpdateConfigTest RoundPolicyTest QuizTextSizerTest QrEncoderTest StartGuardTest \
+         OverlayChannelTest; do
   LOG="$ROOT/.build/$t.log"
   "$JAVA_HOME/bin/java" -Dfile.encoding=UTF-8 -cp "$OUT" "$t" > "$LOG"
   grep -q 'VERIFY=PASS' "$LOG" || { cat "$LOG"; echo "FAILED: $t"; exit 1; }

@@ -22,7 +22,9 @@ public class ReviveReceiver extends BroadcastReceiver {
         String action = i == null ? null : i.getAction();
         SettingsStore st = new SettingsStore(c);
         boolean canDraw = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(c);
-        if (!BootPolicy.shouldRevive(st.guardEnabled(), canDraw, action)) return;
+        boolean channelOk = OverlayChannel.available(OverlayChannel.pick(
+                canDraw, GuardAccessibilityService.canHost(), Build.VERSION.SDK_INT));
+        if (!BootPolicy.shouldRevive(st.guardEnabled(), channelOk, action)) return;
         if (QuizOverlayService.isRunning()) return;
         // SCREEN_ON / USER_PRESENT 不在 Android 12+ 后台启动 FGS 的豁免白名单里，
         // startForegroundService 可能被拒；ensureRunning 内部吞掉异常，等下一次

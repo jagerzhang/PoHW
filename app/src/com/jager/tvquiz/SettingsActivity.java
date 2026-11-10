@@ -871,7 +871,7 @@ public class SettingsActivity extends Activity {
             rowWt[s].setText(w);
         }
         rowBoot.setText(st.bootAutostart() ? "开启（响应开机广播）" : "关闭（需家长手动开启）");
-        rowAutoGuard.setText(st.autoGuardOnBoot() ? "开启（启动即守护）" : "关闭（仅恢复上次）");
+        rowAutoGuard.setText(st.autoGuardOnBoot() ? "开启（打开 APP 时自动守护）" : "关闭（仅恢复上次）");
         rowPause.setText(st.pauseOnQuiz() ? "开启（音频焦点+媒体键）" : "关闭");
         rowResume.setText(st.resumePlayback() ? "开启（尝试恢复）" : "关闭");
         if (!urlDirty) setUrlText(st.bankUrl(), false);

@@ -92,6 +92,22 @@ public final class SettingsStore implements PinGate.Store {
         sp.edit().putString("lastStartVia", v).commit();
     }
 
+    /** v1.3.3：上一次观察到的悬浮窗授权状态，用于识别「固件重启撤权」。 */
+    public boolean overlayWasGranted() {
+        return sp.getBoolean("overlayWasGranted", false);
+    }
+    public void overlayWasGranted(boolean v) {
+        sp.edit().putBoolean("overlayWasGranted", v).commit();
+    }
+
+    /** v1.3.3：曾被系统撤销且尚未恢复；与 overlayWasGranted 分开，供首页诊断文案使用。 */
+    public boolean overlayRevoked() {
+        return sp.getBoolean("overlayRevoked", false);
+    }
+    public void overlayRevoked(boolean v) {
+        sp.edit().putBoolean("overlayRevoked", v).commit();
+    }
+
     public boolean bootAutostart() { return sp.getBoolean("bootAutostart", false); }
     public void bootAutostart(boolean v) {
         sp.edit().putBoolean("bootAutostart", v).commit();

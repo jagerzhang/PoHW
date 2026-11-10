@@ -5,6 +5,6 @@
     <string name="guard_channel">答题守护</string>
     <string name="guard_notification_title">答题守护运行中</string>
     <string name="guard_notification_text">到点会弹出全屏答题页</string>
-    <string name="accessibility_label">答题守护 · 常驻看门狗</string>
-    <string name="accessibility_desc">可选：仅监听应用切换以在守护被系统清理后自动恢复，不读取屏幕内容、不上传任何数据。不开启也能正常使用，需到系统「无障碍」中手动开启。</string>
+    <string name="accessibility_label">答题守护 · 常驻看门狗 / 备用遮罩</string>
+    <string name="accessibility_desc">可选：监听应用切换，在守护被系统清理后自动恢复；当电视重启后撤销悬浮窗授权时，也能继续显示答题页。不读取屏幕内容、不上传任何数据。不开启也能使用，需到系统「无障碍」中手动开启。</string>
 </resources>

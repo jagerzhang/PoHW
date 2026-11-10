@@ -32,6 +32,8 @@ public class BootReceiver extends BroadcastReceiver {
                 st.guardEnabled(), canDraw, action)) {
             return;
         }
+        // v1.3.1：开机链路也不允许绕过首次密码设置。
+        if (!GuardPolicy.canStartGuard(st.hasPin())) return;
         Intent s = new Intent(c, QuizOverlayService.class);
         s.setAction(QuizOverlayService.ACTION_START);
         try {

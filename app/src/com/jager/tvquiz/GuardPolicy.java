@@ -14,4 +14,10 @@ public final class GuardPolicy {
     public static boolean allowStop(boolean hasPin, boolean verified) {
         return !hasPin || verified;
     }
+
+    /** v1.3.1：开启守护前必须已设置家长密码，否则孩子可以随手把守护关掉。
+     *  MainActivity 与前台服务共用这一条规则，任何旁路拉起都逃不过。 */
+    public static boolean canStartGuard(boolean hasPin) {
+        return hasPin;
+    }
 }

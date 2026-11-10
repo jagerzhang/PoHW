@@ -13,16 +13,17 @@ import java.net.Socket;
 import java.util.Collections;
 
 /**
- * v1.3.0 未发布：设备内置的局域网管理服务，仅在家长手动开启时监听 8099。
+ * v1.3.1：设备内置的局域网管理服务，仅在家长开启时监听 18730。
  *
  * <p>不访问互联网、不上传任何数据、不依赖任何第三方库；手机与电视在同一
- * WiFi 时用浏览器打开 http://<电视IP>:8099 并输入管理密码即可管理。
+ * WiFi 时用浏览器打开 http://<电视IP>:18730 并输入管理密码即可管理。
  * usesCleartextTraffic=false 只约束本进程出站流量，作为 ServerSocket 服务端不受影响。
  */
 public final class LanServer {
 
-    public static final int PORT = 8099;
-    /** 8099 被同设备其它应用占用时依次顺延，二维码与提示都用实际端口。 */
+    /** 独立端口段：避开同类应用常用的 Web 端口，减少同机冲突。 */
+    public static final int PORT = 18730;
+    /** 18730 被占用时依次顺延到 18739，二维码与提示都用实际端口。 */
     private static final int PORT_TRIES = 10;
     private static volatile int activePort = PORT;
     private static final String TAG = "PoHW.Lan";

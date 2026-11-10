@@ -1,10 +1,10 @@
 # Changelog
 
-> **版本口径**：对外发布 12 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 13 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
 > **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）、
 > **v1.2.4**（37）、**v1.2.5**（39）、**v1.2.6**（41）、**v1.2.7**（43）、
-> **v1.3.0**（44）。
+> **v1.3.0**（44）、**v1.3.1**（45）。
 > `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
@@ -12,6 +12,26 @@
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.3.1 (versionCode 45) — own LAN port, mandatory first-use PIN, visible QR
+
+Display version 1.3.0 -> **1.3.1**, `versionCode` 44 -> **45**, same release
+keystore (SHA-256 `76eb6063b574...26172`). Thirteenth published release.
+Patch release only; the question bank stays at bank-v5 / 3989 questions.
+
+- **独立局域网端口**：默认端口改为 **18730**，被占用时顺延到 18731–18739；
+  二维码、页面文案与实际监听端口一致。不再与同机安装的同类应用抢端口。
+- **首次开启守护必须设置家长密码**：手动开启与冷启动自动开启都会先弹 4~8 位
+  数字密码初始化层，设置成功才拉起守护，取消则绝不开启；前台服务、开机广播
+  与 `ensureRunning()` 用 `GuardPolicy.canStartGuard()` 做二次校验，Job / Alarm /
+  无障碍 / 任务被划掉等旁路都无法绕过。关闭守护仍需验证密码，行为不变。
+- **二维码一进页面就能扫**：入口从「06 版本更新」提到「01 出题基础」第一行，
+  首页状态栏同时显示入口路径与实时地址；进入页面即自动开启监听并渲染二维码，
+  布局收紧到 236dp 一屏可见，两颗按钮补齐遥控器上下焦点链；未检测到局域网 IP
+  时明确提示，不给家长一个扫不开的码。
+- 回归：源码契约 345 项、JVM 单测 408 项（新增 `StartGuardTest` 10 项）、
+  变异 97/97、题库分布与质量门禁全绿；二维码 V3 参考矩阵按新端口重新生成，
+  仍与标准库逐位一致。
 
 ## v1.3.0 (versionCode 44) — LAN admin, group quiz, wake resilience, UI regression
 
@@ -25,7 +45,7 @@ regression. The question bank stays at bank-v5 / 3989 questions.
   ① `/api/config` 只有最后一个数字字段生效（`jsonInt` 会把下一个 key 的
   引号当值）；② 路径穿越请求返回 200 首页（现只放行白名单路径并拒绝 `..`
   与编码变体）；③ 状态接口版本硬编码 1.2.7（改为读取真实 versionName）；
-  ④ 8099 被同设备其它应用占用时后台静默启动失败（现自动顺延到 8100–8108，
+  ④ 默认端口被同设备其它应用占用时后台静默启动失败（现自动顺延到下一个可用端口，
   二维码与实际端口一致）。另补上「家长开启后 APP 重启自动恢复后台」。
 - **题库题干兜底**：`questionFitTv()` 在抽题层挡掉 >90 字题干、依赖课文原文
   与多子项编号的题（均为逐题复核已确证的结构问题），不按学科内容判超纲。
@@ -72,11 +92,12 @@ regression. The question bank stays at bank-v5 / 3989 questions.
   仍需人在本机跑脚本；脚本产物可回传做多模态截图复核。
 - **WP3 二维码 + 局域网双后台**：新增零依赖 `QrEncoder`（QR Model 2 /
   V1–V4 / EC-L / Byte / mask0，单块 RS；**Java 输出与标准库 29×29 参考矩阵
-  逐位一致**）、`LanServer`（`ServerSocket:8099` + 极简 HTTP/1.1）、`AdminApi`
+  逐位一致**）、`LanServer`（`ServerSocket` + 极简 HTTP/1.1）、`AdminApi`
   （PIN→token、失败 5 次锁 60 秒、白名单 API）、`AdminAssets`（文件名白名单）、
   `PairActivity`（本地渲染二维码 + 大字地址）；`app/assets/admin/` 为 ES5 管理页，
   零外部 CDN。`lanAdminEnabled` **默认关闭**，家长在「06 版本更新 → 手机扫码管理」
-  手动开启；**TV 端原有设置页全量保留备用**。
+  手动开启（v1.3.1 起入口移到「01 出题基础」第一行且进页即开启）；
+  **TV 端原有设置页全量保留备用**。
 - **文案口径修正**：局域网 ≠ 互联网。官网与 README 从「完全离线、零联网 /
   默认一次网络请求都不发」改为「题库与守护离线可用，不访问互联网；在线题库源、
   局域网管理默认关闭；三项都关闭后不产生任何对外请求」。

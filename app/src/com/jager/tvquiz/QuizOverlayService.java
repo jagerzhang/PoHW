@@ -64,6 +64,8 @@ public class QuizOverlayService extends Service {
         if (isRunning()) return;
         SettingsStore st = new SettingsStore(c);
         if (!st.guardEnabled()) return;
+        // v1.3.1：兜底拉起同样要求已设置家长密码。
+        if (!GuardPolicy.canStartGuard(st.hasPin())) return;
         if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(c)) return;
         Intent i = new Intent(c, QuizOverlayService.class).setAction(ACTION_START);
         if (via != null) i.putExtra(EXTRA_VIA, via);
@@ -253,6 +255,17 @@ public class QuizOverlayService extends Service {
         if (!fgReady) {
             Log.e(TAG, "startForeground failed, guard cannot stay resident");
             Toast.makeText(this, "前台服务启动失败，答题守护无法常驻", Toast.LENGTH_LONG).show();
+            st.guardEnabled(false);
+            leaveForeground();
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
+        // v1.3.1：无密码一律不允许开启守护。覆盖开机广播 / Job / Alarm /
+        // 无障碍 / 任务被划掉等所有旁路，杜绝「没设密码也能直接用」。
+        if (!GuardPolicy.canStartGuard(st.hasPin())) {
+            Toast.makeText(this, "首次使用请先在 APP 内设置家长密码，再开启守护",
+                    Toast.LENGTH_LONG).show();
             st.guardEnabled(false);
             leaveForeground();
             stopSelf();

@@ -80,7 +80,8 @@ def write(args):
     main, main_ver, main_latest = channel(
         args.version, args.main_code, 21, args.main_apk, '', args.notes)
     legacy, leg_ver, leg_latest = channel(
-        legacy_version, args.legacy_code, 14, args.legacy_apk, '-legacy', args.notes)
+        legacy_version, args.legacy_code, 14, args.legacy_apk, '-legacy',
+        args.legacy_notes or args.notes)
     doc = {
         'schema': 1,
         'publishedAt': args.date,
@@ -163,6 +164,7 @@ def main():
     p.add_argument('--main-apk')
     p.add_argument('--legacy-apk')
     p.add_argument('--notes', default='')
+    p.add_argument('--legacy-notes', default='')
     p.add_argument('--date', default=datetime.date.today().isoformat())
     a = p.parse_args()
     if a.check:

@@ -309,6 +309,14 @@ public class SettingsActivity extends Activity {
 
         // ---- 01 出题基础 ----
         LinearLayout quiz = addCard(col, "01  出题基础");
+        // v1.3.1：二维码入口从最底部的 06 卡片提到第一屏第一行。
+        addRow(quiz, "手机扫码管理", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(SettingsActivity.this, PairActivity.class));
+            }
+        });
+        note(quiz, "点开即显示二维码：手机与电视连同一 WiFi，扫码后输入家长密码即可管理；"
+                + "默认不监听，进入本页后开启，可随时关闭。");
         rowGrade = addRow(quiz, "所在年级", new View.OnClickListener() {
             @Override public void onClick(View v) {
                 st.grade(st.grade() % SettingsStore.MAX_GRADE + 1); refreshRows();
@@ -584,11 +592,6 @@ public class SettingsActivity extends Activity {
             @Override public void onClick(View v) {
                 st.autoCheckUpdate(!st.autoCheckUpdate());
                 refreshRows();
-            }
-        });
-        addRow(upd, "手机扫码管理", new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                startActivity(new Intent(SettingsActivity.this, PairActivity.class));
             }
         });
         addButton(upd, "立即检查版本", 0xFF185FA5, new View.OnClickListener() {

@@ -26,12 +26,22 @@ public final class PinVerifyView {
     private final PinGate gate;
     private final Callback cb;
     private final FrameLayout layer;
-    private final TextView mask, msg;
+    private final TextView mask, msg, heading;
+    private final boolean setupMode;
     private Button first;
 
     public PinVerifyView(Context ctx, PinGate.Store store, Callback callback) {
+        this(ctx, store, callback, "关闭守护 · 请输入家长密码", "取消关闭",
+                "验证通过后守护才会关闭；按返回键或点「取消」退出验证", false);
+    }
+
+    /** v1.3.1：首次开启守护前的密码初始化层，复用同一套数字键盘与 PinGate 状态机。 */
+    public PinVerifyView(Context ctx, PinGate.Store store, Callback callback,
+                         String headingText, String cancelText, String footerText,
+                         boolean firstSetup) {
         c = ctx;
         cb = callback;
+        setupMode = firstSetup;
         gate = new PinGate(store);
 
         // 浮层必须能在自身 View 树内持有焦点，否则 DPAD 会落到控制台底层按钮上。
@@ -67,8 +77,10 @@ public final class PinVerifyView {
         card.setPadding(Ui.dp(ctx, 24), Ui.dp(ctx, 14), Ui.dp(ctx, 24), Ui.dp(ctx, 12));
         card.setGravity(Gravity.CENTER_HORIZONTAL);
 
-        card.addView(Ui.tv(ctx, "关闭守护 · 请输入家长密码", 21, 0xFFFFFFFF),
-                Ui.fixed(ctx, 36));
+        heading = Ui.tv(ctx, headingText, 20, 0xFFFFFFFF, Gravity.CENTER);
+        heading.setSingleLine(false);
+        heading.setMaxLines(2);
+        card.addView(heading, Ui.fixed(ctx, 42));
         mask = Ui.tv(ctx, "", 28, Ui.AMBER);
         card.addView(mask, Ui.fixed(ctx, 42));
         msg = Ui.tv(ctx, "", 15, Ui.AMBER);
@@ -97,7 +109,7 @@ public final class PinVerifyView {
                     ViewGroup.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 50)));
         }
 
-        Button cancel = Ui.button(ctx, "取消关闭", 0xFFA32D2D, 0xFFFFFFFF, 16);
+        Button cancel = Ui.button(ctx, cancelText, 0xFFA32D2D, 0xFFFFFFFF, 16);
         cancel.setFocusableInTouchMode(false);
         cancel.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { cancel(); }
@@ -108,9 +120,7 @@ public final class PinVerifyView {
         nb.gravity = Gravity.CENTER_HORIZONTAL;
         card.addView(cancel, nb);
 
-        card.addView(Ui.tv(ctx,
-                "验证通过后守护才会关闭；按返回键或点「取消」退出验证",
-                13, Ui.MUTED), Ui.fixed(ctx, 26));
+        card.addView(Ui.tv(ctx, footerText, 13, Ui.MUTED), Ui.fixed(ctx, 30));
 
         FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(
                 Ui.dp(ctx, 470), ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -139,6 +149,8 @@ public final class PinVerifyView {
     public void cancel() { cb.onCancel(); }
 
     private void refresh() {
+        // 首次设置会经历 SET_NEW -> SET_CONFIRM，标题跟随状态机变化。
+        if (setupMode) heading.setText(gate.title());
         mask.setText(gate.mask());
         msg.setText(gate.messageText());
         String t = gate.consumeToast();

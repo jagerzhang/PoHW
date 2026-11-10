@@ -38,6 +38,8 @@ public class MainActivity extends Activity {
     private static final int GRID_COLS = 3;
     private final java.util.List<Button[]> gridRows = new java.util.ArrayList<Button[]>();
     private PinVerifyView verifyView;
+    /** v1.3.1：首次密码设置完成后是否接着拉起守护。 */
+    private boolean pendingStartGuard = false;
     private Boolean paintedRunning = null;
     private String appVersion = "?";
     private String appVersionCode = "?";
@@ -83,9 +85,14 @@ public class MainActivity extends Activity {
         // 走 onResume，不会把家长手动关闭的守护又自动打开。
         if (LaunchPolicy.shouldAutoGuard(b == null, st.autoGuardOnBoot(),
                 canDrawCached, QuizOverlayService.isRunning())) {
-            send(QuizOverlayService.ACTION_START);
-            Toast.makeText(this, "已按设置自动开启守护", Toast.LENGTH_SHORT).show();
-            handler.postDelayed(renderOnce, 300);
+            if (GuardPolicy.canStartGuard(st.hasPin())) {
+                send(QuizOverlayService.ACTION_START);
+                Toast.makeText(this, "已按设置自动开启守护", Toast.LENGTH_SHORT).show();
+                handler.postDelayed(renderOnce, 300);
+            } else {
+                // 首次使用：先设密码，再开启守护。
+                showFirstPin(true);
+            }
         }
     }
 
@@ -323,8 +330,9 @@ public class MainActivity extends Activity {
 
         l.addView(Ui.tv(this,
                 "开启守护后按 Home 切到任意应用，到点弹出全屏答题页；Home 键属系统级按键，第三方无法拦截。\n"
+                        + "手机扫码管理：家长设置 → 01 出题基础 → 手机扫码管理（打开即显示二维码）\n"
                         + "卸载前请先关闭守护；遮罩卡住可在电视「设置 → 应用管理 → PoHW」点「强制停止」",
-                13, Ui.MUTED), Ui.fixed(this, 44));
+                13, Ui.MUTED), Ui.fixed(this, 60));
 
         rootView.addView(l, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -335,6 +343,7 @@ public class MainActivity extends Activity {
 
     private void showVerify() {
         hideVerify();
+        pendingStartGuard = false;
         verifyView = new PinVerifyView(this, st, new PinVerifyView.Callback() {
             @Override public void onVerified() { doStop(); }
             @Override public void onCancel() {
@@ -342,6 +351,41 @@ public class MainActivity extends Activity {
                 Toast.makeText(MainActivity.this, "已取消关闭守护", Toast.LENGTH_SHORT).show();
             }
         });
+        attachVerify();
+    }
+
+    /** v1.3.1：首次开启守护前强制初始化家长密码；取消就绝不开启守护。 */
+    private void showFirstPin(boolean startGuardAfter) {
+        hideVerify();
+        pendingStartGuard = startGuardAfter;
+        verifyView = new PinVerifyView(this, st, new PinVerifyView.Callback() {
+            @Override public void onVerified() {
+                hideVerify();
+                boolean start = pendingStartGuard;
+                pendingStartGuard = false;
+                Toast.makeText(MainActivity.this, "家长密码已设置，守护已受保护",
+                        Toast.LENGTH_SHORT).show();
+                if (start) {
+                    if (canDrawCached) send(QuizOverlayService.ACTION_START);
+                    else openOverlaySettings();
+                    handler.postDelayed(renderOnce, 300);
+                }
+                render();
+            }
+            @Override public void onCancel() {
+                hideVerify();
+                pendingStartGuard = false;
+                Toast.makeText(MainActivity.this,
+                        "未设置家长密码，守护不会开启；可再点「开启守护」重试",
+                        Toast.LENGTH_LONG).show();
+            }
+        }, "首次使用 · 请设置家长密码", "稍后再说",
+           "设置 4~8 位数字后才能开启守护，孩子将无法自行关闭\n"
+                   + "按返回键或点「稍后再说」可暂不开启", true);
+        attachVerify();
+    }
+
+    private void attachVerify() {
         // 浮层与控制台在同一 View 树里：显式 block 底层后代焦点，
         // DPAD/确认键才不会穿透到被遮住的「守护开关 / 立即出题」等按钮。
         View base = rootView.getChildAt(0);
@@ -383,6 +427,7 @@ public class MainActivity extends Activity {
             return;
         }
         if (!canDraw()) { openOverlaySettings(); return; }
+        if (!GuardPolicy.canStartGuard(st.hasPin())) { showFirstPin(true); return; }
         send(QuizOverlayService.ACTION_START);
         handler.postDelayed(renderOnce, 300);
     }
@@ -467,6 +512,9 @@ public class MainActivity extends Activity {
                 .append(" / 自动恢复：").append(st.resumePlayback() ? "开" : "关").append(NL);
         s.append("题库源：").append(st.bankSource()).append(" · 版本 ").append(st.bankVersion())
                 .append(" · 上次检查 ").append(ts(st.bankChecked())).append(NL);
+        s.append("手机管理：").append(st.lanAdminEnabled() && LanServer.isRunning()
+                ? LanServer.url() + "  ·  二维码在「家长设置 → 01 出题基础 → 手机扫码管理」"
+                : "未开启  ·  二维码在「家长设置 → 01 出题基础 → 手机扫码管理」").append(NL);
         s.append("同步状态：").append(st.bankMessage());
         s.append(NL);
         s.append("版本更新：").append(UpdateState.message.length() == 0

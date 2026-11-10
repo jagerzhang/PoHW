@@ -66,7 +66,9 @@ public class QuizOverlayService extends Service {
         if (!st.guardEnabled()) return;
         // v1.3.1：兜底拉起同样要求已设置家长密码。
         if (!GuardPolicy.canStartGuard(st.hasPin())) return;
-        if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(c)) return;
+        boolean canDrawC = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(c);
+        if (OverlayChannel.pick(canDrawC, GuardAccessibilityService.canHost(),
+                Build.VERSION.SDK_INT) == OverlayChannel.NONE) return;
         Intent i = new Intent(c, QuizOverlayService.class).setAction(ACTION_START);
         if (via != null) i.putExtra(EXTRA_VIA, via);
         try {
@@ -106,6 +108,9 @@ public class QuizOverlayService extends Service {
 
     private WindowManager wm;
     private OverlayQuizView quizView;
+    /** v1.3.3：当前答题窗口通道；remove / rebuild 必须沿用同一通道。 */
+    private int quizChannel = OverlayChannel.NONE;
+    private static volatile QuizOverlayService serviceInstance = null;
     private MediaPauseController media;
     private QuizEngine engine;
     private QuizEngine.Question current;
@@ -188,7 +193,7 @@ public class QuizOverlayService extends Service {
                 focusRetry++;
                 // 重新下发 LayoutParams 会强制 WMS 重新评估 focused window；
                 // 仅 requestFocus() 只能改 View 树焦点，抢不回窗口焦点。
-                try { wm.updateViewLayout(quizView.view(), buildParams()); }
+                try { updateQuizViewLayout(quizView.view()); }
                 catch (Exception e) { Log.w(TAG, "focus updateViewLayout failed", e); }
                 handler.postDelayed(this, 200);
                 return;
@@ -210,6 +215,9 @@ public class QuizOverlayService extends Service {
     private final Runnable tick = new Runnable() {
         @Override public void run() {
             if (!running) return;
+            // 无障碍服务被系统关闭时立即撤下降级遮罩，避免残留窗口卡住界面。
+            if (quizShowing && quizChannel == OverlayChannel.ACCESSIBILITY
+                    && !GuardAccessibilityService.canHost()) hideQuiz();
             if (!quizShowing) {
                 remainSec--;
                 if (remainSec <= 0) showQuiz();
@@ -225,6 +233,7 @@ public class QuizOverlayService extends Service {
 
     @Override public void onCreate() {
         super.onCreate();
+        serviceInstance = this;
         st = new SettingsStore(this);
         wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
         media = new MediaPauseController(this);
@@ -295,6 +304,7 @@ public class QuizOverlayService extends Service {
     }
 
     @Override public void onDestroy() {
+        serviceInstance = null;
         if (homeReceiverRegistered) {
             try { unregisterReceiver(homeReceiver); } catch (Exception ignored) { }
             homeReceiverRegistered = false;
@@ -331,9 +341,15 @@ public class QuizOverlayService extends Service {
     }
 
     private void startGuard() {
-        if (!canDraw()) {
-            Toast.makeText(this, "请先授予「显示在其他应用上层」权限", Toast.LENGTH_LONG).show();
-            st.guardEnabled(false);
+        if (OverlayChannel.pick(canDraw(), GuardAccessibilityService.canHost(),
+                Build.VERSION.SDK_INT) == OverlayChannel.NONE) {
+            // v1.3.3：权限被撤时保留家长「已开启守护」的意图，权限恢复后自愈；
+            // 不再清 guardEnabled，也不再静默失败。
+            st.guardEnabled(true);
+            st.lastStartVia("blocked_no_channel");
+            GuardNotice.overlayRevoked(this);
+            Toast.makeText(this, "暂无可用弹题通道：请重新授权悬浮窗或开启无障碍服务",
+                    Toast.LENGTH_LONG).show();
             return;
         }
         running = true;
@@ -480,7 +496,14 @@ public class QuizOverlayService extends Service {
     private void showQuiz() {
         if (practiceMode) { remainSec = interval; return; }
         if (quizShowing) return;
-        if (!canDraw()) { stopAll(); return; }
+        if (OverlayChannel.pick(canDraw(), GuardAccessibilityService.canHost(),
+                Build.VERSION.SDK_INT) == OverlayChannel.NONE) {
+            // 不清 guardEnabled、不 stopAll：权限恢复后由 ReviveReceiver / APP 自愈。
+            st.lastStartVia("blocked_no_channel");
+            GuardNotice.overlayRevoked(this);
+            remainSec = interval;
+            return;
+        }
         if (engine == null) reload(false);
         current = drawFresh();
         if (current == null) {
@@ -506,7 +529,7 @@ public class QuizOverlayService extends Service {
         overlayRebuilt = false;
         handler.removeCallbacks(focusCheck);
         try {
-            wm.addView(view.view(), buildParams());
+            if (!addQuizView(view.view())) throw new IllegalStateException("no overlay channel");
             quizShowing = true;
             view.view().post(new Runnable() {
                 @Override public void run() {
@@ -524,10 +547,15 @@ public class QuizOverlayService extends Service {
         if (media != null) media.quizShown(st);
     }
 
-    private WindowManager.LayoutParams buildParams() {
-        int type = Build.VERSION.SDK_INT >= 26
-                ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                : WindowManager.LayoutParams.TYPE_PHONE;
+    private WindowManager.LayoutParams buildParams(int channel) {
+        int type;
+        if (channel == OverlayChannel.ACCESSIBILITY) {
+            type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
+        } else {
+            type = Build.VERSION.SDK_INT >= 26
+                    ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                    : WindowManager.LayoutParams.TYPE_PHONE;
+        }
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -566,9 +594,9 @@ public class QuizOverlayService extends Service {
     private void rebuildOverlay() {
         if (wm == null || quizView == null) return;
         final View v = quizView.view();
-        try { wm.removeViewImmediate(v); } catch (Exception e) { Log.w(TAG, "rebuild remove failed", e); }
+        try { removeQuizViewImmediate(v); } catch (Exception e) { Log.w(TAG, "rebuild remove failed", e); }
         try {
-            wm.addView(v, buildParams());
+            if (!addQuizView(v)) throw new IllegalStateException("no overlay channel");
             v.post(new Runnable() {
                 @Override public void run() {
                     if (quizShowing && quizView != null) quizView.focusFirst();
@@ -738,18 +766,54 @@ public class QuizOverlayService extends Service {
      * removeView，并始终保留 View 引用到该 Runnable 中，不会因置空而丢失。
      */
     private void removeOverlayNow() {
-        if (wm == null || quizView == null) return;
+        if (quizView == null) return;
         final View v = quizView.view();
         quizView = null;
         try {
-            wm.removeViewImmediate(v);
+            removeQuizViewImmediate(v);
         } catch (Exception e) {
             Log.w(TAG, "removeViewImmediate failed, retry async", e);
             handler.post(new Runnable() {
                 @Override public void run() {
-                    try { wm.removeView(v); } catch (Exception ignored) { }
+                    try { removeQuizViewImmediate(v); } catch (Exception ignored) { }
                 }
             });
         }
+    }
+
+    /** v1.3.3：同一份 OverlayQuizView 按通道挂到系统浮层或无障碍窗口。 */
+    private boolean addQuizView(View v) {
+        int ch = OverlayChannel.pick(canDraw(), GuardAccessibilityService.canHost(),
+                Build.VERSION.SDK_INT);
+        if (!OverlayChannel.available(ch)) return false;
+        quizChannel = ch;
+        WindowManager.LayoutParams lp = buildParams(ch);
+        if (ch == OverlayChannel.ACCESSIBILITY) return GuardAccessibilityService.addOverlay(v, lp);
+        if (wm == null) return false;
+        wm.addView(v, lp);
+        return true;
+    }
+
+    private void updateQuizViewLayout(View v) {
+        WindowManager.LayoutParams lp = buildParams(quizChannel);
+        if (quizChannel == OverlayChannel.ACCESSIBILITY) {
+            GuardAccessibilityService.updateOverlay(v, lp);
+        } else if (wm != null) {
+            wm.updateViewLayout(v, lp);
+        }
+    }
+
+    private void removeQuizViewImmediate(View v) {
+        if (quizChannel == OverlayChannel.ACCESSIBILITY) {
+            GuardAccessibilityService.removeOverlay(v);
+        } else if (wm != null) {
+            wm.removeViewImmediate(v);
+        }
+    }
+
+    /** 无障碍服务被系统关闭时撤下正在显示的降级遮罩。 */
+    public static void onOverlayChannelLost() {
+        QuizOverlayService s = serviceInstance;
+        if (s != null && s.quizShowing) s.hideQuiz();
     }
 }

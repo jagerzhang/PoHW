@@ -28,8 +28,22 @@ public class BootReceiver extends BroadcastReceiver {
         String action = i == null ? null : i.getAction();
         SettingsStore st = new SettingsStore(c);
         boolean canDraw = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(c);
+        // v1.3.3：撤权时留痕 + 主动通知，不再静默失败；设置不会丢。
+        boolean was = st.overlayWasGranted();
+        if (OverlayPermissionTracker.revokeDetected(was, canDraw)) {
+            GuardNotice.overlayRevoked(c);
+            st.overlayRevoked(true);
+        }
+        if (canDraw) st.overlayRevoked(false);
+        if (OverlayPermissionTracker.shouldRecord(was, canDraw)) st.overlayWasGranted(canDraw);
+        boolean channelOk = OverlayChannel.available(OverlayChannel.pick(
+                canDraw, GuardAccessibilityService.canHost(), Build.VERSION.SDK_INT));
+        if (!channelOk) {
+            st.lastStartVia("blocked_no_channel");
+            return;
+        }
         if (!BootPolicy.shouldStartGuard(st.bootAutostart(), st.autoGuardOnBoot(),
-                st.guardEnabled(), canDraw, action)) {
+                st.guardEnabled(), channelOk, action)) {
             return;
         }
         // v1.3.1：开机链路也不允许绕过首次密码设置。

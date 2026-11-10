@@ -44,7 +44,9 @@ public final class BootPolicy {
     }
 
     /**
-     * bootAutostart 关 -> 完全不自启；未授权悬浮窗 -> 不拉起（避免后台 FGS 空转）。
+     * bootAutostart 关 -> 完全不自启；无可用弹题通道 -> 不拉起（避免后台 FGS 空转）。
+     * v1.3.3：布尔实参是「悬浮窗或无障碍降级通道至少有一条可用」，
+     * 由调用方用 OverlayChannel.pick() 计算，不再等同于 canDrawOverlays。
      * autoGuardOnBoot 开 -> 无论上次守护是否开启都自动开启；
      * 否则仅恢复上次开启的守护状态。
      */

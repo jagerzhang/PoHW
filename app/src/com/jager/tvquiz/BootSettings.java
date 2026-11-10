@@ -27,6 +27,9 @@ public final class BootSettings {
                     "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"},
             {"com.vivo.permissionmanager",
                     "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"},
+            // 电视 ROM 常见入口（尽力尝试，找不到会自动降级到应用详情页）
+            {"com.hisense.tvsettings", "com.hisense.tvsettings.SettingsActivity"},
+            {"com.tcl.settings", "com.tcl.settings.AutoStartActivity"},
     };
 
     public static boolean open(Context c) {
@@ -51,7 +54,8 @@ public final class BootSettings {
             // fall through
         }
         Toast.makeText(c,
-                "未找到厂商自启动入口，请在系统设置搜索「自启动」并允许本应用",
+                "未找到厂商自启动入口：海信 / TCL 请在「设置 → 应用 → 自启动」允许本应用，"
+                        + "并在「悬浮窗 / 显示在其他应用上层」中确认授权",
                 Toast.LENGTH_LONG).show();
         return false;
     }

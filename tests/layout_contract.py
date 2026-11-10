@@ -244,8 +244,8 @@ check('getBoolean("autoGuardOnBoot", true)' in _st,
 check('getBoolean("pauseOnQuiz", true)' in _st
       and 'getBoolean("resumePlayback", true)' in _st,
       "pause and resume both default on")
-check("开启（启动即守护）" in raw_s and "开机即守护" not in raw_s,
-      "auto-guard label says launch, not boot")
+check("开启（打开 APP 时自动守护）" in raw_s and "开机即守护" not in raw_s,
+      "auto-guard label says opening the app, not booting the TV")
 check("LaunchPolicy.shouldAutoGuard" in m,
       "home delegates launch auto-guard to a pure policy")
 check("b == null" in m, "auto-guard fires only on a genuine cold start")
@@ -929,5 +929,47 @@ _db132.close()
 check("NUMBERED_ITEM" in _qts132 and "countMatches" in _qts132
       and "TV_MAX_NUMBERED_ITEMS" in _qts132,
       "TV layer filters numbered-sequence questions beyond the data cleanup")
+
+# ---- v1.3.3：权限撤销可见化 / 无障碍降级遮罩 / 开机自愈 ----
+_ch133 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/OverlayChannel.java"))
+_tr133 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/OverlayPermissionTracker.java"))
+_a11y133 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/GuardAccessibilityService.java"))
+_not133 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/GuardNotice.java"))
+_svc133 = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/QuizOverlayService.java")))
+_mf133 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/MainActivity.java"))
+_br133 = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/BootReceiver.java")))
+_rr133 = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/ReviveReceiver.java")))
+_sto133 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsStore.java"))
+_rm133 = read(os.path.join(ROOT, "README.md"))
+check("TYPE_ACCESSIBILITY_OVERLAY" in _svc133
+      and "GuardAccessibilityService.addOverlay(v, lp)" in _svc133
+      and "removeQuizViewImmediate" in _svc133,
+      "overlay view is reused and can be hosted by the accessibility window")
+check("TYPE_ACCESSIBILITY_OVERLAY" in _a11y133 and "canHost()" in _a11y133
+      and "MIN_A11Y_SDK" in _ch133,
+      "accessibility host is API-guarded and shares the channel policy")
+check("OverlayChannel.pick(" in _svc133 and "OverlayChannel.pick(" in _br133
+      and "OverlayChannel.pick(" in _rr133 and "OverlayChannel.pick(" in _mf133,
+      "every launch / display path uses one channel decision")
+check("revokeDetected(" in _mf133 and "GuardNotice.overlayRevoked(" in _mf133
+      and "GuardNotice.overlayRevoked(" in _br133,
+      "overlay revocation is detected and actively reported to the parent")
+check('getBoolean("overlayWasGranted", false)' in _sto133
+      and 'getBoolean("overlayRevoked", false)' in _sto133
+      and "st.overlayRevoked(true)" in _mf133
+      and "OverlayPermissionTracker.restored(" in _mf133,
+      "permission state is persisted, revocation stays visible, recovery self-heals")
+check("blocked_no_channel" in _svc133 and "blocked_no_channel" in _br133
+      and "st.lastStartVia(" in _mf133,
+      "silent failures now leave a diagnosable trace")
+check("IMPORTANCE_HIGH" in _not133 and "ACTION_MANAGE_OVERLAY_PERMISSION" in _not133,
+      "revocation notice is high priority and links to the system grant page")
+check('"## 变更记录"' not in _rm133 and "开机 / 重启后守护没起来" in _rm133,
+      "README drops the duplicated changelog table and documents the Hisense case")
+check(os.path.isfile(os.path.join(ROOT, "tests/src/OverlayChannelTest.java")),
+      "channel and permission-transfer logic has a JVM test")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

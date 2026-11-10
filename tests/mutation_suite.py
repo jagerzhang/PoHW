@@ -187,7 +187,7 @@ MUTATIONS = [
      lambda: replace(ST, 'getBoolean("autoGuardOnBoot", true)',
                      'getBoolean("autoGuardOnBoot", false)'), False, True, False),
     ("Y", "stale boot-only label restored",
-     lambda: replace(S, "开启（启动即守护）", "开启（开机即守护）"), False, True, False),
+     lambda: replace(S, "开启（打开 APP 时自动守护）", "开启（开机即守护）"), False, True, False),
     ("Z", "home no longer delegates to LaunchPolicy",
      lambda: replace(M, "LaunchPolicy.shouldAutoGuard",
                      "LaunchPolicy.alwaysGuard"), True, True, False),

@@ -129,6 +129,28 @@ public class MainActivity extends Activity {
         super.onResume();
         alive = true;
         canDrawCached = canDraw();
+        // v1.3.3：识别「固件重启撤销悬浮窗授权」，明确告诉家长设置没丢。
+        boolean wasGranted = st.overlayWasGranted();
+        if (OverlayPermissionTracker.revokeDetected(wasGranted, canDrawCached)) {
+            GuardNotice.overlayRevoked(this);
+            st.overlayRevoked(true);
+            st.lastStartVia("blocked_no_channel");
+            Toast.makeText(this, "悬浮窗授权被系统撤销，设置没有丢失，请重新授权",
+                    Toast.LENGTH_LONG).show();
+        }
+        if (OverlayPermissionTracker.restored(wasGranted, canDrawCached)) {
+            st.overlayRevoked(false);
+        }
+        if (OverlayPermissionTracker.shouldRecord(wasGranted, canDrawCached)) {
+            st.overlayWasGranted(canDrawCached);
+        }
+        // 授权恢复后自愈：家长此前开启过守护、服务不在运行则拉起。
+        if (OverlayPermissionTracker.restored(wasGranted, canDrawCached)
+                && st.guardEnabled() && !QuizOverlayService.isRunning()
+                && GuardPolicy.canStartGuard(st.hasPin())) {
+            send(QuizOverlayService.ACTION_START);
+            handler.postDelayed(renderOnce, 300);
+        }
         refreshWrongBook();
         handler.removeCallbacks(refresh);
         handler.post(refresh);
@@ -472,7 +494,15 @@ public class MainActivity extends Activity {
         StringBuilder s = new StringBuilder();
         s.append("应用版本：").append(appVersion).append("（build ").append(appVersionCode)
                 .append("）  ·  悬浮窗权限：")
-                .append(canDrawCached ? "已授权 ✓" : "未授权 ✗（点「授权悬浮窗」）").append(NL);
+                .append(canDrawCached ? "已授权 ✓"
+                        : (st.overlayRevoked() ? "未授权 ✗（曾被授权，疑被系统撤销）"
+                                : "未授权 ✗（点「授权悬浮窗」）")).append(NL);
+        int channel = OverlayChannel.pick(canDrawCached,
+                GuardAccessibilityService.canHost(), Build.VERSION.SDK_INT);
+        s.append("弹题通道：").append(channel == OverlayChannel.APPLICATION ? "悬浮窗"
+                : channel == OverlayChannel.ACCESSIBILITY ? "无障碍降级"
+                : "未就绪（重新授权或开启无障碍服务）")
+                .append("  ·  最近启动：").append(st.lastStartVia()).append(NL);
         boolean running = QuizOverlayService.isRunning();
         s.append("守护服务：").append(running ? "运行中" : "未运行");
         if (running) {

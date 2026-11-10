@@ -422,13 +422,13 @@ public class QuizOverlayService extends Service {
         difficultyLevel = st.difficultyLevel();
         autoContinue = st.autoContinueOnCorrect();
         cooldown.reset();
-        engine = new QuizEngine(st.grade(), "",
+        engine = new QuizEngine(st.grade(), st.edition(),
                 st.weight(Subjects.MATH), st.weight(Subjects.CHINESE),
                 st.weight(Subjects.ENGLISH), st.weight(Subjects.OTHER));
         engine.setAllSubjects(st.allSubjects());
         engine.setKnowledgeOnly(knowledgeOnly);
         engine.setDifficultyLevel(difficultyLevel);
-        // 题库已按年级 + 学科打平，不再注入学期 / 单元 / 教材版本过滤。
+        engine.setStudyScope(SyllabusAssets.get(this), st.termIndex(), st.unitLimit());
         QuizDb cached = QuizDb.peek();
         if (cached != null) {
             engine.setDb(cached);

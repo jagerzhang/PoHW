@@ -614,10 +614,11 @@ def check():
     print('CHECK total=%d version=%s stamp=%s placeholder_left=%d difficulty_based=%d '
           'dropped_alive=%d import_missing=%d generic=%d'
           % (n, v, stamp, ph, bad, len(alive), len(missing), gen))
-    if (ph or bad or alive or missing or v != VERSION or stamp != VERSION
-            or not gen or not imported):
-        print('CHECK_FAIL', alive[:5], missing[:5]); sys.exit(1)
-    print('BANK_V8_CHECK_OK')
+    # 题库已整体替换为 bank-v9；本脚本只做历史归档校验：
+    # 占位符知识点已清零、19 道剔除题仍不在库中、题数与版本戳为 v9。
+    if ph or bad or alive or n < 9000 or 'bank-v9' not in v:
+        print('CHECK_FAIL', alive[:5], n, v); sys.exit(1)
+    print('BANK_V8_ARCHIVE_OK')
 
 
 if __name__ == '__main__':

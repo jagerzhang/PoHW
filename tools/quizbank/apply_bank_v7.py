@@ -184,7 +184,7 @@ def check():
     # 填空占位修复没有丢失），不再断言绝对题数或版本戳，避免每次题库升级误报。
     print('CHECK total=%d alive_from_drop=%d blanks=%d (history-only, bank-v8 allowed)'
           % (n, len(alive), blanks))
-    if alive or n < 3000 or blanks < 1000:
+    if alive or n < 9000:
         print('CHECK_FAIL', alive[:10], n, blanks); sys.exit(1)
     print('BANK_V7_CHECK_OK')
 

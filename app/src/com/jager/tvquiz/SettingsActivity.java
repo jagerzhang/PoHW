@@ -44,6 +44,8 @@ public class SettingsActivity extends Activity {
 
     private SettingsStore st;
     private PinGate gate;
+    /** 按教材版本族隔离的单元进度表。 */
+    private Syllabus syllabus;
     private int presetIdx = 0;
     private boolean inSettings = false;
     /** 用户手输过在线源地址后，refreshRows() 不得再用持久化值覆盖掉未保存的输入。 */
@@ -55,7 +57,7 @@ public class SettingsActivity extends Activity {
     private TextView gateTitle, gateMask, gateMsg, gateState, bankStatus, pinState;
     private Button firstGateBtn;
     private EditText urlEdit;
-    private Button rowGrade, rowInterval, rowScope, rowSync;
+    private Button rowGrade, rowInterval, rowScope, rowSync, rowTerm, rowUnit, rowEdition;
     /** v1.1.0 四项可选加固，默认全关。 */
     private Button rowStreak, rowStrict, rowCooldown, rowSource, rowDifficulty, rowAutoContinue;
     /** 在线源并排行：左检查题库更新 / 右自动更新，供行内左右焦点链使用。 */
@@ -76,6 +78,7 @@ public class SettingsActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         st = new SettingsStore(this);
+        syllabus = SyllabusAssets.get(this);
         BankRepository.installBuiltin(this, st);
         gate = new PinGate(st);
         gateView = buildGate();
@@ -326,6 +329,34 @@ public class SettingsActivity extends Activity {
         rowScope = addRow(quiz, "出题范围", new View.OnClickListener() {
             @Override public void onClick(View v) { st.allSubjects(!st.allSubjects()); refreshRows(); }
         });
+        rowTerm = addRow(quiz, "学习学期", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                st.termIndex((st.termIndex() + 1) % Syllabus.TERM_LABELS.length);
+                st.unitLimit(Math.min(st.unitLimit(),
+                        syllabus.maxUnits(st.grade(), st.termIndex())));
+                refreshRows();
+            }
+        });
+        rowUnit = addRow(quiz, "已学单元", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                int max = syllabus.maxUnits(st.grade(), st.termIndex());
+                if (max == 0) {
+                    Toast.makeText(SettingsActivity.this,
+                            "本年级 / 学期暂无单元进度表，仅按学期抽题",
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                st.unitLimit((st.unitLimit() + 1) % (max + 1));
+                refreshRows();
+            }
+        });
+        rowEdition = addRow(quiz, "教材版本", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                Toast.makeText(SettingsActivity.this,
+                        "按当前年级与册次自动匹配题库中题量最多的教材版本",
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
         rowStreak = addRow(quiz, "连续答对", new View.OnClickListener() {
             @Override public void onClick(View v) {
                 st.unlockStreak(st.unlockStreak() % SettingsStore.STREAK_MAX + 1);
@@ -391,8 +422,9 @@ public class SettingsActivity extends Activity {
         note(quiz, "默认：答对 1 题即过关、严格模式关、无冷却惩罚、全部题目、答对自动继续。「严格模式 / 冷却惩罚 / 出题偏好 / 题目难度」是可选开关，不动就和旧版一样。");
         note(quiz, "「答对自动继续」默认开启：达到解锁门槛后直接关闭答题页，不用再按一次「继续观看」；关掉则保留原来的确认按钮。");
         note(quiz, "出题偏好＝仅知识/计算题时，只抽 810 道真知识/计算题（数学算式、语文古诗/词语、英语词汇/句型）；全学科模式的其他学科池交给参数化生成器。");
-        note(quiz, "题库按年级 + 学科 + 课标纲目打平：抽题只按年级上限、学科配比与难度倾向，"
-                + "空池时只放宽年级上限，绝不换学科。");
+        note(quiz, "题库按真实教材册次与课标知识点组织：先选上 / 下册，再选已学到第几单元；"
+                + "同一格子有多套教材时自动匹配题量最多的版本，单元过滤按版本隔离，绝不串题。"
+                + "选不到题时依次放宽单元 → 学期 → 年级，始终不换学科。默认全学年 / 不限。");
 
         // ---- 02 学科设置 ----
         LinearLayout subjects = addCard(col, "02  学科设置 · 题目配比");
@@ -778,6 +810,19 @@ public class SettingsActivity extends Activity {
                 ? "仅知识/计算题" : "全部题目");
         rowScope.setText(st.allSubjects() ? "全学科（含物理/历史等）" : "仅数 / 语 / 英");
         rowSync.setText("自动更新 · " + SettingsStore.SYNC_LABELS[st.syncIndex()]);
+        rowTerm.setText(Syllabus.TERM_LABELS[st.termIndex()]);
+        int maxUnit = syllabus.maxUnits(st.grade(), st.termIndex());
+        int lim = st.unitLimit();
+        if (maxUnit == 0) {
+            rowUnit.setText("本册暂无进度表 · 仅学期过滤");
+        } else if (lim == 0) {
+            rowUnit.setText("不限（整册 " + maxUnit + " 单元）");
+        } else {
+            rowUnit.setText("已学到 " + syllabus.unitLabel(st.grade(), st.termIndex(),
+                    Subjects.MATH, Math.min(lim, maxUnit)));
+        }
+        String fam = syllabus.editionFor(st.grade(), st.termIndex(), Subjects.MATH);
+        rowEdition.setText(fam.isEmpty() ? "通用（全学年）" : fam);
         for (int s = 0; s < Subjects.COUNT; s++) {
             String w = "配比 " + st.weight(s);
             if (s == Subjects.OTHER && !st.allSubjects()) w += " · 未启用";

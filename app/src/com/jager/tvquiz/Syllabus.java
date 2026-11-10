@@ -50,16 +50,36 @@ public final class Syllabus {
     }
 
     private final Map<String, List<Unit>> books;
+    /** (年级|册次|学科) -> 该格子自动匹配的教材版本族，用于按单元过滤时隔离版本。 */
+    private final Map<String, String> editionByCell;
 
-    private Syllabus(Map<String, List<Unit>> books) { this.books = books; }
+    private Syllabus(Map<String, List<Unit>> books,
+                     Map<String, String> editionByCell) {
+        this.books = books;
+        this.editionByCell = editionByCell;
+    }
 
     /** 进度表缺失/损坏时的安全降级：不做任何单元过滤，学期过滤仍然可用。 */
     public static Syllabus empty() {
-        return new Syllabus(Collections.<String, List<Unit>>emptyMap());
+        return new Syllabus(Collections.<String, List<Unit>>emptyMap(),
+                Collections.<String, String>emptyMap());
+    }
+
+    /** 该格子自动匹配的教材版本族；无表（如全学年）返回空串。 */
+    public String editionFor(int grade, int term, int subject) {
+        String v = editionByCell.get(key(grade, term, subject));
+        return v == null ? "" : v;
     }
 
     public static Syllabus fromJson(String json) {
         Map<String, Object> top = asObject(Json.parse(json), "root");
+        HashMap<String, String> editions = new HashMap<String, String>();
+        Object edObj = top.get("editionByCell");
+        if (edObj != null) {
+            for (Map.Entry<String, Object> e : asObject(edObj, "editionByCell").entrySet()) {
+                editions.put(e.getKey(), asString(e.getValue(), "editionByCell[]"));
+            }
+        }
         Object gradesObj = top.get("grades");
         if (gradesObj == null) throw new IllegalArgumentException("syllabus: missing grades");
         Map<String, Object> grades = asObject(gradesObj, "grades");
@@ -111,7 +131,8 @@ public final class Syllabus {
                 }
             }
         }
-        return new Syllabus(Collections.unmodifiableMap(out));
+        return new Syllabus(Collections.unmodifiableMap(out),
+                Collections.unmodifiableMap(editions));
     }
 
     public int bookCount() { return books.size(); }

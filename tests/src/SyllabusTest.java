@@ -61,12 +61,13 @@ public class SyllabusTest {
                 StandardCharsets.UTF_8);
         Syllabus s = Syllabus.fromJson(shipped);
 
-        // ---- 1. shipped 停用空表 ----
-        ok("S01 shipped 进度表为停用空表", s.bookCount() == 0);
-        ok("S02 空表不产生任何单元别名",
-                s.matchNames(3, 1, Subjects.MATH, 99).length == 0);
-        ok("S03 空表 maxUnits 为 0", s.maxUnits(3, 1) == 0);
-        ok("S04 空表 unitLabel 为空", s.unitLabel(3, 1, Subjects.MATH, 2).isEmpty());
+        // ---- 1. shipped 真实教材进度表 ----
+        ok("S01 shipped 进度表含真实册次", s.bookCount() >= 20);
+        ok("S02 三上数学有有序单元", s.unitCount(3, 1, Subjects.MATH) > 0);
+        ok("S03 已学单元能展开别名",
+                s.matchNames(3, 1, Subjects.MATH, 1).length > 0);
+        ok("S04 editionFor 返回版本族",
+                !s.editionFor(3, 1, Subjects.MATH).isEmpty());
         ok("S05 全学年不加 term 谓词",
                 "".equals(Syllabus.termWhere(Syllabus.TERM_ALL)));
         ok("S06 空别名集合不产生单元谓词",

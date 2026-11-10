@@ -34,7 +34,9 @@ def from_bank_check(row):
     opts = [a, b, c, d]
     if any(o is None or not str(o).strip() for o in opts):
         return False
-    if len({norm(o) for o in opts}) != 4:
+    # 与 QuizEngine.Question.fromBank() 一致：按选项原值（trim 后）判重。
+    # 英语大小写 / 分词题的选项差异是有意义的，不能按归一化值合并。
+    if len({str(o).strip() for o in opts}) != 4:
         return False
     if not isinstance(ai, int) or not 0 <= ai <= 3:
         return False

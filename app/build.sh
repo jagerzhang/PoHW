@@ -8,8 +8,8 @@ APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
 VERSION_NAME="1.3.3"
-VERSION_CODE="47"
-APK_NAME="PoHW-v${VERSION_NAME}.apk"
+VERSION_CODE="48"
+APK_NAME="PoHW-v${VERSION_NAME}-legacy.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
 : "${ANDROID_HOME:=$HOME/Android/Sdk}"
@@ -236,7 +236,7 @@ aapt2 link -o "$BUILD/out/base.apk" \
   --manifest "$APP/AndroidManifest.xml" \
   -A "$APP/assets" \
   --java "$BUILD/gen" \
-  --min-sdk-version 21 --target-sdk-version 33 \
+  --min-sdk-version 14 --target-sdk-version 33 \
   --version-code "$VERSION_CODE" --version-name "$VERSION_NAME" \
   "$BUILD/out/res.zip"
 
@@ -251,7 +251,7 @@ javac -source 8 -target 8 -encoding UTF-8 -nowarn \
 
 echo "[6/9] d8"
 find "$BUILD/classes" -name '*.class' > "$BUILD/classes.txt"
-d8 --lib "$ANDROID_JAR" --min-api 21 --output "$BUILD/dexout" @"$BUILD/classes.txt"
+d8 --lib "$ANDROID_JAR" --min-api 14 --output "$BUILD/dexout" @"$BUILD/classes.txt"
 if grep -aq 'v4.1 控制台' "$BUILD/dexout/classes.dex"; then
   echo 'OLD HARDCODED TITLE IN DEX'; exit 1
 fi

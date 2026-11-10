@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="47"' in _mf, "manifest versionCode advances to 47")
-check('VERSION_CODE="47"' in b, "build script versionCode advances to 47")
+check('android:versionCode="48"' in _mf, "manifest versionCode advances to 48")
+check('VERSION_CODE="48"' in b, "build script versionCode advances to 48")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -348,8 +348,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "PROGRESS" in _scope,
       "runtime regression asserts term/edition/unit scoped draws")
-check('android:versionCode="47"' in _mf, "manifest versionCode advances to 47")
-check('VERSION_CODE="47"' in b, "build script versionCode advances to 47")
+check('android:versionCode="48"' in _mf, "manifest versionCode advances to 48")
+check('VERSION_CODE="48"' in b, "build script versionCode advances to 48")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -788,7 +788,7 @@ check('canRetrieveWindowContent="false"' in _ax130
       "accessibility watchdog is read-only and permission bound")
 check('stopWithTask="false"' in _mf130,
       "guard service survives task removal")
-check('android:versionName="1.3.3"' in _mf130 and 'android:versionCode="47"' in _mf130,
+check('android:versionName="1.3.3"' in _mf130 and 'android:versionCode="48"' in _mf130,
       "v1.3.3 is the published version in manifest")
 
 

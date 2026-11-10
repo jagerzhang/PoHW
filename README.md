@@ -19,8 +19,8 @@
 
 | | |
 | --- | --- |
-| 当前版本 | **v1.3.3**（`versionCode 47`） |
-| 运行平台 | Android TV / 电视盒子，`minSdk 21`，遥控器操作 |
+| 当前版本 | **v1.3.3-legacy**（`versionCode 48`，Android 4.0 低配变体） |
+| 运行平台 | Android TV / 电视盒子，`minSdk 14`（Android 4.0+），遥控器操作 |
 | 分发方式 | 自行侧载 APK（U 盘直装），**不在任何应用商店上架** |
 | 签名证书 | SHA-256 `76eb6063…6172`，历次构建连续，旧版可直接覆盖安装 |
 | 仓库 | https://github.com/jagerzhang/PoHW |

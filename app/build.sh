@@ -132,7 +132,7 @@ grep -qF 'bankPair[0].setNextFocusRightId(rightId);' "$SET"
 python3 tests/layout_contract.py
 # 运行时回归：用与 App 相同的两条 SQL 实跑内置题库，验证配比与标签。
 python3 tests/bank_distribution_check.py
-# 学习进度（方案 B）：进度表必须与题库同源，且分层兜底真的有效。
+# 打平口径：syllabus 表必须保持停用空表，运行时确认抽题只按年级 + 学科。
 [ -f "$APP/assets/syllabus.json" ] || { echo "MISSING syllabus.json"; exit 1; }
 python3 tools/quizbank/build_syllabus.py --check
 python3 tests/study_scope_check.py
@@ -160,21 +160,15 @@ grep -qF 'boolean other = s == Subjects.OTHER && allSubjects;' "$DB"
 grep -qF 'new String[args.length * 2]' "$DB"
 grep -qF 'pick(poolWhere + diffW, poolArgs)' "$DB"
 grep -qF 'db.hasOtherQuestions()' "$ENG"
-# 学习进度（方案 B）：学期 / 单元必须真的接进抽题链、服务与家长设置。
-SYL="$APP/src/com/jager/tvquiz/Syllabus.java"
-STORE="$APP/src/com/jager/tvquiz/SettingsStore.java"
-grep -q 'termWhere' "$SYL"
-grep -q 'unitArgs' "$SYL"
-grep -qF 'String strict = where + termW + unitW' "$DB"
-grep -qF 'String termOnly = where + termW' "$DB"
-grep -qF 'concat(args, unitA)' "$DB"
-grep -q 'setStudyScope' "$ENG"
-grep -q 'SyllabusAssets.get' "$SVC"
-grep -qF 'getInt("termIdx", Syllabus.TERM_ALL)' "$STORE"
-grep -qF 'getInt("unitLimit", 0)' "$STORE"
-grep -q 'rowTerm' "$SET"
-grep -q 'rowUnit' "$SET"
-grep -q 'Syllabus.TERM_LABELS' "$SET"
+# 题库打平：家长设置 / 守护服务 / 题面都不得再出现教材版本、学期、单元概念。
+grep -qF '题库按年级 + 学科 + 课标纲目打平' "$SET"
+if grep -q -e 'rowTerm' -e 'rowUnit' -e 'Syllabus.TERM_LABELS' -e '教材版本' "$SET"; then
+  echo 'FORBIDDEN: textbook / term / unit concept back in parent settings'; exit 1
+fi
+if grep -q -e 'setStudyScope' -e 'SyllabusAssets.get' -e 'st.editionFor' "$SVC"; then
+  echo 'FORBIDDEN: textbook edition or study scope back in quiz service'; exit 1
+fi
+grep -qF 'String strict = where + termW + unitW' "$DB"  # 兼容重载保留；调用方恒定传空
 # 负向禁词只看代码行，注释里提到旧实现不应误拦构建。
 if grep -v -e '^[[:space:]]*//' -e '^[[:space:]]*\*' -e '^[[:space:]]*/\*' "$ENG" "$DB" \
     | grep -q -e 'gradeWide' -e 'nextInt(100) < 15' -e 'fromBank(subject,'; then

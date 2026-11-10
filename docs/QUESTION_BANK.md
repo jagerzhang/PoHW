@@ -4,7 +4,7 @@
 
 `app/assets/quiz.db` 当前为 **`pohw-2026.11.10-bank-v8-r2`**，共 **3876 道题**，
 覆盖小学 1–6 年级语数外。`grade` 是「最低适用年级」的保守下界，不是精确年级；
-`syllabus_scope` 区分 `outline`（有课标纲目）与 `generic`（无教材版本，含外部整合题），
+`syllabus_scope` 区分 `outline`（有课标纲目）与 `generic`（无教材版本，含外部整合题）；两类题都只按年级与学科抽，不参与教材进度过滤，
 `grade_basis` 记录该题的定级依据，`difficulty_level` 按题面复杂度分三档。
 题目由本项目按课标自编的低年级题，与整理自互联网公开渠道、经逐题校验清洗后的题目组成。
 

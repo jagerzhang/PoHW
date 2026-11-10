@@ -108,7 +108,9 @@ def check():
     stamp = io.open(STAMP, encoding='utf-8').read().strip()
     print('CHECK total=%d alive_from_drop_list=%d version=%s stamp=%s'
           % (n, len(alive), v, stamp))
-    if alive or v != VERSION or stamp != VERSION:
+    # v1.3.3 起题库已推进到 bank-v7，本脚本只负责校验「54 道 id 仍不在库中」，
+    # 不再把版本戳当成失败条件（否则每次题库升级都会误报）。
+    if alive:
         print('CHECK_FAIL', alive[:10])
         sys.exit(1)
     print('DROP_CHECK_OK')

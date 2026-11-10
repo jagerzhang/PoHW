@@ -351,10 +351,8 @@ public class MainActivity extends Activity {
         wireGrid();
 
         l.addView(Ui.tv(this,
-                "开启守护后按 Home 切到任意应用，到点弹出全屏答题页；Home 键属系统级按键，第三方无法拦截。\n"
-                        + "手机扫码管理：家长设置 → 01 出题基础 → 手机扫码管理（打开即显示二维码）\n"
-                        + "卸载前请先关闭守护；遮罩卡住可在电视「设置 → 应用管理 → PoHW」点「强制停止」",
-                13, Ui.MUTED), Ui.fixed(this, 60));
+                "卸载前请先关闭守护；遮罩卡住可在系统「应用管理 → PoHW」强制停止",
+                13, Ui.MUTED), Ui.fixed(this, 28));
 
         rootView.addView(l, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -492,63 +490,44 @@ public class MainActivity extends Activity {
     private void render() {
         if (!alive || status == null) return;
         StringBuilder s = new StringBuilder();
-        s.append("应用版本：").append(appVersion).append("（build ").append(appVersionCode)
-                .append("）  ·  悬浮窗权限：")
-                .append(canDrawCached ? "已授权 ✓"
-                        : (st.overlayRevoked() ? "未授权 ✗（曾被授权，疑被系统撤销）"
-                                : "未授权 ✗（点「授权悬浮窗」）")).append(NL);
+        boolean running = QuizOverlayService.isRunning();
         int channel = OverlayChannel.pick(canDrawCached,
                 GuardAccessibilityService.canHost(), Build.VERSION.SDK_INT);
-        s.append("弹题通道：").append(channel == OverlayChannel.APPLICATION ? "悬浮窗"
-                : channel == OverlayChannel.ACCESSIBILITY ? "无障碍降级"
-                : "未就绪（重新授权或开启无障碍服务）")
-                .append("  ·  最近启动：").append(st.lastStartVia()).append(NL);
-        boolean running = QuizOverlayService.isRunning();
-        s.append("守护服务：").append(running ? "运行中" : "未运行");
-        if (running) {
-            s.append("  ·  ").append(QuizOverlayService.isQuizShowing()
-                    ? "答题遮罩已弹出" : "距下次答题 " + QuizOverlayService.remainSec() + " 秒");
-        }
-        s.append("  ·  家长密码：").append(st.hasPin() ? "已设置 ✓" : "未设置 ✗").append(NL);
-        s.append("当前配置：").append(st.gradeLabel()).append(" · 每 ").append(st.intervalSec())
-                .append(" 秒一题 · ")
+
+        // 只留家长当前最关心的设置与状态；诊断细节改为「异常时才出现」。
+        s.append(st.gradeLabel()).append(" · 每 ").append(st.intervalSec())
+                .append(" 秒一题 · 一组 ").append(st.questionsPerRound())
+                .append(" 题需答对 ")
+                .append((st.questionsPerRound() * st.passPercent() + 99) / 100)
+                .append(" 题 · ")
                 .append(st.allSubjects()
-                        ? ("全学科 数/语/英/其他 " + st.weight(0) + "/" + st.weight(1)
-                                + "/" + st.weight(2) + "/" + st.weight(3))
-                        : ("数/语/英 " + st.weight(0) + "/" + st.weight(1) + "/" + st.weight(2)))
+                        ? ("全学科 " + st.weight(0) + "/" + st.weight(1) + "/"
+                                + st.weight(2) + "/" + st.weight(3))
+                        : ("数/语/英 " + st.weight(0) + "/" + st.weight(1) + "/"
+                                + st.weight(2)))
                 .append(NL);
-        s.append("学习进度：").append(Syllabus.TERM_LABELS[st.termIndex()]);
-        if (st.unitLimit() > 0) {
-            s.append(" · 数学已学到第 ").append(st.unitLimit()).append(" 单元");
-        } else {
-            s.append(" · 单元不限");
+        s.append("守护：").append(running ? "运行中" : "未运行");
+        if (running) {
+            s.append(" · ").append(QuizOverlayService.isQuizShowing()
+                    ? "答题中" : "距下次答题 " + QuizOverlayService.remainSec() + " 秒");
         }
-        s.append(NL);
-        s.append("教材版本：");
-        for (int i = 0; i < Subjects.COUNT; i++) {
-            if (i > 0) s.append(" / ");
-            s.append(Subjects.name(i)).append(" ").append(st.editionFor(i));
+        s.append(" · 密码：").append(st.hasPin() ? "已设置" : "未设置")
+                .append(" · 通道：")
+                .append(channel == OverlayChannel.APPLICATION ? "悬浮窗"
+                        : channel == OverlayChannel.ACCESSIBILITY ? "无障碍"
+                        : "未就绪").append(NL);
+        s.append("答对 ").append(st.correct()).append(" / ").append(st.questioned())
+                .append(" 题 · 错题库 ").append(WrongBook.cachedCount())
+                .append(" 题 · 内置 ").append(bankLine()).append(NL);
+        if (!canDrawCached) {
+            s.append("⚠ 悬浮窗授权")
+                    .append(st.overlayRevoked() ? "被系统撤销（设置没丢）" : "未授予")
+                    .append("，点「授权悬浮窗」或开启无障碍服务").append(NL);
         }
-        s.append(NL);
-        s.append("内置题库：").append(bankLine()).append(NL);
-        s.append("错题库：").append(WrongBook.cachedCount()).append(" 题");
-        String latest = WrongBook.latestSummary();
-        if (!latest.isEmpty()) s.append(" · 最近：").append(latest);
-        s.append("  ·  统计：答对 ")
-                .append(st.correct()).append(" / ").append(st.questioned()).append(" 题").append(NL);
-        s.append("开机自启：").append(st.bootAutostart() ? "开" : "关")
-                .append("（启动即守护：").append(st.autoGuardOnBoot() ? "开" : "关")
-                .append("）  ·  答题暂停视频：").append(st.pauseOnQuiz() ? "开" : "关")
-                .append(" / 自动恢复：").append(st.resumePlayback() ? "开" : "关").append(NL);
-        s.append("题库源：").append(st.bankSource()).append(" · 版本 ").append(st.bankVersion())
-                .append(" · 上次检查 ").append(ts(st.bankChecked())).append(NL);
-        s.append("手机管理：").append(st.lanAdminEnabled() && LanServer.isRunning()
-                ? LanServer.url() + "  ·  二维码在「家长设置 → 01 出题基础 → 手机扫码管理」"
-                : "未开启  ·  二维码在「家长设置 → 01 出题基础 → 手机扫码管理」").append(NL);
-        s.append("同步状态：").append(st.bankMessage());
-        s.append(NL);
-        s.append("版本更新：").append(UpdateState.message.length() == 0
-                ? "尚未检查" : UpdateState.message);
+        if (UpdateState.pending != null) {
+            s.append("⚠ 有新版本 ").append(UpdateState.pending.versionName)
+                    .append("，见家长设置 · 版本更新").append(NL);
+        }
         // 每秒轮询只在文本真的变化时才触碰 TextView / Button，避免无意义的重绘。
         String text = s.toString();
         if (!text.equals(status.getText().toString())) status.setText(text);

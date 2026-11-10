@@ -174,7 +174,7 @@ grep -qF 'getInt("termIdx", Syllabus.TERM_ALL)' "$STORE"
 grep -qF 'getInt("unitLimit", 0)' "$STORE"
 grep -q 'rowTerm' "$SET"
 grep -q 'rowUnit' "$SET"
-grep -q 'Syllabus.TERM_LABELS' "$MAIN"
+grep -q 'Syllabus.TERM_LABELS' "$SET"
 # 负向禁词只看代码行，注释里提到旧实现不应误拦构建。
 if grep -v -e '^[[:space:]]*//' -e '^[[:space:]]*\*' -e '^[[:space:]]*/\*' "$ENG" "$DB" \
     | grep -q -e 'gradeWide' -e 'nextInt(100) < 15' -e 'fromBank(subject,'; then
@@ -260,7 +260,7 @@ d8 --lib "$ANDROID_JAR" --min-api 21 --output "$BUILD/dexout" @"$BUILD/classes.t
 if grep -aq 'v4.1 控制台' "$BUILD/dexout/classes.dex"; then
   echo 'OLD HARDCODED TITLE IN DEX'; exit 1
 fi
-grep -aq '应用版本' "$BUILD/dexout/classes.dex"
+grep -aq '一组' "$BUILD/dexout/classes.dex"  # 精简后的首页状态仍带当前配置
 grep -aq '错题库' "$BUILD/dexout/classes.dex"
 
 echo "[7/9] package + zipalign"

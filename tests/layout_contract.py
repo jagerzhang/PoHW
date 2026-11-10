@@ -249,7 +249,7 @@ check("开启（打开 APP 时自动守护）" in raw_s and "开机即守护" no
 check("LaunchPolicy.shouldAutoGuard" in m,
       "home delegates launch auto-guard to a pure policy")
 check("b == null" in m, "auto-guard fires only on a genuine cold start")
-check("启动即守护" in m, "home status line uses the new wording")
+check("st.autoGuardOnBoot()" in m, "home still honours the launch-time auto-guard setting")
 check("public static boolean shouldAutoGuard" in _launch,
       "launch policy is pure Java and unit-testable")
 check("LaunchPolicy.java" in _run, "launch policy is compiled into JVM tests")
@@ -346,8 +346,8 @@ check("rowTerm" in raw_s and "rowUnit" in raw_s and "学习进度" in raw_s,
 check("SyllabusAssets.get(this)" in raw_s
       and "maxUnits" in raw_s and "unitLabel" in raw_s,
       "settings clamps the unit index to the real book size")
-check("Syllabus.TERM_LABELS" in m and "学习进度：" in raw_m,
-      "home status line reports the active study scope")
+check("Syllabus.TERM_LABELS" in raw_s and "学习进度" in raw_s,
+      "settings page reports the active study scope")
 check(all(k in _run for k in ("Json.java", "Syllabus.java", "SyllabusTest")),
       "JSON parser, syllabus and its JVM test are compiled and executed")
 check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
@@ -729,7 +729,7 @@ check('must-revalidate' in _edge125,
 
 # ---- v1.2.7：逐题复核成果必须真的随 APK 发布 ----
 _bv127 = read(os.path.join(ROOT, "app/assets/quiz.db.version")).strip()
-check("bank-v6" in _bv127, "shipped bank is the reviewed bank-v6")
+check("bank-v7" in _bv127, "shipped bank is the reviewed bank-v7")
 check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/apply_review.py")),
       "bank-v5 review-apply script is still committed as history")
 check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/apply_drop_v132.py")),
@@ -904,8 +904,9 @@ check("autoEnable()" in _pair131v and "wireFocus()" in _pair131v
 check('addRow(quiz, "手机扫码管理"' in _st131v
       and 'addRow(upd, "手机扫码管理"' not in _st131v,
       "QR entry sits at the top of settings card 01 only")
-check("手机扫码管理" in _mf131v and "LanServer.url()" in _mf131v,
-      "home screen shows the QR entry path and the live LAN URL")
+check('addRow(quiz, "手机扫码管理"' in _st131v
+      and "st.questionsPerRound()" in _mf131v and "st.passPercent()" in _mf131v,
+      "home status is compact; QR entry stays first in settings")
 check(os.path.isfile(os.path.join(ROOT, "tests/src/StartGuardTest.java")),
       "first-use PIN gate has a JVM test")
 
@@ -923,8 +924,8 @@ _db132 = _sq132.connect(os.path.join(ROOT, "app/assets/quiz.db"))
 _alive132 = [i for i in _ids132
              if _db132.execute("select 1 from questions where id=?", (i,)).fetchone()]
 check(not _alive132, "all signed-off questions are absent from the shipped bank")
-check(_db132.execute("select count(*) from questions").fetchone()[0] == 3935,
-      "shipped bank holds exactly 3935 questions after bank-v6 cleanup")
+check(_db132.execute("select count(*) from questions").fetchone()[0] == 3818,
+      "shipped bank holds exactly 3818 questions after bank-v7 review")
 _db132.close()
 check("NUMBERED_ITEM" in _qts132 and "countMatches" in _qts132
       and "TV_MAX_NUMBERED_ITEMS" in _qts132,
@@ -971,5 +972,32 @@ check('"## 变更记录"' not in _rm133 and "开机 / 重启后守护没起来" 
       "README drops the duplicated changelog table and documents the Hisense case")
 check(os.path.isfile(os.path.join(ROOT, "tests/src/OverlayChannelTest.java")),
       "channel and permission-transfer logic has a JVM test")
+
+# ---- 未发布：首页精简 / 题量上限 / 全库逐题质检 ----
+_sto134 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsStore.java"))
+_mf134 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/MainActivity.java"))
+_bv134 = read(os.path.join(ROOT, "app/assets/quiz.db.version")).strip()
+_db134 = _sq132.connect(os.path.join(ROOT, "app/assets/quiz.db"))
+check("bank-v7" in _bv134, "shipped bank is the fully reviewed bank-v7")
+check("clamp(v, 1, 10)" in _sto134 and 'getInt("questionsPerRound", 5)' in _sto134,
+      "round size defaults to 5 and is capped at 10")
+check("st.gradeLabel()" in _mf134 and "st.intervalSec()" in _mf134
+      and "st.questionsPerRound()" in _mf134 and "WrongBook.cachedCount()" in _mf134,
+      "home status keeps only current settings and study stats")
+check('"应用版本："' not in _mf134 and '"同步状态："' not in _mf134
+      and '"题库源："' not in _mf134,
+      "verbose version / sync / source lines are gone from the home screen")
+check(_db134.execute("select count(*) from questions where length(text)>90").fetchone()[0] == 0
+      and _db134.execute("select count(*) from questions where length(opt_a)>48 or "
+                         "length(opt_b)>48 or length(opt_c)>48 or length(opt_d)>48")
+              .fetchone()[0] == 0,
+      "no question survives with a TV-unreadable stem or option")
+check(_db134.execute("select count(*) from questions where instr(text,'____')>0")
+              .fetchone()[0] >= 1300,
+      "fill-in-the-blank stems carry a visible underscore placeholder")
+check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/apply_bank_v7.py"))
+      and os.path.isfile(os.path.join(ROOT, "tools/quizbank/review/drop-v133.csv")),
+      "bank-v7 cleanup has a reproducible script and signed-off drop list")
+_db134.close()
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

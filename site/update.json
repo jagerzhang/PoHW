@@ -2,23 +2,23 @@
   "schema": 1,
   "publishedAt": "2026-11-10",
   "main": {
-    "versionName": "1.3.2",
-    "versionCode": 46,
+    "versionName": "1.3.3",
+    "versionCode": 47,
     "minSdk": 21,
     "latest": "https://pohw.zhangge.net/dl/latest-main.apk",
-    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.2.apk",
-    "sha256": "f3da74df1c2739c859efbd04cf294bd2c3d2d5f493b6ad4d6f0236c3751cf2aa",
-    "size": 1046295,
-    "notes": "v1.3.2 逐题剔除 54 道学段错配 / TV 不适配题，题库 bank-v6 / 3,935 道"
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.3.apk",
+    "sha256": "4b67c23f1558f47b8ed0416ea257547231d2566a89fc2f2ee003d210f86e5388",
+    "size": 2397975,
+    "notes": "v1.3.3 题库整体替换为 9,544 道带真实教材册次/单元/课标知识点的四选一题（bank-v9），恢复上下学期与已学单元进度并修复偏好模式学期过滤"
   },
   "legacy": {
-    "versionName": "1.2.4",
-    "versionCode": 38,
+    "versionName": "1.3.3",
+    "versionCode": 48,
     "minSdk": 14,
     "latest": "https://pohw.zhangge.net/dl/latest-legacy.apk",
-    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.2.4-legacy.apk",
-    "sha256": "a72d9c7fb67f9e2c68d622289d78b933b27bb1fc1a531841496efd58bb55ec33",
-    "size": 1021440,
-    "notes": "Android 4.0 低配版 v1.2.4（不含在线更新，手动下载）"
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.3-legacy.apk",
+    "sha256": "4e1a31ebdf161d12721f5a76a0c3d514c713c94f15cadf6632c92cd7d91399fc",
+    "size": 2397975,
+    "notes": "Android 4.0 低配变体 v1.3.3-legacy（minSdk 14），与主线共用同一套题库与出题机制，读 legacy 更新通道"
   }
 }

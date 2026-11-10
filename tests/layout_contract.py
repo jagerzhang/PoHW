@@ -729,7 +729,7 @@ check('must-revalidate' in _edge125,
 
 # ---- v1.2.7：逐题复核成果必须真的随 APK 发布 ----
 _bv127 = read(os.path.join(ROOT, "app/assets/quiz.db.version")).strip()
-check("bank-v7" in _bv127, "shipped bank is the reviewed bank-v7")
+check("bank-v8" in _bv127, "shipped bank is the regraded bank-v8")
 check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/apply_review.py")),
       "bank-v5 review-apply script is still committed as history")
 check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/apply_drop_v132.py")),
@@ -924,8 +924,8 @@ _db132 = _sq132.connect(os.path.join(ROOT, "app/assets/quiz.db"))
 _alive132 = [i for i in _ids132
              if _db132.execute("select 1 from questions where id=?", (i,)).fetchone()]
 check(not _alive132, "all signed-off questions are absent from the shipped bank")
-check(_db132.execute("select count(*) from questions").fetchone()[0] == 3818,
-      "shipped bank holds exactly 3818 questions after bank-v7 review")
+check(_db132.execute("select count(*) from questions").fetchone()[0] == 3876,
+      "shipped bank holds exactly 3876 questions after bank-v8 regrade")
 _db132.close()
 check("NUMBERED_ITEM" in _qts132 and "countMatches" in _qts132
       and "TV_MAX_NUMBERED_ITEMS" in _qts132,
@@ -978,7 +978,7 @@ _sto134 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsStore.java")
 _mf134 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/MainActivity.java"))
 _bv134 = read(os.path.join(ROOT, "app/assets/quiz.db.version")).strip()
 _db134 = _sq132.connect(os.path.join(ROOT, "app/assets/quiz.db"))
-check("bank-v7" in _bv134, "shipped bank is the fully reviewed bank-v7")
+check("bank-v8" in _bv134, "shipped bank is the regraded bank-v8")
 check("clamp(v, 1, 10)" in _sto134 and 'getInt("questionsPerRound", 5)' in _sto134,
       "round size defaults to 5 and is capped at 10")
 check("st.gradeLabel()" in _mf134 and "st.intervalSec()" in _mf134
@@ -998,6 +998,50 @@ check(_db134.execute("select count(*) from questions where instr(text,'____')>0"
 check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/apply_bank_v7.py"))
       and os.path.isfile(os.path.join(ROOT, "tools/quizbank/review/drop-v133.csv")),
       "bank-v7 cleanup has a reproducible script and signed-off drop list")
+
+# ---- 未发布：bank-v8 逐题重定级 / 外部优质题整合 / 教材划分如实降级 ----
+_cols134 = [r[1] for r in _db134.execute("pragma table_info(questions)")]
+check(all(c in _cols134 for c in ("syllabus_scope", "grade_basis", "grade_verified")),
+      "bank-v8 carries syllabus_scope / grade_basis / grade_verified")
+check(_db134.execute("select count(*) from questions where topic like '知识点 7%'")
+      .fetchone()[0] == 0,
+      "no non-semantic knowledge-point placeholders survive")
+check(_db134.execute("select count(*) from questions where grade_basis like '%difficulty%'")
+      .fetchone()[0] == 0,
+      "no grade is derived from the noisy difficulty coefficient")
+check(_db134.execute("select count(*) from questions where syllabus_scope='generic'")
+      .fetchone()[0] > 0,
+      "generic (no-textbook) questions are marked and separated")
+_dv8 = [r["id"] for r in _csv132.DictReader(
+    io.open(os.path.join(ROOT, "tools/quizbank/review/drop-v134.csv"), encoding="utf-8-sig"))]
+check(len(_dv8) == 19 and not [i for i in _dv8
+      if _db134.execute("select 1 from questions where id=?", (i,)).fetchone()],
+      "all 19 bank-v8 signed-off drops are absent from the shipped bank")
+check(os.path.isfile(os.path.join(ROOT, "tools/quizbank/regrade_bank_v8.py"))
+      and os.path.isfile(os.path.join(ROOT, "tools/quizbank/review/import-v134.csv")),
+      "bank-v8 regrade is reproducible with signed-off drop/import ledgers")
+_iv8 = list(_csv132.DictReader(
+    io.open(os.path.join(ROOT, "tools/quizbank/review/import-v134.csv"), encoding="utf-8-sig")))
+check(len(_iv8) == 77 and all(
+      _db134.execute("select 1 from questions where id=?", (r["id"],)).fetchone()
+      for r in _iv8),
+      "all 77 regraded quiz-challenge imports are present in the shipped bank")
+# 负向校验：单元进度谓词只有加上 scope 约束才会排除通用题（无教材版本）；
+# 不加约束时该谓词确实能命中 generic 题 —— 证明约束真的生效，而不是空条件。
+_qd134 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizDb.java"))
+check("syllabus_scope='outline'" in _qd134,
+      "unit progress filters exclude generic no-textbook questions")
+_al134 = _syljson["grades"]["2"]["1"]["数学"][0]["match"][0]
+_w134 = "grade<=2 AND subject='数学' AND (topic LIKE ? OR topic=?)"
+_p134 = ("%" + _al134 + "%", _al134)
+_n134 = _db134.execute("select count(*) from questions where " + _w134,
+                       _p134).fetchone()[0]
+_o134 = _db134.execute("select count(*) from questions where " + _w134
+                       + " AND syllabus_scope='outline'", _p134).fetchone()[0]
+_g134 = _db134.execute("select count(*) from questions where " + _w134
+                       + " AND syllabus_scope='generic'", _p134).fetchone()[0]
+check(_o134 > 0 and _g134 > 0 and _o134 + _g134 == _n134,
+      "scope isolation is real: generic questions appear without the constraint only")
 _db134.close()
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

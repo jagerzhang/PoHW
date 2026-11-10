@@ -1,10 +1,10 @@
 # Changelog
 
-> **版本口径**：对外发布 14 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 15 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
 > **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）、
 > **v1.2.4**（37）、**v1.2.5**（39）、**v1.2.6**（41）、**v1.2.7**（43）、
-> **v1.3.0**（44）、**v1.3.1**（45）、**v1.3.2**（46）。
+> **v1.3.0**（44）、**v1.3.1**（45）、**v1.3.2**（46）、**v1.3.3**（47）。
 > `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
@@ -12,6 +12,43 @@
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.3.3 (versionCode 47) — bank-v9 replacement, textbook progress, term fix
+
+Display version 1.3.2 -> **1.3.3**, `versionCode` 46 -> **47**, same release
+keystore (SHA-256 `76eb6063b574...26172`). Fifteenth published release.
+Ships all unreleased work from PR #30-#33 plus a matching Android 4.0 legacy
+build (`v1.3.3-legacy`, code 48, minSdk 14).
+
+- **Question bank replaced end to end**: 3,876 -> **9,544** four-choice
+  questions (`pohw-2026.11.10-bank-v9`), each with a real textbook term,
+  unit, knowledge point and explanation; 84 textbooks, 497 unit groups,
+  2,607 knowledge points. Grade-3 English goes from 0 to 1,026. Grade 1-2
+  and grade-6 English are empty (the new bank starts English at grade 3).
+- **Study progress restored**: `syllabus.json` rebuilt as 30 cells / 287
+  ordered units; the 上/下 term filter and studied-unit limits are live
+  again. Unit predicates add `AND edition_family = ?` so the same U1 from
+  different textbook families never mixes. Settings show the auto-matched
+  edition family for the current grade and term.
+- **Interim work folded in**: bank-v8 per-question regrading removed the
+  `difficulty`-coefficient grade guess (2,932 placeholder knowledge points
+  resolved, 19 bad questions dropped, 77 vetted external questions added);
+  a flatten pass then removed the unreliable textbook concept; bank-v9's
+  real per-edition data brought progress back on solid ground.
+- **Preference mode term fix**: `QuizDb.random()`'s `knowledgeOnly` branch
+  used to bypass `termW/unitW`. All three fallback layers now share
+  `koW = KNOWLEDGE_ONLY_SQL + termW + diffW`; an empty pool returns to the
+  parametric generator instead of leaking another term or the full bank.
+- **Gates**: contract 378, JVM 416, study-scope draws 960 + 640, mutation
+  98/98, bank distribution/quality/historical ledgers, signed release build
+  and `--check-strict` all green. Device end-to-end captured 4 live
+  questions under 上册 + 仅知识/计算题 and looked each stem up in the bank:
+  UP 4 / DOWN 0.
+- **Android 4.0 legacy**: the full main source compiles with `minSdk 14`
+  and `d8 --min-api 14` (aapt2 -> javac -> d8 verified), with the same
+  release key, question bank and progress engine. Existing `SDK_INT` guards
+  in the main source keep high-platform calls off API 14 code paths;
+  no API 14 device was available in this environment for runtime testing.
 
 ## v1.3.2 (versionCode 46) — bank-v6 per-question cleanup
 

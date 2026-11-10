@@ -155,7 +155,7 @@
         <article class="feature-card">
           <span class="feature-no">09</span>
           <h3>年级防超纲与学习进度</h3>
-          <p>抽题的每一层（含最后一层保底）都带 <code>grade&lt;=?</code>，只抽不高于当前年级的题；题目按小学课标知识点白名单重新定级，无可靠依据的题保守标到 4 年级以上。「学习学期 / 已学单元」因新库无学期与单元序号，诚实退化为按年级 / 学科过滤，不假装精确。</p>
+          <p>抽题的每一层（含最后一层保底）都带 <code>grade&lt;=?</code>，只抽不高于当前年级的题；9,544 道题按真实教材册次、单元与课标知识点组织，进度表共 30 个格子 / 287 个有序单元。家长可选上 / 下册与已学到第几单元，单元按教材版本族隔离，不同教材的同一单元序号不会串题。</p>
           <span class="tag">年级上限</span>
         </article>
         <article class="feature-card">
@@ -235,7 +235,7 @@
       <div class="download-box">
         <span class="eyebrow">Download</span>
         <h2 class="section-title">下载最新版本</h2>
-        <p>最新版本 <strong>v1.3.2</strong>（当前构建 <code>versionCode 46</code>）；签名证书连续（<code>76eb6063…6172</code>），旧版可直接覆盖安装，家长密码、设置与错题库都会保留。本页下载按钮直连本站托管的 <code>latest-main.apk</code>（永远指向当前最新版）；历史版本仍可从 GitHub Releases 获取，校验值见 <code>update.json</code>。</p>
+        <p>最新版本 <strong>v1.3.3</strong>（当前构建 <code>versionCode 47</code>）；签名证书连续（<code>76eb6063…6172</code>），旧版可直接覆盖安装，家长密码、设置与错题库都会保留。本页下载按钮直连本站托管的 <code>latest-main.apk</code>（永远指向当前最新版）；历史版本仍可从 GitHub Releases 获取，校验值见 <code>update.json</code>。</p>
         <div class="download-actions">
           <a class="btn btn-primary btn-lg" href="https://pohw.zhangge.net/dl/latest-main.apk">下载 APK（本站直链 · 最新版）</a>
           <a class="btn btn-ghost" href="https://github.com/jagerzhang/PoHW/releases">所有 Releases</a>
@@ -252,7 +252,7 @@
       <div class="section-head">
         <span class="eyebrow">Changelog</span>
         <h2 class="section-title">版本更新记录</h2>
-        <p class="section-lead">按时间倒序整理自仓库 <a href="https://github.com/jagerzhang/PoHW/blob/main/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a>。与 GitHub Releases 一一对应、按版本聚合，目前共 <strong>14 个正式版本</strong>（v1.0.0 / v1.0.1 / v1.0.2 / v1.2.0 / v1.2.1 / v1.2.2 / v1.2.3 / v1.2.4 / v1.2.5 / v1.2.6 / v1.2.7 / v1.3.0 / v1.3.1 / v1.3.2）；v1.0.0 之前为开发期内部迭代编号，已归档为 v0.9.0-re。<code>versionCode</code> 为单调技术计数、不随展示版本重置。具体构建号与改动以仓库 CHANGELOG 为准。</p>
+        <p class="section-lead">按时间倒序整理自仓库 <a href="https://github.com/jagerzhang/PoHW/blob/main/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a>。与 GitHub Releases 一一对应、按版本聚合，目前共 <strong>15 个正式版本</strong>（v1.0.0 / v1.0.1 / v1.0.2 / v1.2.0 / v1.2.1 / v1.2.2 / v1.2.3 / v1.2.4 / v1.2.5 / v1.2.6 / v1.2.7 / v1.3.0 / v1.3.1 / v1.3.2 / v1.3.3）；v1.0.0 之前为开发期内部迭代编号，已归档为 v0.9.0-re。<code>versionCode</code> 为单调技术计数、不随展示版本重置。具体构建号与改动以仓库 CHANGELOG 为准。</p>
       </div>
       <div id="releases-list" class="releases"></div>
     </div>
@@ -287,7 +287,7 @@
 
         <details class="faq-item">
           <summary>题库能按教材版本或单元序号出题吗？</summary>
-          <p>题库本身<strong>不含出版社版本字段、不含单元序号，也不含学期数据</strong>；每题带 1–6 年级标签与低 / 中 / 高难度分档，家长可按年级与难度倾向出题。<code>assets/syllabus.json</code> 仍保留小学 1–6 年级数学 12 册有序单元表供旧数据兼容，但对当前题库，「学习学期 / 已学单元」会诚实退化为按年级 / 学科过滤，不假装精确到单元。设计与边界见 <a href="https://github.com/jagerzhang/PoHW/blob/main/docs/QUESTION_BANK.md" target="_blank" rel="noopener">docs/QUESTION_BANK.md</a>。</p>
+          <p>可以。当前 9,544 道题<strong>全部带教材版本族、上 / 下册、单元序号与课标知识点</strong>；<code>assets/syllabus.json</code> 按「年级 × 册次 × 学科」组织 30 个格子、287 个有序单元，家长在设置里选上 / 下册与已学单元即可。同一格子可能有多套教材，进度表自动匹配题量最多的版本族，单元过滤按版本隔离，不会把不同教材的第 1 单元混在一起。1–2 年级与 6 年级没有英语题（新库英语三年级起点）。设计与边界见 <a href="https://github.com/jagerzhang/PoHW/blob/main/docs/QUESTION_BANK.md" target="_blank" rel="noopener">docs/QUESTION_BANK.md</a>。</p>
         </details>
 
         <details class="faq-item">

@@ -89,6 +89,35 @@ cover-install 47 -> 49 boots with `9544 / bank-v9`, quiz overlay fires,
 `FATAL=0`. No Android 4 device/image is available in this environment, so
 API-14 runtime behaviour remains unverified on real hardware.
 
+
+### 未发布：issue #37 生效时段与内置节假日日历（v1.3.4 待发）
+
+`main` 已包含以下改动，但**尚未打 tag / 发 Release / 更新 update.json / 部署官网**。
+
+- **生效时段**：家长可分别设置「上学日」与「在家日」的允许弹题时段，每组最多两段、
+  每段带 7 位星期掩码、支持跨午夜。默认关闭，覆盖安装旧版本行为不变。门禁放在
+  `QuizOverlayService.showQuiz()` 单点：只拦新题，不打断已弹出的题、不停服务、
+  不改守护状态；时段外把 `remainSec` 压到 1 每秒重试，进入时段下一秒即弹。
+  家长手动「立即出题」豁免。
+- **内置节假日日历**：`app/assets/holidays.json`（MIT，源自国务院办公厅通知，
+  经 NateScarlet/holiday-cn 结构化）覆盖 2026–2027 共 73 个例外日：62 个放假日
+  与 11 个调休补班日。先判日期类型（上学日 / 在家日）再套该类型的时段表，
+  因此「周末补班要上学」「工作日放假不上学」都能自动正确处理——这是纯星期
+  掩码做不到的。`java.util.Calendar` 实现，不引用任何 API>14 类。
+- **假期模式与当天临时覆盖**：寒暑假区间带自动恢复（到期无需手动关）；
+  「今天放行 / 屏蔽」隔天自动失效。
+- **数据覆盖边界**：超出 2027 年或日历文件损坏时退回纯星期掩码并在设置页提示，
+  绝不静默按普通星期算。
+- **UI / API**：电视设置页新增「07 生效时段与节假日」卡片（6 行，预设循环，
+  无需键盘输入）；手机管理页开放 6 个新键（31 个可写键），字符串值逐个经
+  `SchedulePolicy` 格式校验后才落盘。
+- **门禁**：新增 `tools/holidays/fetch_holidays.py --check`（数据溯源与补班日黄金断言）、
+  `tests/holiday_check.py`（730 天全年判定）、`SchedulePolicyTest`（33 条 JVM 断言）；
+  布局契约 410（低配 417）、JVM 449、变异 110/110（新增 CZ–DF 七项均被精确拦下）；
+  低配包 `versionCode 49 / minSdk 14` 成品 dex `high-api=0`。
+- 顺手修正官网 `site/index.html` 残留的 3,935 题旧数字与「初中 1-3」过时说明
+  （本轮不部署官网，线上文案待正式发版时生效）。
+
 ## v1.3.2 (versionCode 46) — bank-v6 per-question cleanup
 
 Display version 1.3.1 -> **1.3.2**, `versionCode` 45 -> **46**, same release

@@ -88,8 +88,8 @@ check("getPackageInfo" in m, "home version still read from PackageManager")
 
 # ---- 家长设置：单列卡片流 ----
 check(s.count("new ScrollView(this)") == 1, "settings has exactly one scroll container")
-check(s.count("addCard(") == 7, "settings declares 6 grouped cards + helper")
-check(len(re.findall(r'addCard\(col, "0\d', s)) == 6, "settings has 6 numbered cards")
+check(s.count("addCard(") == 8, "settings declares 7 grouped cards + helper")
+check(len(re.findall(r'addCard\(col, "0\d', s)) == 7, "settings has 7 numbered cards")
 check("addColumn" not in raw_s and "wireColumns" not in raw_s,
       "legacy three-column helpers are gone")
 check(s.count("wireVerticalFocus()") == 3, "settings declares and calls the vertical focus chain")
@@ -1057,7 +1057,9 @@ _keys134 = ("grade", "interval", "questionsPerRound", "passPercent", "roundMode"
             "questionSource", "difficultyLevel", "syncIndex",
             "w0", "w1", "w2", "w3", "allSubjects", "strictOneShot",
             "cooldownEnabled", "autoContinueOnCorrect", "bootAutostart",
-            "autoGuardOnBoot", "pauseOnQuiz", "resumePlayback", "autoCheckUpdate")
+            "autoGuardOnBoot", "pauseOnQuiz", "resumePlayback", "autoCheckUpdate",
+            "scheduleEnabled", "skipHolidays", "schoolWindows", "homeWindows",
+            "vacationRange", "todayOverride")
 check(all(('"' + k + '"') in _api134 for k in _keys134)
       and _api134.count("NUM_KEYS") >= 2 and "BOOL_KEYS" in _api134
       and "statusJson(" in _api134 and "applyConfig(" in _api134,
@@ -1086,5 +1088,94 @@ check(_set134.count("setMaxLines(4)") >= 4 and "setMaxLines(2)" not in _set134,
 check("word-break:break-word" in _css134 and "white-space:normal" in _css134
       and 'id="form"' in _html134 and "保存并生效" in _html134,
       "phone page wraps long labels and renders the full form")
+
+
+# ---- issue #37：生效时段、内置节假日日历与调休补班 ----
+_hol_path = os.path.join(ROOT, "app/assets/holidays.json")
+_hol = json.load(io.open(_hol_path, encoding="utf-8"))
+_hol_off = dict((x["d"], int(x["off"])) for x in _hol["days"])
+_hol_stamp = read(os.path.join(ROOT, "app/assets/holidays.json.version")).strip()
+_hc137 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/HolidayCalendar.java"))
+_sp137 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SchedulePolicy.java"))
+_ha137 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/HolidayAssets.java"))
+_sto137 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsStore.java"))
+_svc137 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizOverlayService.java"))
+_api137 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/AdminApi.java"))
+_run137 = read(os.path.join(ROOT, "tests/run.sh"))
+_bld137 = read(os.path.join(ROOT, "app/build.sh"))
+_hchk137 = read(os.path.join(ROOT, "tests/holiday_check.py"))
+_hfetch137 = read(os.path.join(ROOT, "tools/holidays/fetch_holidays.py"))
+_js137 = read(os.path.join(ROOT, "app/assets/admin/app.js"))
+_set137 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsActivity.java"))
+
+check(_hol["license"].startswith("MIT")
+      and len(_hol["papers"]) >= 2
+      and all("gov.cn" in u for u in _hol["papers"]),
+      "holiday calendar is MIT licensed and traces to State Council notices")
+check(_hol["years"] == [2026, 2027] and len(_hol["days"]) == 73
+      and _hol_stamp == _hol["version"],
+      "holiday calendar covers 2026-2027 with a matching version stamp")
+_makeup137 = ("2026-01-04", "2026-02-14", "2026-02-28", "2026-05-09",
+              "2026-09-20", "2026-10-10", "2027-01-31", "2027-02-14",
+              "2027-05-08", "2027-09-26", "2027-10-09")
+check(all(_hol_off.get(d) == 0 for d in _makeup137),
+      "every makeup workday is recorded as a school day, not a holiday")
+check(_hol_off.get("2026-10-01") == 1 and _hol_off.get("2027-01-01") == 1,
+      "statutory holidays are recorded as home days")
+check("HOLIDAYS_CHECK_OK" in _hfetch137 and "HOLIDAY_CHECK_OK" in _hchk137
+      and "fetch_holidays.py --check" in _bld137 and "holiday_check.py" in _bld137,
+      "holiday data and full-year decision regression are build gates")
+check("java.time" not in _hc137 and "java.time" not in _sp137
+      and "java.util.Calendar" in _hc137,
+      "holiday logic stays on API 1 Calendar for the Android 4 variant")
+check("if (e == 0) return DAY_SCHOOL;" in _hc137
+      and "exception(dateKey(c))" in _hc137
+      and "DAY_UNKNOWN" in _hc137,
+      "holiday lookup checks exceptions first and degrades out of coverage")
+check("c.enabled = false;" in _sp137 and "c.skipHolidays = true;" in _sp137,
+      "schedule is off by default so cover-install behaviour is unchanged")
+check("inVacationRange(" in _sp137 and "todayOverride" in _sp137
+      and "parseWindows(" in _sp137 and "MAX_WINDOWS = 2" in _sp137,
+      "schedule supports vacation mode, today override and multiple windows")
+check("scheduleConfig()" in _sto137
+      and all(k in _sto137 for k in ("scheduleEnabled(", "skipHolidays(",
+                                     "schoolWindows(", "homeWindows(",
+                                     "vacationRange(", "todayOverride(")),
+      "settings store persists all schedule fields for both UIs")
+check("SchedulePolicy.decide(" in _svc137
+      and "st.scheduleConfig(), HolidayAssets.get(this));" in _svc137
+      and "if (!sd.allowed) {" in _svc137
+      and "remainSec = 1;" in _svc137,
+      "guard service gates only new quizzes and retries every second while muted")
+_q137 = _svc137.find("if (quizShowing) return;")
+_d137 = _svc137.find("SchedulePolicy.decide(")
+check(_q137 >= 0 and _d137 > _q137 and "forceNextQuiz" in _svc137,
+      "manual quiz-now is exempt and an already shown quiz is never interrupted")
+check("get(Context c)" in _ha137 and 'ASSET = "holidays.json"' in _ha137
+      and "HolidayCalendar.empty()" in _ha137
+      and "HolidayAssets.get(this)" in _svc137,
+      "missing holiday asset degrades to weekday mask without crashing")
+_keys137 = ("scheduleEnabled", "skipHolidays", "schoolWindows", "homeWindows",
+            "vacationRange", "todayOverride")
+check(all(('"' + k + '"') in _api137 for k in _keys137)
+      and "STR_KEYS" in _api137
+      and all(('f_' + k) in _js137 or ('"' + k + '"') in _js137 for k in _keys137),
+      "phone admin reads and writes all six schedule settings")
+check("if (!SchedulePolicy.validWindows(v)) continue;" in _api137
+      and "SchedulePolicy.validVacationRange(v)" in _api137
+      and "SchedulePolicy.validOverride(v)" in _api137,
+      "LAN admin validates window, vacation and override formats before writing")
+check("holidayCoverageEnd" in _api137 and "scheduleAllowedNow" in _api137,
+      "phone page can show calendar coverage and whether a quiz is allowed now")
+check('input[type=text]' in _css134 and 'type === "text"' in _js137,
+      "phone page renders free-form schedule inputs")
+check('addCard(col, "07' in _set137
+      and all(("addRow(sched, \"" + label) in _set137
+              for label in ("生效时段", "上学日可答题", "在家日可答题",
+                            "智能跳过节假日", "假期模式", "今天临时")),
+      "TV settings expose a dedicated schedule card with six rows")
+check("HolidayCalendar.java" in _run137 and "SchedulePolicy.java" in _run137
+      and "SchedulePolicyTest.java" in _run137,
+      "JVM suite compiles and runs the pure-Java schedule tests")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

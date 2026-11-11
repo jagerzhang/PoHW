@@ -10,7 +10,7 @@ import java.security.SecureRandom;
  * <p>token 只存内存、进程重启失效；PIN 连续失败 5 次锁 60 秒；
  * 只暴露白名单路径，不提供任意文件读取。数据全部留在设备本地。
  *
- * <p>手机端开放绝大部分家长设置（26 个键），每个值都做范围/枚举校验；
+ * <p>手机端开放绝大部分家长设置（31 个可写键），每个值都做范围/枚举/格式校验；
  * 有意不开放：修改家长密码、清空错题库与统计、关闭手机管理自身、
  * 在线题库地址、立即检查更新等破坏性或安全敏感操作。
  */
@@ -30,7 +30,11 @@ public final class AdminApi {
     private static final String[] BOOL_KEYS = {
             "allSubjects", "strictOneShot", "cooldownEnabled", "autoContinueOnCorrect",
             "bootAutostart", "autoGuardOnBoot", "pauseOnQuiz", "resumePlayback",
-            "autoCheckUpdate"
+            "autoCheckUpdate", "scheduleEnabled", "skipHolidays"
+    };
+    /** issue #37：字符串型设置，逐个走 SchedulePolicy 的严格格式校验。 */
+    private static final String[] STR_KEYS = {
+            "schoolWindows", "homeWindows", "vacationRange", "todayOverride"
     };
 
     private AdminApi() { }
@@ -109,6 +113,18 @@ public final class AdminApi {
         s.append(",\"pauseOnQuiz\":").append(st.pauseOnQuiz());
         s.append(",\"resumePlayback\":").append(st.resumePlayback());
         s.append(",\"autoCheckUpdate\":").append(st.autoCheckUpdate());
+        s.append(",\"scheduleEnabled\":").append(st.scheduleEnabled());
+        s.append(",\"skipHolidays\":").append(st.skipHolidays());
+        s.append(",\"schoolWindows\":\"").append(st.schoolWindows()).append("\"");
+        s.append(",\"homeWindows\":\"").append(st.homeWindows()).append("\"");
+        s.append(",\"vacationRange\":\"").append(st.vacationRange()).append("\"");
+        s.append(",\"todayOverride\":\"").append(st.todayOverride()).append("\"");
+        HolidayCalendar hc = HolidayAssets.get(c);
+        s.append(",\"holidayCoverageStart\":").append(hc.usable() ? hc.firstCoveredYear() : 0);
+        s.append(",\"holidayCoverageEnd\":").append(hc.usable() ? hc.lastCoveredYear() : 0);
+        s.append(",\"scheduleAllowedNow\":").append(
+                SchedulePolicy.decide(System.currentTimeMillis(),
+                        java.util.TimeZone.getDefault(), st.scheduleConfig(), hc).allowed);
         for (int i = 0; i < Subjects.COUNT; i++) {
             s.append(",\"w").append(i).append("\":").append(st.weight(i));
         }
@@ -195,6 +211,21 @@ public final class AdminApi {
             else if ("pauseOnQuiz".equals(key)) st.pauseOnQuiz(on);
             else if ("resumePlayback".equals(key)) st.resumePlayback(on);
             else if ("autoCheckUpdate".equals(key)) st.autoCheckUpdate(on);
+            else if ("scheduleEnabled".equals(key)) st.scheduleEnabled(on);
+            else if ("skipHolidays".equals(key)) st.skipHolidays(on);
+        }
+        for (String key : STR_KEYS) {
+            String v = jsonString(body, key);
+            if (v == null) continue;
+            if ("schoolWindows".equals(key) || "homeWindows".equals(key)) {
+                if (!SchedulePolicy.validWindows(v)) continue;
+                if ("schoolWindows".equals(key)) st.schoolWindows(v);
+                else st.homeWindows(v);
+            } else if ("vacationRange".equals(key)) {
+                if (SchedulePolicy.validVacationRange(v)) st.vacationRange(v);
+            } else if ("todayOverride".equals(key)) {
+                if (SchedulePolicy.validOverride(v)) st.todayOverride(v);
+            }
         }
     }
 

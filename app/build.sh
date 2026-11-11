@@ -131,6 +131,12 @@ grep -qF 'bankPair[0].setNextFocusRightId(rightId);' "$SET"
 [ -f "$APP/res/drawable-nodpi/donate_alipay.png" ] || { echo "MISSING alipay QR"; exit 1; }
 [ -f "$ROOT/tools/branding/make_icons.py" ] || { echo "MISSING icon generator"; exit 1; }
 python3 tests/layout_contract.py
+# issue #37：内置节假日日历必须与国务院通知同源，且全年日期类型回归通过。
+[ -f "$APP/assets/holidays.json" ] || { echo "MISSING holidays.json"; exit 1; }
+python3 tools/holidays/fetch_holidays.py --check
+python3 tests/holiday_check.py
+grep -qF 'SchedulePolicy.decide(' "$ROOT/app/src/com/jager/tvquiz/QuizOverlayService.java"
+grep -qF 'remainSec = 1;' "$ROOT/app/src/com/jager/tvquiz/QuizOverlayService.java"
 # 运行时回归：用与 App 相同的两条 SQL 实跑内置题库，验证配比与标签。
 python3 tests/bank_distribution_check.py
 # bank-v9 教材进度：进度表必须与题库同源，且学期 / 版本 / 单元分层真的生效。

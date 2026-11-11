@@ -2,23 +2,23 @@
   "schema": 1,
   "publishedAt": "2026-11-11",
   "main": {
-    "versionName": "1.3.3",
-    "versionCode": 47,
+    "versionName": "1.3.4",
+    "versionCode": 50,
     "minSdk": 21,
     "latest": "https://pohw.zhangge.net/dl/latest-main.apk",
-    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.3.apk",
-    "sha256": "4b67c23f1558f47b8ed0416ea257547231d2566a89fc2f2ee003d210f86e5388",
-    "size": 2397975,
-    "notes": "v1.3.3 题库整体替换为 9,544 道带真实教材册次/单元/课标知识点的四选一题（bank-v9），恢复上下学期与已学单元进度并修复偏好模式学期过滤"
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.4.apk",
+    "sha256": "7a3b24445f845ff9acd7abc5f279c94c0b9d9ba9ce3ee3acc20899008e99f6e9",
+    "size": 2443171,
+    "notes": "v1.3.4：手机端开放绝大部分设置、教材学制可切换、生效时段与内置 2026-2027 法定节假日/调休、假期模式与当天临时、Web 时段可视化、官网精简；签名证书连续，旧版可直接覆盖安装"
   },
   "legacy": {
-    "versionName": "1.3.3",
-    "versionCode": 49,
+    "versionName": "1.3.4",
+    "versionCode": 51,
     "minSdk": 14,
     "latest": "https://pohw.zhangge.net/dl/latest-legacy.apk",
-    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.3-legacy.apk",
-    "sha256": "1ab3b312867579cc4e1152d06ae6275aa37c1e6060bae6deadaa9b589fb320dc",
-    "size": 2430743,
-    "notes": "Android 4.0 低配变体 v1.3.3-legacy 修复版（versionCode 49 / minSdk 14）：修复 API 21+ 主题与高版本类引用导致的启动崩溃，保留 bank-v9 题库、学制切换与手机端全量设置，可直接覆盖安装 versionCode 48"
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.4-legacy.apk",
+    "sha256": "871777e29f37bd0226d443db280d15855f2a1858fcd07aa1a1d7e11f3c3487f1",
+    "size": 2443171,
+    "notes": "Android 4.0 低配变体 v1.3.4-legacy（versionCode 51 / minSdk 14）：与主线共用题库与全部新功能，读取 legacy 更新通道；可直接覆盖安装 49"
   }
 }

@@ -1,10 +1,11 @@
 # Changelog
 
-> **版本口径**：对外发布 15 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 16 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
 > **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）、
 > **v1.2.4**（37）、**v1.2.5**（39）、**v1.2.6**（41）、**v1.2.7**（43）、
-> **v1.3.0**（44）、**v1.3.1**（45）、**v1.3.2**（46）、**v1.3.3**（47）。
+> **v1.3.0**（44）、**v1.3.1**（45）、**v1.3.2**（46）、**v1.3.3**（47）、
+> **v1.3.4**（50，低配 51）。
 > `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
@@ -12,6 +13,30 @@
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.3.4 (versionCode 50) — phone admin parity, edition systems, active schedule, site slim-down
+
+Display version 1.3.3 -> **1.3.4**, `versionCode` 47 -> **50**, same release
+keystore (SHA-256 `76eb6063b574...26172`). Sixteenth published release.
+Ships PR #35, #38 and #39, with a matching Android 4.0 legacy variant at code 51.
+
+- **Phone admin parity (PR #35)**: `/api/status` 34 -> 43 fields and
+  `/api/config` 25 -> 31 writable keys with strict range/format validation;
+  PIN change, wrong-answer reset, LAN shutdown and online-bank URL stay TV-only.
+  TV settings gain a QR button label, four-row values that no longer clip, and a
+  switchable edition system (auto / 6-3 / 5-4) backed by three independent unit
+  tables (30/287, 27/213, 16/180 cells/units).
+- **Issue #37 active schedule (PR #38)**: built-in 2026-2027 statutory holidays
+  including makeup workdays (holiday-cn / MIT, offline), school-day vs home-day
+  window tables, vacation mode with auto expiry, per-day override, and weekly
+  masks. `showQuiz()` gates only new questions; `ACTION_QUIZ_NOW` stays exempt.
+- **UX and site (PR #39)**: phone Web uses time pickers + weekday checkboxes +
+  date controls instead of raw `HH:mm-HH:mm:1111111` strings (wire format
+  unchanged); landing page slimmed, 15 release cards moved to `changelog.html`.
+- **Signing key recovery**: the release keystore was purged along with `/tmp`
+  on the build host and recovered by read-only XFS block carving, verified by an
+  actual `jarsigner` signature against the published certificate. Certificate is
+  unchanged, so side-loaded upgrades install over older builds without uninstall.
 
 ## v1.3.3 (versionCode 47) — bank-v9 replacement, textbook progress, term fix
 

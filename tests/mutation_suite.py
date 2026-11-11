@@ -119,11 +119,13 @@ def replace(p, old, new):
 def env_for(with_key):
     env = os.environ.copy()
     env["JAVA_HOME"] = "/opt/jdk17"
-    env["ANDROID_HOME"] = "/tmp/apkbuild/sdk"
+    env["ANDROID_HOME"] = os.environ.get("ANDROID_HOME",
+                                        "/data/workspace/apkbuild/sdk")
     for k in ("POHW_KEYSTORE", "POHW_KEYSTORE_PASS", "POHW_ALLOW_DEV_SIGN"):
         env.pop(k, None)
     if with_key:
-        env["POHW_KEYSTORE"] = "/tmp/apkbuild/debug.keystore"
+        env["POHW_KEYSTORE"] = os.environ.get("POHW_KEYSTORE",
+                                          "/data/workspace/PoHW-release-signing-key.keystore")
         env["POHW_KEYSTORE_PASS"] = "android"
     return env
 
@@ -184,7 +186,7 @@ MUTATIONS = [
     ("O", "service stops passing the fourth weight",
      lambda: replace(O, "st.weight(Subjects.OTHER)", "0"), False, True, False),
     ("P", "versionCode rolled back",
-     lambda: replace(B, 'VERSION_CODE="47"', 'VERSION_CODE="43"'), False, True, False),
+     lambda: replace(B, 'VERSION_CODE="50"', 'VERSION_CODE="43"'), False, True, False),
     ("Q", "OTHER routing disabled",
      lambda: replace(D, "boolean other = s == Subjects.OTHER && allSubjects;", "boolean other = false;"), True, True, False),
     ("R", "single WHERE binding",
@@ -270,7 +272,7 @@ MUTATIONS = [
     ("AV", "auto-review workflow removed",
      lambda: os.remove(CI), False, True, False),
     ("AW", "display version rolled back to 1.0.1",
-     lambda: replace(MF, 'android:versionName="1.3.3"', 'android:versionName="1.0.2"'),
+     lambda: replace(MF, 'android:versionName="1.3.4"', 'android:versionName="1.0.2"'),
      False, True, False),
     ("AX", "alipay QR crop corrupted",
      lambda: open(APNG, "wb").write(bytes([137, 80, 78, 71, 13, 10, 26, 10]) + bytes(16)),
@@ -383,7 +385,7 @@ MUTATIONS = [
      lambda: replace(QRJ, "if (text == null || text.length() == 0) return -1;", ""),
      False, True, False),
     ("CK", "published versionCode rolled back",
-     lambda: replace(MF, 'android:versionCode="47"', 'android:versionCode="43"'),
+     lambda: replace(MF, 'android:versionCode="50"', 'android:versionCode="43"'),
      False, True, False),
     ("CR", "extreme long option size back to 18sp",
      lambda: replace(os.path.join(SRC, "QuizTextSizer.java"),

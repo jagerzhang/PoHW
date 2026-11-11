@@ -116,6 +116,8 @@ public class QuizOverlayService extends Service {
     private SettingsStore st;
     /** 练习模式挂起标志：练习页可见时不弹题，退出/进程重启自动恢复守护。 */
     private static volatile boolean practiceMode = false;
+    /** issue #37：家长手动「立即出题」豁免时段门禁，一次性消费。 */
+    private boolean forceNextQuiz = false;
     public static void setPracticeMode(boolean v) { practiceMode = v; }
     public static boolean isPracticeMode() { return practiceMode; }
 
@@ -284,6 +286,7 @@ public class QuizOverlayService extends Service {
         if (!running) { leaveForeground(); stopSelf(); return START_NOT_STICKY; }
 
         if (ACTION_QUIZ_NOW.equals(action)) {
+            forceNextQuiz = true;
             showQuiz();
         } else if (ACTION_RELOAD.equals(action)) {
             reload(false);
@@ -488,6 +491,20 @@ public class QuizOverlayService extends Service {
     private void showQuiz() {
         if (practiceMode) { remainSec = interval; return; }
         if (quizShowing) return;
+        // issue #37：家长手动「立即出题」不受时段限制；自动弹题按日程判定。
+        boolean force = forceNextQuiz;
+        forceNextQuiz = false;
+        if (!force) {
+            SchedulePolicy.Decision sd = SchedulePolicy.decide(
+                    System.currentTimeMillis(), java.util.TimeZone.getDefault(),
+                    st.scheduleConfig(), HolidayAssets.get(this));
+            if (!sd.allowed) {
+                // 只拦新题：不停服务、不改 guardEnabled、不重置整段 interval；
+                // 压到 1 秒让 tick 每秒重试，进入生效时段下一秒即可弹出。
+                remainSec = 1;
+                return;
+            }
+        }
         if (OverlayChannel.pick(canDraw(), GuardAccessibilityService.canHost(),
                 Build.VERSION.SDK_INT) == OverlayChannel.NONE) {
             // 不清 guardEnabled、不 stopAll：权限恢复后由 ReviveReceiver / APP 自愈。

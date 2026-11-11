@@ -68,7 +68,14 @@
       { group: "03 学科配比", key: "w0", label: "数学配比", type: "num", min: 0, max: maxW },
       { group: "03 学科配比", key: "w1", label: "语文配比", type: "num", min: 0, max: maxW },
       { group: "03 学科配比", key: "w2", label: "英语配比", type: "num", min: 0, max: maxW },
-      { group: "03 学科配比", key: "w3", label: "其他学科配比（需开启全学科）", type: "num", min: 0, max: maxW }
+      { group: "03 学科配比", key: "w3", label: "其他学科配比（需开启全学科）", type: "num", min: 0, max: maxW },
+
+      { group: "04 生效时段与节假日", key: "scheduleEnabled", label: "启用生效时段（关闭则全天可弹题）", type: "bool" },
+      { group: "04 生效时段与节假日", key: "skipHolidays", label: "智能跳过节假日（含调休补班）", type: "bool" },
+      { group: "04 生效时段与节假日", key: "schoolWindows", label: "上学日时段 HH:mm-HH:mm:掩码（可 | 分两段）", type: "text" },
+      { group: "04 生效时段与节假日", key: "homeWindows", label: "在家日时段（周末 / 法定假日 / 寒暑假）", type: "text" },
+      { group: "04 生效时段与节假日", key: "vacationRange", label: "假期模式 YYYY-MM-DD~YYYY-MM-DD（留空关闭，到期自动恢复）", type: "text" },
+      { group: "04 生效时段与节假日", key: "todayOverride", label: "今天临时 YYYY-MM-DD:allow 或 :block（留空无）", type: "text" }
     ];
     return out;
   }
@@ -94,6 +101,9 @@
           html += "<option value=\"" + esc(f.opts[j][0]) + "\">" + esc(f.opts[j][1]) + "</option>";
         }
         html += "</select></label>";
+      } else if (f.type === "text") {
+        html += "<label class=\"field\" for=\"" + id + "\"><span>" + esc(f.label) +
+          "</span><input type=\"text\" id=\"" + id + "\" spellcheck=\"false\"></label>";
       } else {
         html += "<label class=\"field\" for=\"" + id + "\"><span>" + esc(f.label) +
           "</span><input type=\"number\" id=\"" + id + "\" min=\"" + f.min +
@@ -121,6 +131,7 @@
       var f = list[i], el = $("f_" + f.key);
       if (!el) continue;
       if (f.type === "bool") body[f.key] = el.checked ? 1 : 0;
+      else if (f.type === "text") body[f.key] = String(el.value || "").trim();
       else {
         var n = parseInt(el.value, 10);
         if (!isNaN(n)) body[f.key] = n;
@@ -134,7 +145,11 @@
       ["守护服务", d.guard ? "运行中" : "未运行"],
       ["错题库", (d.wrong || 0) + " 题"],
       ["版本", d.version || "-"],
-      ["当前学制", (d.editionLabels || [])[d.editionMode] || "自动"]
+      ["当前学制", (d.editionLabels || [])[d.editionMode] || "自动"],
+      ["此刻是否允许弹题", d.scheduleAllowedNow === false ? "否（静默时段）" : "是"],
+      ["节假日日历", d.holidayCoverageEnd
+        ? (d.holidayCoverageStart + "–" + d.holidayCoverageEnd + " 年")
+        : "不可用（按星期）"]
     ];
     var html = "";
     for (var i = 0; i < rows.length; i++) {

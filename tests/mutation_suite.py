@@ -64,12 +64,22 @@ PV = os.path.join(SRC, "PinVerifyView.java")
 PAIR = os.path.join(SRC, "PairActivity.java")
 LAN = os.path.join(SRC, "LanServer.java")
 SGT = os.path.join(ROOT, "tests/src/StartGuardTest.java")
+HC = os.path.join(SRC, "HolidayCalendar.java")
+SP = os.path.join(SRC, "SchedulePolicy.java")
+HA = os.path.join(SRC, "HolidayAssets.java")
+HOLJ = os.path.join(ROOT, "app/assets/holidays.json")
+HOLV = os.path.join(ROOT, "app/assets/holidays.json.version")
+HCHK = os.path.join(ROOT, "tests/holiday_check.py")
+HFETCH = os.path.join(ROOT, "tools/holidays/fetch_holidays.py")
+SPT = os.path.join(ROOT, "tests/src/SchedulePolicyTest.java")
+RUNSH = os.path.join(ROOT, "tests/run.sh")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
 for _i, p in enumerate((M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
            RM, CH, SJS, CI, APNG, UP, CD, DP, MP, PA, PC, UI, UCFG,
            RP, GW, OVL, AXML, OVLQ, ADMAS, QRJ, QTS,
-           GP, BR, PV, PAIR, LAN, SGT, API, AIDX, AJS, ACSS)):
+           GP, BR, PV, PAIR, LAN, SGT, API, AIDX, AJS, ACSS,
+           HC, SP, HA, HOLJ, HOLV, HCHK, HFETCH, SPT, RUNSH)):
     # 不同目录下的同名文件（site/index.html 与 admin/index.html）必须用不同备份名，
     # 否则 restore() 会把手机管理页写回官网首页。
     BK[p] = os.path.join(BK_DIR, "%03d_%s.bk" % (_i, os.path.basename(p)))
@@ -398,6 +408,24 @@ MUTATIONS = [
      lambda: replace(os.path.join(SRC, "AdminApi.java"),
                      '"w0", "w1", "w2", "w3"',
                      '"w0", "w1", "w2", "w3", "bankUrl"'), False, True, False),
+    ("CZ", "showQuiz schedule gate removed",
+     lambda: replace(O, 'if (!sd.allowed) {', 'if (false) {'), False, True, False),
+    ("DA", "muted gate stops retrying every second",
+     lambda: replace(O, 'remainSec = 1;', 'remainSec = interval;'), False, True, False),
+    ("DB", "holiday calendar lookup dropped from the gate",
+     lambda: replace(O, 'st.scheduleConfig(), HolidayAssets.get(this));',
+                     'st.scheduleConfig(), HolidayCalendar.empty());'), False, True, False),
+    ("DC", "a 2026 makeup workday flipped into a holiday",
+     lambda: replace(HOLJ, '"d": "2026-01-04",\n   "off": 0',
+                     '"d": "2026-01-04",\n   "off": 1'), False, True, False),
+    ("DD", "LAN config drops window format validation",
+     lambda: replace(API, 'if (!SchedulePolicy.validWindows(v)) continue;',
+                     'if (false) continue;'), False, True, False),
+    ("DE", "schedule switched on by default",
+     lambda: replace(SP, 'c.enabled = false;', 'c.enabled = true;'), False, True, False),
+    ("DF", "makeup workday treated as a home day in Java",
+     lambda: replace(HC, 'if (e == 0) return DAY_SCHOOL;',
+                     'if (e == 0) return DAY_HOME;'), False, True, False),
 ]
 
 print("--- baseline ---")

@@ -18,7 +18,8 @@
 Display version 1.3.2 -> **1.3.3**, `versionCode` 46 -> **47**, same release
 keystore (SHA-256 `76eb6063b574...26172`). Fifteenth published release.
 Ships all unreleased work from PR #30-#33 plus a matching Android 4.0 legacy
-build (`v1.3.3-legacy`, code 48, minSdk 14).
+build (`v1.3.3-legacy`, code 48, minSdk 14), later repaired as code 49
+(see the `###` entry below).
 
 - **Question bank replaced end to end**: 3,876 -> **9,544** four-choice
   questions (`pohw-2026.11.10-bank-v9`), each with a real textbook term,
@@ -49,6 +50,44 @@ build (`v1.3.3-legacy`, code 48, minSdk 14).
   release key, question bank and progress engine. Existing `SDK_INT` guards
   in the main source keep high-platform calls off API 14 code paths;
   no API 14 device was available in this environment for runtime testing.
+
+
+### Android 4.0 低配包启动崩溃修复（versionCode 48 -> 49，2026-11-11）
+
+The `v1.3.3-legacy` / code-48 package could not launch on Android 4.x. Two
+independent causes, both confirmed against the SDK `api-versions.xml` and the
+compiled binary:
+
+- The application theme resolved to `@0x01030241`
+  (`Theme.Material.Light.NoActionBar`, API 21+); Android 4 framework has no
+  such resource, so Activity creation aborts immediately. The previously
+  shipping code-38 legacy build used `@0x010300f0` (Holo, API 14).
+- The dex referenced 12 framework classes introduced after API 14
+  (`JobService` / `JobInfo` / `JobParameters` / `JobScheduler` and
+  `AudioAttributes` at 21, `NotificationChannel` / `AudioFocusRequest` at 26,
+  `Notification$Style` / `BigTextStyle` at 16). `GuardWatchdog extends
+  JobService` and an `AudioFocusRequest` field fail at class-load time, before
+  any `SDK_INT` guard can run.
+
+Code 49 keeps the full v1.3.3 feature set (bank-v9 / 9,544 questions, the
+three edition-system syllabus tables, the 25-key phone admin API) and:
+
+- switches the theme to Holo, drops the JobService manifest entry, rewrites
+  `GuardWatchdog` on plain `AlarmManager`, uses the API-1 three-argument
+  `requestAudioFocus`, and removes `BigTextStyle`;
+- adds `NotifCompat`, which creates the notification channel by reflection
+  only when `SDK_INT >= 26` (class name stays a string, never enters the dex
+  type pool) so Android 8+ foreground-service notifications stay valid;
+- adds `tests/android4_compat_check.py` as a hard gate: source/manifest checks
+  before the build, and a full dex `Landroid/...` reference scan after it,
+  asserting `high-api=0`.
+
+Verification: theme id matches the known-good code-38 build, dex has 0
+API>14 classes, `aapt dump badging` reports `versionCode 49 / sdkVersion 14`,
+layout contract 395, JVM 416, mutation 103/103, all gates green; emulator
+cover-install 47 -> 49 boots with `9544 / bank-v9`, quiz overlay fires,
+`FATAL=0`. No Android 4 device/image is available in this environment, so
+API-14 runtime behaviour remains unverified on real hardware.
 
 ## v1.3.2 (versionCode 46) — bank-v6 per-question cleanup
 

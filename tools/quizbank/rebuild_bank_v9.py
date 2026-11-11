@@ -27,7 +27,7 @@ import shutil
 import sqlite3
 import sys
 
-ROOT = '/tmp/PoHW'
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 AUD = '/tmp/congcong-audit'
 DB = os.path.join(ROOT, 'app/assets/quiz.db')
 VER = os.path.join(ROOT, 'app/assets/quiz.db.version')

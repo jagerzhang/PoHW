@@ -432,8 +432,8 @@ MUTATIONS = [
     ("DG", "long-stem font padding restored",
      lambda: replace(OVLQ, "text.setIncludeFontPadding(false);",
                      "text.setIncludeFontPadding(true);"), False, True, False),
-    ("DH", "boot fallback hint removed",
-     lambda: replace(BOOTSET, "BootGuide.fallbackHint()", '""'),
+    ("DH", "boot guide confirm button removed",
+     lambda: replace(BOOTSET, '"去系统设置"', '"关闭"'),
      False, True, False),
 ]
 

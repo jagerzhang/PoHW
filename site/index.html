@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PoHW · Proof of Homework — 答对题目，无限续租！</title>
-<meta name="description" content="PoHW（Proof of Homework）是装在 Android TV 上的反沉迷家长守护工具：跨应用全屏答题遮罩，答对才能继续观看，内置 3,935 题带 1–6 年级标签的离线题库，题库与守护离线可用，不访问互联网；可选局域网管理默认不监听。">
+<meta name="description" content="PoHW（Proof of Homework）是装在 Android TV 上的反沉迷家长守护工具：跨应用全屏答题遮罩，答对才能继续观看，内置 9,544 道带教材册次、单元与课标知识点的离线题库，题库与守护离线可用，不访问互联网；可选局域网管理默认不监听。">
 <meta name="theme-color" content="#0F1725">
 <link rel="icon" type="image/png" href="assets/ic_launcher.png">
 <link rel="stylesheet" href="style.css">
@@ -22,7 +22,7 @@
       <a href="#features">产品亮点</a>
       <a href="#how">安装步骤</a>
       <a href="#download">下载</a>
-      <a href="#releases">更新记录</a>
+      <a href="changelog.html">更新记录</a>
       <a href="#faq">FAQ</a>
       <a href="#docs">文档</a>
     </nav>
@@ -39,15 +39,15 @@
         <p class="eyebrow">Android TV · 家长守护 · 离线优先</p>
         <h1 class="hero-title">PoHW<span class="hero-title-en">Proof of Homework</span></h1>
         <p class="hero-tagline">答对题目，无限续租！</p>
-        <p class="hero-desc">装在电视上的反沉迷小实验：开启守护后，前台服务会按设定周期在<strong>任意应用之上</strong>弹出全屏答题页，答对才能继续看电视；同一题答错 2 次自动换题并记入错题库。这是一台 Android TV 上的「答题解锁继续观看」家长守护工具。</p>
-        <p class="hero-note">PoHW 是 Proof of Work 的一个玩笑 —— 看电视的通行权不靠算力，而是靠周期性交一次「作业量证明」来续租。租约到期，重新出题。本项目是个人非商业的 Android TV 实验，只发布 APK，不上架任何应用商店。</p>
+        <p class="hero-desc">到点弹出一道题，答对才能继续看电视。答错两次自动换题，记入错题库。Proof of Work 的一个玩笑：通行权不靠算力，靠交一次作业。</p>
+        <p class="hero-note">个人非商业的 Android TV 实验，只发布 APK，不上架应用商店。</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="https://pohw.zhangge.net/dl/latest-main.apk">下载 APK</a>
           <a class="btn btn-ghost" href="https://github.com/jagerzhang/PoHW">查看 GitHub 源码</a>
         </div>
         <div class="hero-facts">
           <span>Android 5.0+ / minSdk 21</span>
-          <span>3,935 题离线题库</span>
+          <span>9,544 题离线题库</span>
           <span>不收集数据 · 离线可用</span>
         </div>
       </div>
@@ -76,7 +76,7 @@
         <img src="assets/ic_launcher.png" alt="PoHW APP 图标" width="76" height="76">
         <div>
           <h2>为电视而生</h2>
-          <p>深蓝渐变圆角底 + 琥珀计时弧 + 屏幕里的青绿对勾 + 底座，呼应「答对题目，无限续租！」。图标与 TV 横幅均由仓库脚本可复现生成。</p>
+          <p>图标与 TV 横幅均由仓库脚本生成，呼应「答对题目，无限续租！」。</p>
         </div>
       </div>
       <div>
@@ -92,76 +92,76 @@
       <div class="section-head">
         <span class="eyebrow">Features</span>
         <h2 class="section-title">产品亮点</h2>
-        <p class="section-lead">从全屏答题遮罩到离线题库与家长设置，全部围绕一件事：让孩子在继续观看前，先交一次「作业」。</p>
+        <p class="section-lead">让孩子在继续观看前，先交一次「作业」。</p>
       </div>
 
       <div class="features-grid">
         <article class="feature-card">
           <span class="feature-no">01</span>
           <h3>跨应用全屏答题遮罩</h3>
-          <p>基于 <code>TYPE_APPLICATION_OVERLAY</code> 的全屏窗口，切到视频 App 或桌面后照样弹出；遥控器方向键、确定键、数字键 1-4 由遮罩自主路由，不依赖窗口 View 焦点。</p>
+          <p>跨应用全屏遮罩，遥控器方向键与数字键 1–4 自主路由。</p>
           <span class="tag">跨应用</span>
         </article>
 
         <article class="feature-card">
           <span class="feature-no">02</span>
           <h3>答对继续观看</h3>
-          <p>答对才能继续看电视，租约到期重新出题；「答对自动继续」默认开启，达到解锁门槛后直接关闭答题页，不用再按一次遥控器（可在家长设置里关掉）。守护开关合并为一个按钮，运行中显示「关闭守护」，关闭也必须先通过家长密码就地验证。</p>
+          <p>答对解锁，租约到期重新出题；关闭守护需家长密码。</p>
           <span class="tag">PoW 续租</span>
         </article>
 
         <article class="feature-card">
           <span class="feature-no">03</span>
           <h3>答错 2 次换题 + 错题库</h3>
-          <p>同一题累计答错 2 次自动原地换题，原题按题面去重记入本地错题库；控制台可翻页查看、删除、清空，并标出正确答案与选错项。</p>
+          <p>同一题答错 2 次换题，原题记入本地错题库。</p>
           <span class="tag">本地 SQLite</span>
         </article>
 
         <article class="feature-card">
           <span class="feature-no">04</span>
-          <h3>3,935 题离线题库</h3>
-          <p>内置 SQLite，覆盖小学 1–6 年级语数外；每题带明确年级标签与低 / 中 / 高难度分档。题目由按课标自编的题与整理自公开渠道、逐题校验清洗后的题组成。题库与守护离线可用、不收集数据；在线题库源默认关闭；局域网手机管理默认不监听，家长进入扫码管理页才开启。版本检查默认每 24 小时读取一次清单，可在家长设置里关闭。</p>
+          <h3>9,544 题离线题库</h3>
+          <p>9,544 题内置 SQLite，覆盖小学 1–6 年级语数外；离线可用、不收集数据。</p>
           <span class="tag warn">离线优先 · 可选更新</span>
         </article>
 
         <article class="feature-card">
           <span class="feature-no">05</span>
           <h3>学科配比 5:3:2:2</h3>
-          <p>数学 / 语文 / 英语 / 其他学科四槽权重，默认 5:3:2:2（每槽 0-5 可调）。「全学科」模式下第 4 槽生效，其他学科池不可用时自动失效，避免串科抽题。</p>
+          <p>数 / 语 / 英 / 其他四槽权重，默认 5:3:2:2。</p>
           <span class="tag">四槽权重</span>
         </article>
 
         <article class="feature-card">
           <span class="feature-no">06</span>
           <h3>家长密码 + 单列卡片设置</h3>
-          <p>4-8 位数字密码，PBKDF2（60,000 次迭代）+ 随机 salt，关闭守护也需要验证且服务侧二次校验。设置页为居中窄栏单列卡片流，遥控器上下按行移动，不再跨栏跳转。</p>
+          <p>4–8 位密码，PBKDF2 + 随机 salt；设置页为遥控器单列卡片流。</p>
           <span class="tag">PBKDF2 · 单列卡片</span>
         </article>
 
         <article class="feature-card">
           <span class="feature-no">07</span>
           <h3>答题时暂停 / 恢复视频</h3>
-          <p>弹题时申请短暂音频焦点并派发媒体暂停键，答对解锁后归还焦点并尝试恢复播放。这是 best-effort：Android 没有强制暂停第三方播放器的公开 API，不保证所有视频 App 响应。</p>
+          <p>弹题时请求暂停，答对后尝试恢复。best-effort，取决于视频 App。</p>
           <span class="tag warn">best-effort</span>
         </article>
 
         <article class="feature-card">
           <span class="feature-no">08</span>
           <h3>启动即守护 / 开机自启</h3>
-          <p>「启动即守护」默认开：APP 冷启动且条件满足时自动拉起守护，从后台返回不会把家长手动关掉的守护又打开。「开机自启」默认关，需家长显式开启并手动放行厂商自启动权限。</p>
+          <p>启动即守护默认开；开机自启默认关，需手动放行厂商权限。</p>
           <span class="tag">LaunchPolicy</span>
         </article>
 
         <article class="feature-card">
           <span class="feature-no">09</span>
           <h3>年级防超纲与学习进度</h3>
-          <p>抽题的每一层（含最后一层保底）都带 <code>grade&lt;=?</code>，只抽不高于当前年级的题；9,544 道题按真实教材册次、单元与课标知识点组织，进度表共 30 个格子 / 287 个有序单元。家长可选上 / 下册与已学到第几单元，单元按教材版本族隔离，不同教材的同一单元序号不会串题。</p>
+          <p>抽题每层都带年级上限；9,544 题按教材册次、单元与知识点组织，单元按版本族隔离。</p>
           <span class="tag">年级上限</span>
         </article>
         <article class="feature-card">
           <span class="feature-no">10</span>
           <h3>练习模式：孩子自己练题</h3>
-          <p>控制台「练习模式」进入独立全屏自由答题页，可切学科 / 年级 / 难度，答对自动出下一题并显示已练 / 正确 / 连对统计。进入期间挂起守护弹题、退出自动恢复，守护服务本身不停止，不成为绕过口子。</p>
+          <p>独立练习页，可切学科 / 年级 / 难度；练习期间挂起守护弹题。</p>
           <span class="tag">自由答题</span>
         </article>
       </div>
@@ -174,7 +174,7 @@
       <div class="section-head">
         <span class="eyebrow">How it works</span>
         <h2 class="section-title">工作原理与安装步骤</h2>
-        <p class="section-lead">侧载到小米电视等 Android TV 设备，授权一次悬浮窗，配置好家长密码与出题参数，即可开启守护。</p>
+        <p class="section-lead">U 盘装包 → 授权悬浮窗 → 设密码 → 开启守护。</p>
       </div>
 
       <ol class="steps">
@@ -182,36 +182,35 @@
           <span class="step-no">1</span>
           <div>
             <h3>用 U 盘把 APK 装到电视</h3>
-            <p>在电脑上从官网下载 APK，拷进 U 盘；把 U 盘插到电视 USB 口，用电视自带的「文件管理器」找到 APK 并点击安装。首次安装若提示「未知来源」，按系统提示允许即可。整个过程不需要电脑连接电视，也不需要任何调试工具。</p>
-            <p>已有旧版时直接覆盖安装即可：签名证书保持一致，家长密码、设置与错题库都会保留。</p>
+            <p>官网下载 APK 拷进 U 盘，插电视用「文件管理器」打开安装；首次允许「未知来源」。旧版直接覆盖，设置与错题库保留。</p>
           </div>
         </li>
         <li class="step">
           <span class="step-no">2</span>
           <div>
             <h3>首次打开，授权「悬浮窗」</h3>
-            <p>点「授权悬浮窗」打开系统开关并允许。<code>SYSTEM_ALERT_WINDOW</code> 是必需权限，用于在其他应用上层弹出全屏答题页。</p>
+            <p>点「授权悬浮窗」允许 <code>SYSTEM_ALERT_WINDOW</code>，用于在其他应用上层弹题。</p>
           </div>
         </li>
         <li class="step">
           <span class="step-no">3</span>
           <div>
             <h3>进家长设置，初始化 4-8 位密码</h3>
-            <p>首次进入会要求初始化 4-8 位数字家长密码；密码以 PBKDF2 + 随机 salt 落盘，用于保护设置页与关闭守护。</p>
+            <p>首次进入设置 4–8 位数字密码，PBKDF2 + 随机 salt 落盘。</p>
           </div>
         </li>
         <li class="step">
           <span class="step-no">4</span>
           <div>
             <h3>设年级 / 频率 / 学科配比</h3>
-            <p>可选小学 1-6 / 初中 1-3（内部 1-9 年级）、出题频率（15 秒至 30 分钟）、数 / 语 / 英配比、「全学科」开关与难度倾向；抽题只取不高于当前年级的题，答对后默认自动继续观看。</p>
+            <p>设年级（题库覆盖小学 1–6 年级）、出题频率、学科配比与难度；抽题不高于当前年级。</p>
           </div>
         </li>
         <li class="step">
           <span class="step-no">5</span>
           <div>
             <h3>返回首页，开启守护</h3>
-            <p>点「开启守护」后按 Home 切到任意视频 App，到点会弹出全屏答题页。答对继续观看（默认自动继续，无需再按遥控器），租约到期重新出题；想让孩子自己练题就点控制台「练习模式」。</p>
+            <p>回首页点「开启守护」，按 Home 切到视频 App，到点弹题。</p>
           </div>
         </li>
       </ol>
@@ -219,11 +218,9 @@
       <div class="callout">
         <h3>安装前请先看这几条边界</h3>
         <ul>
-          <li>不上架应用商店、仅自行侧载：这是个人非商业实验，只发布 APK，不在任何应用商店分发。</li>
-          <li>需要 Android 5.0+（<code>minSdk 21</code>，<code>targetSdk 33</code>）；电视、手机、平板均可安装，不强制 Leanback。</li>
-          <li>厂商自启动权限需家长手动放行：「开机自启」默认关闭，开启后还要在系统设置里允许该应用自启动。</li>
-          <li>忘记密码：在电视「设置 → 应用管理 → PoHW → 清除数据」重置（会清空全部设置与错题库）；遮罩卡住卸载流程时，在同一页面点「强制停止」，或先关闭守护。</li>
-          <li>拦不住 Home 键、系统「强制停止」、卸载与清除数据 —— 第三方应用没有这些能力，本仓库明确禁止 Device Admin / 防卸载类 API。</li>
+          <li>仅侧载 APK，不上架应用商店；需要 Android 5.0+（<code>minSdk 21</code>）。</li>
+          <li>开机自启需家长手动放行厂商权限，默认关闭。</li>
+          <li>拦不住 Home 键、系统「强制停止」、卸载与清除数据。</li>
         </ul>
       </div>
     </div>
@@ -235,79 +232,67 @@
       <div class="download-box">
         <span class="eyebrow">Download</span>
         <h2 class="section-title">下载最新版本</h2>
-        <p>最新版本 <strong>v1.3.3</strong>（当前构建 <code>versionCode 47</code>）；签名证书连续（<code>76eb6063…6172</code>），旧版可直接覆盖安装，家长密码、设置与错题库都会保留。本页下载按钮直连本站托管的 <code>latest-main.apk</code>（永远指向当前最新版）；历史版本仍可从 GitHub Releases 获取，校验值见 <code>update.json</code>。</p>
+        <p>最新版本 <strong>v1.3.4</strong>（<code>versionCode 50</code>）；签名证书连续（<code>76eb6063…6172</code>），旧版直接覆盖安装即可。</p>
         <div class="download-actions">
           <a class="btn btn-primary btn-lg" href="https://pohw.zhangge.net/dl/latest-main.apk">下载 APK（本站直链 · 最新版）</a>
           <a class="btn btn-ghost" href="https://github.com/jagerzhang/PoHW/releases">所有 Releases</a>
           <a class="btn btn-ghost" href="https://github.com/jagerzhang/PoHW">GitHub 仓库</a>
         </div>
-        <p class="download-hint">本项目不上架任何应用商店，仅发布 APK 供自行侧载；请从本页直链或仓库 Releases 获取，不要使用第三方镜像。</p>
+        <p class="download-hint">仅提供 APK 侧载，不上架应用商店；请从本页或仓库 Releases 获取。</p>
       </div>
     </div>
   </section>
 
-  <!-- ===== 版本更新记录 ===== -->
-  <section id="releases" class="section">
-    <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">Changelog</span>
-        <h2 class="section-title">版本更新记录</h2>
-        <p class="section-lead">按时间倒序整理自仓库 <a href="https://github.com/jagerzhang/PoHW/blob/main/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a>。与 GitHub Releases 一一对应、按版本聚合，目前共 <strong>15 个正式版本</strong>（v1.0.0 / v1.0.1 / v1.0.2 / v1.2.0 / v1.2.1 / v1.2.2 / v1.2.3 / v1.2.4 / v1.2.5 / v1.2.6 / v1.2.7 / v1.3.0 / v1.3.1 / v1.3.2 / v1.3.3）；v1.0.0 之前为开发期内部迭代编号，已归档为 v0.9.0-re。<code>versionCode</code> 为单调技术计数、不随展示版本重置。具体构建号与改动以仓库 CHANGELOG 为准。</p>
-      </div>
-      <div id="releases-list" class="releases"></div>
-    </div>
-  </section>
-
-  <!-- ===== FAQ / 边界与免责声明 ===== -->
+<!-- ===== FAQ / 边界与免责声明 ===== -->
   <section id="faq" class="section">
     <div class="container">
       <div class="section-head">
         <span class="eyebrow">FAQ & Disclaimer</span>
-        <h2 class="section-title">常见问题、边界与免责声明</h2>
-        <p class="section-lead">请把 PoHW 当成一个「自己家里用的玩具项目」，而不是商用家长控制产品。</p>
+        <h2 class="section-title">常见问题</h2>
+        <p class="section-lead">更多安装细节、系统限制与题库口径，都放在仓库文档里。</p>
       </div>
 
       <div class="faq-list">
         <details class="faq-item">
           <summary>APP 会联网吗？会上传数据吗？</summary>
-          <p>题库、守护与答题全程离线，不上传任何数据。默认开启的版本检查每 24 小时向本站读取一次 <code>update.json</code>（不含设备标识、无统计），发现新版本只提示，<strong>下载与安装必须由家长主动点击</strong>。可选在线题库源默认关闭，只有家长自行填写地址后才会联网。两项都关闭后 APP 不发任何请求。可在「家长设置 → 06 版本更新」里关闭自动检查。</p>
+          <p>题库、守护与答题全程离线，不上传数据。默认每 24 小时读取一次版本清单（可关）；可选在线题库源与局域网管理默认关闭。三项都关闭后不产生对外请求。</p>
         </details>
         <details class="faq-item">
           <summary>视频暂停一定生效吗？</summary>
-          <p>不一定，是 <strong>best-effort</strong>。Android 没有「强制暂停第三方播放器」的公开 API，APP 只能请求短暂音频焦点并派发媒体暂停键，答对后归还焦点并尝试恢复；不保证所有视频 App 响应。Android 12+ 视频 App 还可用 <code>HIDE_OVERLAY_WINDOWS</code> 隐藏非系统浮层，各家 ROM 与小米电视的实际表现需要上机实测。窗口焦点重抢同样是 best-effort，重抢失败时遮罩保留、不自动放行，触摸 / 鼠标点击仍可答题。</p>
+          <p>不一定，是 <strong>best-effort</strong>。Android 没有强制暂停第三方播放器的公开 API，各家 ROM 表现需实测。</p>
         </details>
 
         <details class="faq-item">
           <summary>会不会抽到超纲题？</summary>
-          <p>v1.2.3 起做了两层保护：题库按小学课标知识点白名单<strong>逐题重新定级</strong>（不再信任题面自带标签，例如曾把代数等式标成三年级），只有明确且单纯命中 1–3 年级课标的题才进低年级池；抽题时<strong>每一层都带年级上限</strong>，只取不高于当前年级的题，任何兜底都不会放宽。同时修复了英文单词间空格丢失、剔除了中学课文与重复题，题库经多轮课标重标定、逐题复核与原创补题后为 3,935 道。规则已固化进自动审核门禁；如遇具体不适用的题目，欢迎通过 GitHub Issue 反馈，核实后会调整规则并重建题库。</p>
+          <p>抽题每层都带年级上限，只取不高于当前年级的题；题库按课标逐题重标定。详见 <a href="https://github.com/jagerzhang/PoHW/blob/main/docs/QUESTION_BANK.md" target="_blank" rel="noopener">docs/QUESTION_BANK.md</a>。</p>
         </details>        <details class="faq-item">
           <summary>内置题库是教材同步练习题吗？</summary>
-          <p>不是。内置 3,935 道题由本项目按课标自编的题，与整理自互联网公开渠道、经逐题校验清洗后的题组成，全部带 1–6 年级标签与难度分档，偏「知识点辨识 / 能力题」，不是教材同步真题，也不是教辅题库。题库内容不含站点水印、外链或付费题数据。它的作用是打断连续观看、让孩子回忆一下学过什么。来源说明见仓库 <code>docs/DATA_SOURCES.md</code>。</p>
+          <p>不是教材同步真题。9,544 道按课标自编 + 公开渠道整理，带教材册次、单元、知识点与解析，用于打断连续观看。来源见 <code>docs/DATA_SOURCES.md</code>。</p>
         </details>
 
         <details class="faq-item">
           <summary>题库能按教材版本或单元序号出题吗？</summary>
-          <p>可以。当前 9,544 道题<strong>全部带教材版本族、上 / 下册、单元序号与课标知识点</strong>；<code>assets/syllabus.json</code> 按「年级 × 册次 × 学科」组织 30 个格子、287 个有序单元，家长在设置里选上 / 下册与已学单元即可。同一格子可能有多套教材，进度表自动匹配题量最多的版本族，单元过滤按版本隔离，不会把不同教材的第 1 单元混在一起。1–2 年级与 6 年级没有英语题（新库英语三年级起点）。设计与边界见 <a href="https://github.com/jagerzhang/PoHW/blob/main/docs/QUESTION_BANK.md" target="_blank" rel="noopener">docs/QUESTION_BANK.md</a>。</p>
+          <p>可以。9,544 题全部带教材版本族、上 / 下册、单元序号与知识点；进度表 30 格 287 单元，按版本族隔离。1–2 与 6 年级没有英语题。</p>
         </details>
 
         <details class="faq-item">
           <summary>会收集数据或联网吗？</summary>
-          <p>不收集数据，题库与守护离线可用、不访问互联网：<code>INTERNET</code> 权限用于家长自行配置的可选在线题库源、默认开启的版本检查（仅 GET 版本清单，24 小时一次，不含设备标识），以及默认不监听的局域网管理（数据只在家里 WiFi 内流转，不经过外部服务器）；三项都关闭后 APP 不产生任何对外请求。不含任何统计、广告或支付 SDK。清单同时设置了 <code>allowBackup=false</code> 与默认禁止明文 HTTP。</p>
+          <p>不收集数据，题库与守护离线可用、不访问互联网；<code>INTERNET</code> 仅用于可选在线题库源、版本检查与局域网管理，三项都关即零请求。不含统计、广告或支付 SDK。</p>
         </details>
 
         <details class="faq-item">
           <summary>开源许可证的边界是什么？</summary>
-          <p>代码采用 <a href="https://github.com/jagerzhang/PoHW/blob/main/LICENSE" target="_blank" rel="noopener">MIT 许可证</a>；<code>app/assets/quiz.db</code> 中的题库内容<strong>不在 MIT 授权范围内</strong>，权利归各自权利人所有，仅供个人非商业学习使用。<strong>如有侵权或其他权益问题，请通过 GitHub Issue 联系维护者，核实后会及时删除或替换。</strong>详见仓库 <code>docs/DATA_SOURCES.md</code>。仓库与 APK 中不含任何密钥与付费接口。</p>
+          <p>代码采用 <a href="https://github.com/jagerzhang/PoHW/blob/main/LICENSE" target="_blank" rel="noopener">MIT 许可证</a>；题库内容<strong>不在 MIT 授权范围内</strong>，仅供个人非商业学习使用。详见 <code>docs/DATA_SOURCES.md</code>。</p>
         </details>
 
         <details class="faq-item">
           <summary>为什么不在应用商店上架？能拦住卸载吗？</summary>
-          <p>这是个人非商业实验，<strong>不上架任何应用商店、非应用商店分发</strong>，只发布 APK 供自行侧载。第三方应用拦不住 Home 键、系统「强制停止」、卸载与清除数据，本项目明确禁止 Device Admin / Device Owner / 锁屏任务 / 防卸载这类 API。</p>
+          <p>个人非商业实验，只发布 APK 供侧载；第三方应用拦不住 Home 键、强制停止、卸载与清除数据。</p>
         </details>
 
         <details class="faq-item">
           <summary>适合什么场景？</summary>
-          <p>仅供<strong>家庭自用</strong>：请在自己设备上、在自己孩子知情的前提下使用。它不是商用家长控制产品，也不承诺任何监护效果；题目质量、真机兼容性与遥控器体验以实际设备为准。</p>
+          <p>仅供<strong>家庭自用</strong>，不是商用家长控制产品，不承诺监护效果。</p>
         </details>
       </div>
     </div>
@@ -319,32 +304,32 @@
       <div class="section-head">
         <span class="eyebrow">Docs</span>
         <h2 class="section-title">文档</h2>
-        <p class="section-lead">全部文档都在仓库里，以下链接指向 <code>main</code> 分支的对应文件。</p>
+        <p class="section-lead">完整说明都在仓库 <code>main</code> 分支。</p>
       </div>
 
       <div class="docs-grid">
         <a class="doc-card" href="https://github.com/jagerzhang/PoHW/blob/main/README.md" target="_blank" rel="noopener">
           <span class="doc-path">README.md</span>
           <h3>项目总览</h3>
-          <p>能力边界、快速开始、内置题库、家长设置、构建与权限说明。</p>
+          <p>能力边界、快速开始、构建与权限说明。</p>
           <span class="doc-arrow">在 GitHub 打开 →</span>
         </a>
         <a class="doc-card" href="https://github.com/jagerzhang/PoHW/blob/main/CHANGELOG.md" target="_blank" rel="noopener">
           <span class="doc-path">CHANGELOG.md</span>
           <h3>版本变更</h3>
-          <p>版本口径、各次 versionCode 改动与验证数据的权威来源。</p>
+          <p>各次 versionCode 改动与验证数据的权威来源。</p>
           <span class="doc-arrow">在 GitHub 打开 →</span>
         </a>
         <a class="doc-card" href="https://github.com/jagerzhang/PoHW/blob/main/docs/QUESTION_BANK.md" target="_blank" rel="noopener">
           <span class="doc-path">docs/QUESTION_BANK.md</span>
           <h3>题库设计与数据来源</h3>
-          <p>课标年级重标定、英文空格修复、表结构与质量门禁、许可证边界。</p>
+          <p>课标年级重标定、表结构与质量门禁、许可证边界。</p>
           <span class="doc-arrow">在 GitHub 打开 →</span>
         </a>
         <a class="doc-card" href="https://github.com/jagerzhang/PoHW/blob/main/docs/BANK_STATS.md" target="_blank" rel="noopener">
           <span class="doc-path">docs/BANK_STATS.md</span>
           <h3>题库统计</h3>
-          <p>各年级 × 学科题量、难度分档分布与本次重建的剔除明细。</p>
+          <p>各年级 × 学科题量、难度分布与剔除明细。</p>
           <span class="doc-arrow">在 GitHub 打开 →</span>
         </a>
         <a class="doc-card" href="https://github.com/jagerzhang/PoHW/blob/main/docs/BUILD.md" target="_blank" rel="noopener">

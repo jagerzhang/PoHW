@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="49"' in _mf, "manifest versionCode advances to 49")
-check('VERSION_CODE="49"' in b, "build script versionCode advances to 49")
+check('android:versionCode="51"' in _mf, "manifest versionCode advances to 51")
+check('VERSION_CODE="51"' in b, "build script versionCode advances to 51")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -348,8 +348,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "PROGRESS" in _scope,
       "runtime regression asserts term/edition/unit scoped draws")
-check('android:versionCode="49"' in _mf, "manifest versionCode advances to 49")
-check('VERSION_CODE="49"' in b, "build script versionCode advances to 49")
+check('android:versionCode="51"' in _mf, "manifest versionCode advances to 51")
+check('VERSION_CODE="51"' in b, "build script versionCode advances to 51")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -399,8 +399,8 @@ check("保留所有权利 · Proof of Homework" in _site and "jagerzhang · PoHW
       "footer copyright uses the new wording")
 check('id="year"' not in _site and 'getElementById("year")' not in _site_js,
       "footer year is fixed in HTML, not overwritten by JS")
-check("versionCode 47" in _site and "versionCode 21" in _site_js,
-      "site reports the latest build 47 and keeps the v1.0.2 card note")
+check("versionCode 50" in _site and "versionCode 21" in _site_js,
+      "site reports the latest build 50 and keeps the v1.0.2 card note")
 check("addView(bankRow, rowLp())" in s,
       "bank update and auto-update share one side-by-side row")
 check("track(btnCheck, rowSync)" in s,
@@ -427,10 +427,11 @@ _ch21 = read(os.path.join(ROOT, "CHANGELOG.md"))
 _rm21 = read(os.path.join(ROOT, "README.md"))
 _ci21 = os.path.join(ROOT, ".github/workflows/ci.yml")
 _ci_text = read(_ci21) if os.path.isfile(_ci21) else ""
-check('android:versionName="1.3.3"' in _mf21
-      and 'VERSION_NAME="1.3.3"' in _b21,
-      "display version is 1.3.3 in both manifest and build script")
-check(_site_js.count('version: "v1.3.3"') == 1
+check('android:versionName="1.3.4"' in _mf21
+      and 'VERSION_NAME="1.3.4"' in _b21,
+      "display version is 1.3.4 in both manifest and build script")
+check(_site_js.count('version: "v1.3.4"') == 1
+      and _site_js.count('version: "v1.3.3"') == 1
       and _site_js.count('version: "v1.3.2"') == 1
       and _site_js.count('version: "v1.3.1"') == 1
       and _site_js.count('version: "v1.3.0"') == 1
@@ -445,9 +446,10 @@ check(_site_js.count('version: "v1.3.3"') == 1
       and _site_js.count('version: "v1.0.2"') == 1
       and _site_js.count('version: "v1.0.1"') == 1
       and _site_js.count('version: "v1.0.0"') == 1
-      and _site_js.count('version: "') == 15,
-      "site release notes expose exactly fifteen distinct release versions")
-check(_ch21.count("\n## v1.3.3") == 1
+      and _site_js.count('version: "') == 16,
+      "site release notes expose exactly sixteen distinct release versions")
+check(_ch21.count("\n## v1.3.4") == 1
+      and _ch21.count("\n## v1.3.3") == 1
       and _ch21.count("\n## v1.3.2") == 1
       and _ch21.count("\n## v1.3.1") == 1
       and _ch21.count("\n## v1.3.0") == 1
@@ -460,7 +462,7 @@ check(_ch21.count("\n## v1.3.3") == 1
       and _ch21.count("\n## v1.0.2") == 1 and _ch21.count("\n## v1.0.1") == 1
       and _ch21.count("\n## v1.0.0") == 1
       and _ch21.count("\n## v0.9.0-re") == 1,
-      "changelog groups builds into fifteen releases plus one dev archive")
+      "changelog groups builds into sixteen releases plus one dev archive")
 check("## Dev build v6.0.0" not in _ch21 and "## Dev build v5.0.0" not in _ch21
       and "## v4.1.0" not in _ch21 and "## v1 - v3" not in _ch21,
       "pre-1.0 dev-build sections are collapsed into the 0.9.0-re archive")
@@ -791,8 +793,8 @@ check('canRetrieveWindowContent="false"' in _ax130
       "accessibility watchdog is read-only and permission bound")
 check('stopWithTask="false"' in _mf130,
       "guard service survives task removal")
-check('android:versionName="1.3.3"' in _mf130 and 'android:versionCode="49"' in _mf130,
-      "v1.3.3-legacy compat build is versionCode 49 in manifest")
+check('android:versionName="1.3.4"' in _mf130 and 'android:versionCode="51"' in _mf130,
+      "v1.3.4-legacy compat build is versionCode 51 in manifest")
 
 
 # ---- v1.3.0 未发布：答题选项长文本不得被固定高度网格裁切 ----
@@ -1103,8 +1105,8 @@ _sv_a4 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizOv
 check("Theme.Holo.Light.NoActionBar" in _mf_a4 and "Theme.Material" not in _mf_a4,
       "android4 manifest uses an API14 theme")
 check('android:minSdkVersion="14"' in _mf_a4
-      and 'android:versionCode="49"' in _mf_a4,
-      "android4 build is minSdk 14 and can upgrade devices on 48")
+      and 'android:versionCode="51"' in _mf_a4,
+      "android4 build is minSdk 14 and can upgrade devices on 49")
 check(all(t not in (_gw_a4 + _mp_a4 + _no_a4 + _sv_a4) for t in (
       "android.app.job", "JobService", "new NotificationChannel",
       "import android.app.NotificationChannel", "AudioFocusRequest",
@@ -1196,8 +1198,14 @@ check("if (!SchedulePolicy.validWindows(v)) continue;" in _api137
       "LAN admin validates window, vacation and override formats before writing")
 check("holidayCoverageEnd" in _api137 and "scheduleAllowedNow" in _api137,
       "phone page can show calendar coverage and whether a quiz is allowed now")
-check('input[type=text]' in _css134 and 'type === "text"' in _js137,
-      "phone page renders free-form schedule inputs")
+check('input[type=time]' in _css134 and 'input[type=date]' in _css134
+      and all(t in _js137 for t in ('type === "windows"', 'type === "range"',
+                                    'type === "override"', 'week-picks',
+                                    'collectWindows', 'fillWindows'))
+      and 'type: "text"' not in _js137
+      and 'HH:mm-HH:mm:掩码' not in _js137
+      and 'YYYY-MM-DD:allow 或 :block' not in _js137,
+      "phone page uses visual time/week/date controls instead of raw mask strings")
 check('addCard(col, "07' in _set137
       and all(("addRow(sched, \"" + label) in _set137
               for label in ("生效时段", "上学日可答题", "在家日可答题",
@@ -1206,5 +1214,18 @@ check('addCard(col, "07' in _set137
 check("HolidayCalendar.java" in _run137 and "SchedulePolicy.java" in _run137
       and "SchedulePolicyTest.java" in _run137,
       "JVM suite compiles and runs the pure-Java schedule tests")
+
+
+# ---- 官网精简：版本记录移出首页，独立页承接 ----
+check('id="releases"' not in _site and 'releases-list' not in _site
+      and 'href="changelog.html"' in _site
+      and '<section id="features"' in _site and '<section id="faq"' in _site,
+      "home page links to a separate changelog instead of embedding 15 cards")
+_cl137 = os.path.join(ROOT, "site/changelog.html")
+check(os.path.isfile(_cl137) and 'id="releases-list"' in read(_cl137)
+      and 'script.js' in read(_cl137),
+      "changelog page hosts the release timeline and reuses the shared script")
+check(_site.count('<section') <= 7,
+      "home page keeps a compact section count")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

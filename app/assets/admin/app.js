@@ -2,11 +2,17 @@
   "use strict";
   var token = "";
   var last = null;
+  var WEEK = ["一", "二", "三", "四", "五", "六", "日"];
 
   function $(id) { return document.getElementById(id); }
   function esc(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
       .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
   }
   function api(method, path, body, cb) {
     var x = new XMLHttpRequest();
@@ -23,7 +29,9 @@
   }
   function show(id, msg) { $(id).textContent = msg || ""; }
 
-  // 与 AdminApi.NUM_KEYS / BOOL_KEYS 一一对应；敏感与破坏性项有意不列入。
+  // 与 AdminApi.NUM_KEYS / BOOL_KEYS / STR_KEYS 一一对应；敏感项有意不列入。
+  // windows / range / override 三种可视化控件在提交时仍拼回原来的紧凑字符串，
+  // 因此 AdminApi 与 SchedulePolicy 的格式校验完全不用改。
   function fields(d) {
     var grades = [];
     for (var g = 1; g <= (d.maxGrade || 9); g++) {
@@ -72,12 +80,53 @@
 
       { group: "04 生效时段与节假日", key: "scheduleEnabled", label: "启用生效时段（关闭则全天可弹题）", type: "bool" },
       { group: "04 生效时段与节假日", key: "skipHolidays", label: "智能跳过节假日（含调休补班）", type: "bool" },
-      { group: "04 生效时段与节假日", key: "schoolWindows", label: "上学日时段 HH:mm-HH:mm:掩码（可 | 分两段）", type: "text" },
-      { group: "04 生效时段与节假日", key: "homeWindows", label: "在家日时段（周末 / 法定假日 / 寒暑假）", type: "text" },
-      { group: "04 生效时段与节假日", key: "vacationRange", label: "假期模式 YYYY-MM-DD~YYYY-MM-DD（留空关闭，到期自动恢复）", type: "text" },
-      { group: "04 生效时段与节假日", key: "todayOverride", label: "今天临时 YYYY-MM-DD:allow 或 :block（留空无）", type: "text" }
+      { group: "04 生效时段与节假日", key: "schoolWindows", label: "上学日可答题时段",
+        type: "windows", def: "17:00-21:00:1111111", hint: "工作日，以及调休补班的周末" },
+      { group: "04 生效时段与节假日", key: "homeWindows", label: "在家日可答题时段",
+        type: "windows", def: "09:00-21:00:1111111", hint: "周末、法定假日与寒暑假" },
+      { group: "04 生效时段与节假日", key: "vacationRange", label: "假期模式（寒暑假）",
+        type: "range", hint: "留空关闭；区间结束自动恢复，无需手动取消" },
+      { group: "04 生效时段与节假日", key: "todayOverride", label: "今天临时",
+        type: "override", hint: "只影响今天，隔天自动失效" }
     ];
     return out;
+  }
+
+  function windowsHtml(f) {
+    var h = '<div class="field sched-field"><span>' + esc(f.label) + "</span>" +
+      '<p class="hint">' + esc(f.hint) + "</p>";
+    for (var i = 0; i < 2; i++) {
+      h += '<div class="win-row"><div class="win-time">' +
+        '<input type="time" lang="zh-CN" id="f_' + f.key + "_s" + i + '" aria-label="开始时间">' +
+        "<em>至</em>" +
+        '<input type="time" lang="zh-CN" id="f_' + f.key + "_e" + i + '" aria-label="结束时间">' +
+        "</div>" + '<div class="week-picks">';
+      for (var d = 0; d < 7; d++) {
+        h += '<label><input type="checkbox" id="f_' + f.key + "_d" + i + "_" + d +
+          '" checked><span>周' + WEEK[d] + "</span></label>";
+      }
+      h += "</div></div>";
+    }
+    h += '<p class="hint">第二行留空表示只用一段；支持跨午夜（如 22:00 至 02:00）。</p></div>';
+    return h;
+  }
+
+  function rangeHtml(f) {
+    return '<div class="field sched-field"><span>' + esc(f.label) + "</span>" +
+      '<p class="hint">' + esc(f.hint) + "</p>" +
+      '<div class="win-time"><input type="date" id="f_' + f.key + '_from" aria-label="假期开始">' +
+      "<em>至</em>" +
+      '<input type="date" id="f_' + f.key + '_to" aria-label="假期结束"></div></div>';
+  }
+
+  function overrideHtml(f) {
+    return '<label class="field sched-field" for="f_' + f.key + '"><span>' +
+      esc(f.label) + "（" + esc(today()) + "）</span>" +
+      '<select id="f_' + f.key + '">' +
+      '<option value="">按日程</option>' +
+      '<option value="allow">今天全天放行</option>' +
+      '<option value="block">今天全天屏蔽</option></select>' +
+      '<p class="hint">' + esc(f.hint) + "</p></label>";
   }
 
   function renderForm(d) {
@@ -88,7 +137,10 @@
       if (f.group !== group) {
         if (group) html += "</div>";
         group = f.group;
-        html += "<h2>" + esc(group) + "</h2><div class=\"fields\">";
+        // 日程分组的控件较宽，即便在两列断点下也整组单列，避免被压窄裁字。
+        var cls = group.indexOf("04 生效时段") === 0
+          ? "fields fields-schedule" : "fields";
+        html += "<h2>" + esc(group) + "</h2><div class=\"" + cls + "\">";
       }
       var id = "f_" + f.key;
       if (f.type === "bool") {
@@ -101,9 +153,12 @@
           html += "<option value=\"" + esc(f.opts[j][0]) + "\">" + esc(f.opts[j][1]) + "</option>";
         }
         html += "</select></label>";
-      } else if (f.type === "text") {
-        html += "<label class=\"field\" for=\"" + id + "\"><span>" + esc(f.label) +
-          "</span><input type=\"text\" id=\"" + id + "\" spellcheck=\"false\"></label>";
+      } else if (f.type === "windows") {
+        html += windowsHtml(f);
+      } else if (f.type === "range") {
+        html += rangeHtml(f);
+      } else if (f.type === "override") {
+        html += overrideHtml(f);
       } else {
         html += "<label class=\"field\" for=\"" + id + "\"><span>" + esc(f.label) +
           "</span><input type=\"number\" id=\"" + id + "\" min=\"" + f.min +
@@ -115,23 +170,85 @@
     fillForm(d, list);
   }
 
+  // 内部串 "17:00-21:00:1111111|09:00-12:00:0000011" -> 两行控件。
+  // 时间里也有冒号，必须从最后一个冒号切，跟 Java 侧 SchedulePolicy 一致。
+  function fillWindows(key, raw) {
+    var parts = String(raw || "").split("|");
+    for (var i = 0; i < 2; i++) {
+      var p = parts[i] || "";
+      var last = p.lastIndexOf(":");
+      var mask = "1111111", times = ["", ""];
+      if (last >= 0) {
+        mask = p.substring(last + 1);
+        times = p.substring(0, last).split("-");
+      }
+      $("f_" + key + "_s" + i).value = times[0] || "";
+      $("f_" + key + "_e" + i).value = times[1] || "";
+      for (var d = 0; d < 7; d++) {
+        $("f_" + key + "_d" + i + "_" + d).checked = mask.charAt(d) === "1";
+      }
+    }
+  }
+  function fillRange(key, raw) {
+    var p = String(raw || ""), i = p.indexOf("~");
+    $("f_" + key + "_from").value = i > 0 ? p.substring(0, i) : "";
+    $("f_" + key + "_to").value = i > 0 ? p.substring(i + 1) : "";
+  }
+  function fillOverride(key, raw) {
+    var p = String(raw || ""), el = $("f_" + key);
+    el.value = p === today() + ":allow" ? "allow"
+      : (p === today() + ":block" ? "block" : "");
+  }
+
   function fillForm(d, list) {
     list = list || fields(d);
     for (var i = 0; i < list.length; i++) {
-      var f = list[i], el = $("f_" + f.key), v = d[f.key];
-      if (!el || v === undefined) continue;
+      var f = list[i], v = d[f.key];
+      if (v === undefined) continue;
+      if (f.type === "windows") { fillWindows(f.key, v); continue; }
+      if (f.type === "range") { fillRange(f.key, v); continue; }
+      if (f.type === "override") { fillOverride(f.key, v); continue; }
+      var el = $("f_" + f.key);
+      if (!el) continue;
       if (f.type === "bool") el.checked = !!v;
       else el.value = String(v);
     }
   }
 
+  function collectWindows(f) {
+    var parts = [];
+    for (var i = 0; i < 2; i++) {
+      var s = $("f_" + f.key + "_s" + i).value;
+      var e = $("f_" + f.key + "_e" + i).value;
+      if (!s || !e) continue;
+      var mask = "";
+      for (var d = 0; d < 7; d++) {
+        mask += $("f_" + f.key + "_d" + i + "_" + d).checked ? "1" : "0";
+      }
+      if (mask.indexOf("1") < 0) mask = "1111111";
+      parts.push(s + "-" + e + ":" + mask);
+    }
+    return parts.length ? parts.join("|") : f.def;
+  }
+  function collectRange(key) {
+    var a = $("f_" + key + "_from").value, b = $("f_" + key + "_to").value;
+    return (a && b) ? (a + "~" + b) : "";
+  }
+  function collectOverride(key) {
+    var v = $("f_" + key).value;
+    return v ? (today() + ":" + v) : "";
+  }
+
   function collect(d) {
     var body = {}, list = fields(d);
     for (var i = 0; i < list.length; i++) {
-      var f = list[i], el = $("f_" + f.key);
+      var f = list[i];
+      if (f.type === "windows") { body[f.key] = collectWindows(f); continue; }
+      if (f.type === "range") { body[f.key] = collectRange(f.key); continue; }
+      if (f.type === "override") { body[f.key] = collectOverride(f.key); continue; }
+      var el = $("f_" + f.key);
       if (!el) continue;
       if (f.type === "bool") body[f.key] = el.checked ? 1 : 0;
-      else if (f.type === "text") body[f.key] = String(el.value || "").trim();
       else {
         var n = parseInt(el.value, 10);
         if (!isNaN(n)) body[f.key] = n;

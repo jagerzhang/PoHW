@@ -8,7 +8,7 @@
 """
 import csv, io, json, os, re, sqlite3, collections
 
-ROOT = '/tmp/PoHW'
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 OUT = os.path.join(ROOT, '.build')
 os.makedirs(OUT, exist_ok=True)
 db = sqlite3.connect(os.path.join(ROOT, 'app/assets/quiz.db'))

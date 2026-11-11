@@ -11,7 +11,7 @@
 """
 import argparse, csv, hashlib, io, json, os, re, sqlite3, sys, collections
 
-ROOT = '/tmp/PoHW'
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 DB = os.path.join(ROOT, 'app/assets/quiz.db')
 STAMP = os.path.join(ROOT, 'app/assets/quiz.db.version')
 CAND = os.path.join(ROOT, '.build/bank-audit-candidates.csv')

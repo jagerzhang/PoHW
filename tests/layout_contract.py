@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="50"' in _mf, "manifest versionCode advances to 50")
-check('VERSION_CODE="50"' in b, "build script versionCode advances to 50")
+check('android:versionCode="52"' in _mf, "manifest versionCode advances to 52")
+check('VERSION_CODE="52"' in b, "build script versionCode advances to 52")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -348,8 +348,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "PROGRESS" in _scope,
       "runtime regression asserts term/edition/unit scoped draws")
-check('android:versionCode="50"' in _mf, "manifest versionCode advances to 50")
-check('VERSION_CODE="50"' in b, "build script versionCode advances to 50")
+check('android:versionCode="52"' in _mf, "manifest versionCode advances to 52")
+check('VERSION_CODE="52"' in b, "build script versionCode advances to 52")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -399,8 +399,8 @@ check("保留所有权利 · Proof of Homework" in _site and "jagerzhang · PoHW
       "footer copyright uses the new wording")
 check('id="year"' not in _site and 'getElementById("year")' not in _site_js,
       "footer year is fixed in HTML, not overwritten by JS")
-check("versionCode 50" in _site and "versionCode 21" in _site_js,
-      "site reports the latest build 50 and keeps the v1.0.2 card note")
+check("versionCode 52" in _site and "versionCode 21" in _site_js,
+      "site reports the latest build 52 and keeps the v1.0.2 card note")
 check("addView(bankRow, rowLp())" in s,
       "bank update and auto-update share one side-by-side row")
 check("track(btnCheck, rowSync)" in s,
@@ -427,10 +427,11 @@ _ch21 = read(os.path.join(ROOT, "CHANGELOG.md"))
 _rm21 = read(os.path.join(ROOT, "README.md"))
 _ci21 = os.path.join(ROOT, ".github/workflows/ci.yml")
 _ci_text = read(_ci21) if os.path.isfile(_ci21) else ""
-check('android:versionName="1.3.4"' in _mf21
-      and 'VERSION_NAME="1.3.4"' in _b21,
-      "display version is 1.3.4 in both manifest and build script")
-check(_site_js.count('version: "v1.3.4"') == 1
+check('android:versionName="1.3.5"' in _mf21
+      and 'VERSION_NAME="1.3.5"' in _b21,
+      "display version is 1.3.5 in both manifest and build script")
+check(_site_js.count('version: "v1.3.5"') == 1
+      and _site_js.count('version: "v1.3.4"') == 1
       and _site_js.count('version: "v1.3.3"') == 1
       and _site_js.count('version: "v1.3.2"') == 1
       and _site_js.count('version: "v1.3.1"') == 1
@@ -446,9 +447,10 @@ check(_site_js.count('version: "v1.3.4"') == 1
       and _site_js.count('version: "v1.0.2"') == 1
       and _site_js.count('version: "v1.0.1"') == 1
       and _site_js.count('version: "v1.0.0"') == 1
-      and _site_js.count('version: "') == 16,
-      "site release notes expose exactly sixteen distinct release versions")
-check(_ch21.count("\n## v1.3.4") == 1
+      and _site_js.count('version: "') == 17,
+      "site release notes expose exactly seventeen distinct release versions")
+check(_ch21.count("\n## v1.3.5") == 1
+      and _ch21.count("\n## v1.3.4") == 1
       and _ch21.count("\n## v1.3.3") == 1
       and _ch21.count("\n## v1.3.2") == 1
       and _ch21.count("\n## v1.3.1") == 1
@@ -462,7 +464,7 @@ check(_ch21.count("\n## v1.3.4") == 1
       and _ch21.count("\n## v1.0.2") == 1 and _ch21.count("\n## v1.0.1") == 1
       and _ch21.count("\n## v1.0.0") == 1
       and _ch21.count("\n## v0.9.0-re") == 1,
-      "changelog groups builds into sixteen releases plus one dev archive")
+      "changelog groups builds into seventeen releases plus one dev archive")
 check("## Dev build v6.0.0" not in _ch21 and "## Dev build v5.0.0" not in _ch21
       and "## v4.1.0" not in _ch21 and "## v1 - v3" not in _ch21,
       "pre-1.0 dev-build sections are collapsed into the 0.9.0-re archive")
@@ -790,8 +792,8 @@ check('canRetrieveWindowContent="false"' in _ax130
       "accessibility watchdog is read-only and permission bound")
 check('stopWithTask="false"' in _mf130,
       "guard service survives task removal")
-check('android:versionName="1.3.4"' in _mf130 and 'android:versionCode="50"' in _mf130,
-      "v1.3.4 is the published version in manifest")
+check('android:versionName="1.3.5"' in _mf130 and 'android:versionCode="52"' in _mf130,
+      "v1.3.5 is the published version in manifest")
 
 
 # ---- v1.3.0 未发布：答题选项长文本不得被固定高度网格裁切 ----

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "publishedAt": "2026-11-10",
+  "publishedAt": "2026-11-11",
   "main": {
     "versionName": "1.3.3",
     "versionCode": 47,
@@ -13,12 +13,12 @@
   },
   "legacy": {
     "versionName": "1.3.3",
-    "versionCode": 48,
+    "versionCode": 49,
     "minSdk": 14,
     "latest": "https://pohw.zhangge.net/dl/latest-legacy.apk",
     "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.3-legacy.apk",
-    "sha256": "4e1a31ebdf161d12721f5a76a0c3d514c713c94f15cadf6632c92cd7d91399fc",
-    "size": 2397975,
-    "notes": "Android 4.0 低配变体 v1.3.3-legacy（minSdk 14），与主线共用同一套题库与出题机制，读 legacy 更新通道"
+    "sha256": "1ab3b312867579cc4e1152d06ae6275aa37c1e6060bae6deadaa9b589fb320dc",
+    "size": 2430743,
+    "notes": "Android 4.0 低配变体 v1.3.3-legacy 修复版（versionCode 49 / minSdk 14）：修复 API 21+ 主题与高版本类引用导致的启动崩溃，保留 bank-v9 题库、学制切换与手机端全量设置，可直接覆盖安装 versionCode 48"
   }
 }

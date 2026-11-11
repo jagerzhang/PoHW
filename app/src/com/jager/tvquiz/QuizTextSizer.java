@@ -29,13 +29,25 @@ public final class QuizTextSizer {
 
     private QuizTextSizer() {}
 
+    /**
+     * 题干区在 1080p / density 2.0 的电视上只有约 74dp；长题干按旧分档
+     * (22sp) 三行会把末行裁成半截，整体降一档配合去字体留白。
+     */
     public static int sp(String s) {
         int n = s == null ? 0 : s.length();
-        if (n > 72) return 19;
-        if (n > 48) return 22;
-        if (n > 28) return 25;
-        if (n > 16) return 28;
-        return 30;
+        if (n > 72) return 16;
+        if (n > 48) return 18;
+        if (n > 28) return 21;
+        if (n > 16) return 25;
+        return 28;
+    }
+
+    /**
+     * 题干在给定可用高度里是否放得下。按 1.3 的保守行距估算（含默认字体
+     * 留白），比实际 1.05 行距更严，跨设备字体偏高时也不会裁末行。
+     */
+    public static boolean stemFits(int sp, int lines, int availableDp) {
+        return (int) Math.ceil(sp * 1.3f * lines) <= availableDp;
     }
 
     /**

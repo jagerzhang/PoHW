@@ -72,6 +72,7 @@ HOLV = os.path.join(ROOT, "app/assets/holidays.json.version")
 HCHK = os.path.join(ROOT, "tests/holiday_check.py")
 HFETCH = os.path.join(ROOT, "tools/holidays/fetch_holidays.py")
 SPT = os.path.join(ROOT, "tests/src/SchedulePolicyTest.java")
+BOOTSET = os.path.join(SRC, "BootSettings.java")
 RUNSH = os.path.join(ROOT, "tests/run.sh")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
@@ -79,7 +80,7 @@ for _i, p in enumerate((M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, 
            RM, CH, SJS, CI, APNG, UP, CD, DP, MP, PA, PC, UI, UCFG,
            RP, GW, OVL, AXML, OVLQ, ADMAS, QRJ, QTS,
            GP, BR, PV, PAIR, LAN, SGT, API, AIDX, AJS, ACSS,
-           HC, SP, HA, HOLJ, HOLV, HCHK, HFETCH, SPT, RUNSH)):
+           HC, SP, HA, HOLJ, HOLV, HCHK, HFETCH, SPT, RUNSH, BOOTSET)):
     # 不同目录下的同名文件（site/index.html 与 admin/index.html）必须用不同备份名，
     # 否则 restore() 会把手机管理页写回官网首页。
     BK[p] = os.path.join(BK_DIR, "%03d_%s.bk" % (_i, os.path.basename(p)))
@@ -428,6 +429,12 @@ MUTATIONS = [
     ("DF", "makeup workday treated as a home day in Java",
      lambda: replace(HC, 'if (e == 0) return DAY_SCHOOL;',
                      'if (e == 0) return DAY_HOME;'), False, True, False),
+    ("DG", "long-stem font padding restored",
+     lambda: replace(OVLQ, "text.setIncludeFontPadding(false);",
+                     "text.setIncludeFontPadding(true);"), False, True, False),
+    ("DH", "boot fallback hint removed",
+     lambda: replace(BOOTSET, "BootGuide.fallbackHint()", '""'),
+     False, True, False),
 ]
 
 print("--- baseline ---")

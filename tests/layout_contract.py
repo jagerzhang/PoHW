@@ -1199,4 +1199,40 @@ check(os.path.isfile(_cl137) and 'id="releases-list"' in read(_cl137)
 check(_site.count('<section') <= 7,
       "home page keeps a compact section count")
 
+# ---- v1.3.5 未发布：长题干不得被加权 TextView 裁掉末行 ----
+check("QuizTextSizer.sp(q.text)" in _ov130
+      and "text.setIncludeFontPadding(false)" in _ov130
+      and "text.setLineSpacing(0, 1.05f)" in _ov130
+      and "text.setMaxLines(5)" in _ov130
+      and "text.setEllipsize(null)" in _ov130,
+      "long stems drop font padding, tighten spacing and never ellipsize")
+check("if (n > 48) return 18;" in _qts130
+      and "if (n > 72) return 16;" in _qts130
+      and "stemFits(" in _qts130,
+      "long stems use safe font bands with a conservative fit calculation")
+
+# ---- v1.3.5：开机自启引导如实说明厂商差异与降级 ----
+_bs135 = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/BootSettings.java")))
+check("BootGuide.fallbackHint()" in _bs135
+      and "BootGuide.pathFor(" in _bs135
+      and "ACTION_APPLICATION_DETAILS_SETTINGS" in _bs135,
+      "boot settings explains the fallback to the app-info page")
+check("开机自启引导" in _mf133 and "厂商自启设置" not in _mf133,
+      "console button no longer promises a vendor-only autostart page")
+check("开机自启引导" in _st131v
+      and "BootGuide.pathFor(" in _st131v
+      and "BootGuide.fallbackHint()" in _st131v,
+      "settings page shows the vendor path and the honest fallback note")
+check(os.path.isfile(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/BootGuide.java"))
+      and os.path.isfile(os.path.join(ROOT, "tests/src/BootGuideTest.java"))
+      and "BootGuideTest" in read(os.path.join(ROOT, "tests/run.sh")),
+      "boot guide is pure Java and covered by a JVM regression")
+
+check("BootSettings.showGuide(MainActivity.this)" in _mf133
+      and "BootSettings.showGuide(SettingsActivity.this)" in _st131v
+      and "AlertDialog" in _bs135 and "去系统设置" in _bs135,
+      "autostart button explains vendor paths in a dialog before jumping")
+
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

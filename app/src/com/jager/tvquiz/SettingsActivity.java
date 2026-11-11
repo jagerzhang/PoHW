@@ -467,12 +467,9 @@ public class SettingsActivity extends Activity {
         rowResume = addRow(boot, "恢复播放", new View.OnClickListener() {
             @Override public void onClick(View v) { st.resumePlayback(!st.resumePlayback()); refreshRows(); }
         });
-        addButton(boot, "开启厂商自启动设置", 0xFF2C6E8F, new View.OnClickListener() {
+        addButton(boot, "开机自启引导", 0xFF2C6E8F, new View.OnClickListener() {
             @Override public void onClick(View v) {
-                BootSettings.open(SettingsActivity.this);
-                Toast.makeText(SettingsActivity.this,
-                        "小米等 ROM 需允许「自启动」，否则收不到开机广播",
-                        Toast.LENGTH_LONG).show();
+                BootSettings.showGuide(SettingsActivity.this);
             }
         });
         addButton(boot, "授权悬浮窗", 0xFF243044, new View.OnClickListener() {
@@ -480,6 +477,8 @@ public class SettingsActivity extends Activity {
         });
         note(boot, "「启动即守护」默认开启：打开 APP 即自动进入守护；「开机自启」默认关闭，"
                 + "需家长自行开启并允许厂商自启动权限后，才会随开机拉起。");
+        note(boot, BootGuide.pathFor(android.os.Build.MANUFACTURER));
+        note(boot, BootGuide.fallbackHint());
         note(boot, "暂停视频是 best-effort：靠音频焦点 + 媒体键请求播放器暂停，不保证所有视频 App 响应。");
         note(boot, "「授权悬浮窗」原在控制台，现移至本卡片；未授权时守护与立即出题都不可用。");
 

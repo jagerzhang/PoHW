@@ -21,7 +21,7 @@ SRC = os.path.join(ROOT, 'app/src/com/jager/tvquiz')
 MANIFEST = os.path.join(ROOT, 'app/AndroidManifest.xml')
 MIN_SDK = 14
 MIN_CODE = 49
-API_XML = os.path.join(os.environ.get('ANDROID_HOME', '/tmp/apkbuild/sdk'),
+API_XML = os.path.join(os.environ.get('ANDROID_HOME', '/data/workspace/apkbuild/sdk'),
                        'platforms/android-34/data/api-versions.xml')
 
 

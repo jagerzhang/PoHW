@@ -806,8 +806,8 @@ check("optionSp(" in _qts130 and "optionFits(" in _qts130,
 check("QuizTextSizer.optionSp(q.options)" in _ov130
       and "opts[i].setTextSize(" in _ov130,
       "all four option buttons share the dynamic size")
-check("setMaxLines(4)" in _ov130 and "setIncludeFontPadding(false)" in _ov130
-      and "setEllipsize(null)" in _ov130,
+check("b.setMaxLines(4)" in _ov130 and "b.setIncludeFontPadding(false);" in _ov130
+      and "b.setEllipsize(null)" in _ov130,
       "option buttons allow four lines without font padding or ellipsis")
 check("if (max > 48) return 14;" in _qts130
       and "if (max > 24) return 16;" in _qts130,

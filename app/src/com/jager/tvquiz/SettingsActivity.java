@@ -68,6 +68,24 @@ public class SettingsActivity extends Activity {
     private Button rowUpdate, btnUpdateInstall;
     /** v1.3.0 未发布：按组答题的两项设置。 */
     private Button rowRoundSize, rowPassRate;
+    /** issue #37：生效时段与节假日（默认全关，覆盖安装行为不变）。 */
+    private Button rowSchedule, rowSchoolWin, rowHomeWin, rowSkipHolidays,
+            rowVacation, rowTodayOverride;
+    private static final String[] SCHOOL_PRESETS = {
+            "17:00-21:00:1111111", "18:00-21:00:1111111",
+            "19:00-22:00:1111111", "16:00-20:00:1111111",
+            "00:00-23:59:1111111"
+    };
+    private static final String[] SCHOOL_PRESET_LABELS = {
+            "17:00–21:00", "18:00–21:00", "19:00–22:00", "16:00–20:00", "全天（不限）"
+    };
+    private static final String[] HOME_PRESETS = {
+            "09:00-21:00:1111111", "08:00-22:00:1111111",
+            "10:00-20:00:1111111", "00:00-23:59:1111111"
+    };
+    private static final String[] HOME_PRESET_LABELS = {
+            "09:00–21:00", "08:00–22:00", "10:00–20:00", "全天（不限）"
+    };
     private TextView updateStatus;
     /** 防重入标志：绝不用 setEnabled(false) 禁用已登记焦点链的按钮。 */
     private boolean updateChecking = false, updateDownloading = false;
@@ -649,6 +667,61 @@ public class SettingsActivity extends Activity {
         upd.addView(updateStatus, rowLp());
         note(upd, "发现新版本只会提示；下载与安装需家长主动点击，系统安装界面仍需手动确认。");
 
+        // ---- 07 生效时段与节假日（issue #37，默认全关）----
+        LinearLayout sched = addCard(col, "07  生效时段与节假日（可选 · 默认关闭）");
+        note(sched, "开启后只在这些时段弹题。上学日 / 在家日由内置节假日日历自动判定，"
+                + "含法定假日与调休补班（周末要上学）。精确日期与多段时间请在手机管理页填写；"
+                + "时段外只拦新题，守护服务与已弹出的题都不受影响。");
+        rowSchedule = addRow(sched, "生效时段", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                st.scheduleEnabled(!st.scheduleEnabled());
+                refreshRows();
+            }
+        });
+        rowSchoolWin = addRow(sched, "上学日可答题", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                int i = presetIndex(st.schoolWindows(), SCHOOL_PRESETS);
+                st.schoolWindows(SCHOOL_PRESETS[(i + 1) % SCHOOL_PRESETS.length]);
+                refreshRows();
+            }
+        });
+        rowHomeWin = addRow(sched, "在家日可答题", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                int i = presetIndex(st.homeWindows(), HOME_PRESETS);
+                st.homeWindows(HOME_PRESETS[(i + 1) % HOME_PRESETS.length]);
+                refreshRows();
+            }
+        });
+        rowSkipHolidays = addRow(sched, "智能跳过节假日", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                st.skipHolidays(!st.skipHolidays());
+                refreshRows();
+            }
+        });
+        rowVacation = addRow(sched, "假期模式（寒暑假）", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                String[] presets = vacationPresets();
+                int i = 0;
+                for (int k = 0; k < presets.length; k++) {
+                    if (presets[k].equals(st.vacationRange())) { i = k; break; }
+                }
+                st.vacationRange(presets[(i + 1) % presets.length]);
+                refreshRows();
+            }
+        });
+        rowTodayOverride = addRow(sched, "今天临时", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                String today = HolidayCalendar.dateKey(java.util.Calendar.getInstance());
+                String[] presets = {"", today + ":allow", today + ":block"};
+                int i = 0;
+                for (int k = 0; k < presets.length; k++) {
+                    if (presets[k].equals(st.todayOverride())) { i = k; break; }
+                }
+                st.todayOverride(presets[(i + 1) % presets.length]);
+                refreshRows();
+            }
+        });
+
         root.addView(sv, Ui.fill(1));
 
         // ---- 底部固定操作条：长表单滚动时仍可随时保存 ----
@@ -679,6 +752,40 @@ public class SettingsActivity extends Activity {
         return root;
     }
 
+
+    private static int presetIndex(String value, String[] presets) {
+        for (int i = 0; i < presets.length; i++) {
+            if (presets[i].equals(value)) return i;
+        }
+        return -1;
+    }
+
+    /** 手机端可能写了任意合法窗口，电视端如实显示而不是显示内部字符串。 */
+    private String windowLabel(String value, String[] presets, String[] labels) {
+        int i = presetIndex(value, presets);
+        if (i >= 0) return labels[i];
+        java.util.List<SchedulePolicy.Window> ws = SchedulePolicy.parseWindows(value);
+        if (ws.isEmpty()) return "未设置（点选预设）";
+        StringBuilder b = new StringBuilder();
+        for (int k = 0; k < ws.size(); k++) {
+            if (k > 0) b.append(" / ");
+            SchedulePolicy.Window w = ws.get(k);
+            b.append(String.format("%02d:%02d–%02d:%02d",
+                    Integer.valueOf(w.start / 60), Integer.valueOf(w.start % 60),
+                    Integer.valueOf(w.end / 60), Integer.valueOf(w.end % 60)));
+        }
+        return b.toString();
+    }
+
+    /** 未设置 / 当年暑假 / 跨年寒假；年份动态算，不会写死过期。 */
+    private static String[] vacationPresets() {
+        int y = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
+        return new String[]{
+                "",
+                y + "-07-01~" + y + "-08-31",
+                y + "-12-20~" + (y + 1) + "-02-28"
+        };
+    }
     private String intervalLabel() {
         int sec = st.intervalSec();
         for (int i = 0; i < SettingsStore.INTERVALS.length; i++) {
@@ -848,6 +955,23 @@ public class SettingsActivity extends Activity {
         if (!urlDirty) setUrlText(st.bankUrl(), false);
         pinState.setText(st.hasPin() ? "家长密码：已设置 ✓" : "家长密码：未设置 ✗");
         updateBankStatus();
+        if (rowSchedule != null) {
+            HolidayCalendar hc = HolidayAssets.get(this);
+            rowSchedule.setText(st.scheduleEnabled()
+                    ? "开启（仅生效时段内弹题）" : "关闭（全天可弹题 · 默认）");
+            rowSchoolWin.setText(windowLabel(st.schoolWindows(),
+                    SCHOOL_PRESETS, SCHOOL_PRESET_LABELS));
+            rowHomeWin.setText(windowLabel(st.homeWindows(),
+                    HOME_PRESETS, HOME_PRESET_LABELS));
+            rowSkipHolidays.setText(st.skipHolidays()
+                    ? ("开启（日历至 " + hc.lastCoveredYear() + " 年）") : "关闭（仅按星期）");
+            String vr = st.vacationRange();
+            rowVacation.setText(vr.isEmpty() ? "未设置（点选寒暑假）" : vr.replace("~", " 至 "));
+            String ov = st.todayOverride();
+            rowTodayOverride.setText(ov.isEmpty() ? "无（按日程）"
+                    : (ov.endsWith(":allow") ? "今天全天放行（隔天自动失效）"
+                                            : "今天全天屏蔽（隔天自动失效）"));
+        }
         if (rowUpdate != null) {
             rowUpdate.setText(st.autoCheckUpdate()
                     ? "开启（每 24 小时检查一次）" : "关闭（仅手动检查）");

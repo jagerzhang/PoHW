@@ -402,6 +402,64 @@ public final class SettingsStore implements PinGate.Store {
         return sb.toString();
     }
 
+    // ---- issue #37：生效时段与节假日（默认全关，覆盖安装行为不变）----
+    public boolean scheduleEnabled() {
+        return sp.getBoolean("scheduleEnabled", false);
+    }
+    public void scheduleEnabled(boolean v) {
+        sp.edit().putBoolean("scheduleEnabled", v).commit();
+    }
+
+    /** 智能跳过法定节假日与调休补班日，默认开。 */
+    public boolean skipHolidays() {
+        return sp.getBoolean("skipHolidays", true);
+    }
+    public void skipHolidays(boolean v) {
+        sp.edit().putBoolean("skipHolidays", v).commit();
+    }
+
+    public String schoolWindows() {
+        return sp.getString("schoolWindows", SchedulePolicy.DEFAULT_SCHOOL_WINDOWS);
+    }
+    public void schoolWindows(String v) {
+        sp.edit().putString("schoolWindows", v == null ? "" : v.trim()).commit();
+    }
+
+    public String homeWindows() {
+        return sp.getString("homeWindows", SchedulePolicy.DEFAULT_HOME_WINDOWS);
+    }
+    public void homeWindows(String v) {
+        sp.edit().putString("homeWindows", v == null ? "" : v.trim()).commit();
+    }
+
+    /** 假期模式（寒暑假）"YYYY-MM-DD~YYYY-MM-DD"，区间外自动恢复。 */
+    public String vacationRange() {
+        return sp.getString("vacationRange", "");
+    }
+    public void vacationRange(String v) {
+        sp.edit().putString("vacationRange", v == null ? "" : v.trim()).commit();
+    }
+
+    /** 当天临时覆盖 "YYYY-MM-DD:allow|block"，隔天自动失效。 */
+    public String todayOverride() {
+        return sp.getString("todayOverride", "");
+    }
+    public void todayOverride(String v) {
+        sp.edit().putString("todayOverride", v == null ? "" : v.trim()).commit();
+    }
+
+    /** 守护服务用的纯 Java 判定入参；与手机端 /api/config 逐字段同源。 */
+    public SchedulePolicy.Config scheduleConfig() {
+        SchedulePolicy.Config c = SchedulePolicy.Config.defaults();
+        c.enabled = scheduleEnabled();
+        c.skipHolidays = skipHolidays();
+        c.schoolWindows = schoolWindows();
+        c.homeWindows = homeWindows();
+        c.vacationRange = vacationRange();
+        c.todayOverride = todayOverride();
+        return c;
+    }
+
     private static byte[] unhex(String s) {
         if (s == null || s.length() % 2 != 0) return null;
         byte[] out = new byte[s.length() / 2];

@@ -1167,8 +1167,14 @@ check("if (!SchedulePolicy.validWindows(v)) continue;" in _api137
       "LAN admin validates window, vacation and override formats before writing")
 check("holidayCoverageEnd" in _api137 and "scheduleAllowedNow" in _api137,
       "phone page can show calendar coverage and whether a quiz is allowed now")
-check('input[type=text]' in _css134 and 'type === "text"' in _js137,
-      "phone page renders free-form schedule inputs")
+check('input[type=time]' in _css134 and 'input[type=date]' in _css134
+      and all(t in _js137 for t in ('type === "windows"', 'type === "range"',
+                                    'type === "override"', 'week-picks',
+                                    'collectWindows', 'fillWindows'))
+      and 'type: "text"' not in _js137
+      and 'HH:mm-HH:mm:掩码' not in _js137
+      and 'YYYY-MM-DD:allow 或 :block' not in _js137,
+      "phone page uses visual time/week/date controls instead of raw mask strings")
 check('addCard(col, "07' in _set137
       and all(("addRow(sched, \"" + label) in _set137
               for label in ("生效时段", "上学日可答题", "在家日可答题",
@@ -1177,5 +1183,18 @@ check('addCard(col, "07' in _set137
 check("HolidayCalendar.java" in _run137 and "SchedulePolicy.java" in _run137
       and "SchedulePolicyTest.java" in _run137,
       "JVM suite compiles and runs the pure-Java schedule tests")
+
+
+# ---- 官网精简：版本记录移出首页，独立页承接 ----
+check('id="releases"' not in _site and 'releases-list' not in _site
+      and 'href="changelog.html"' in _site
+      and '<section id="features"' in _site and '<section id="faq"' in _site,
+      "home page links to a separate changelog instead of embedding 15 cards")
+_cl137 = os.path.join(ROOT, "site/changelog.html")
+check(os.path.isfile(_cl137) and 'id="releases-list"' in read(_cl137)
+      and 'script.js' in read(_cl137),
+      "changelog page hosts the release timeline and reuses the shared script")
+check(_site.count('<section') <= 7,
+      "home page keeps a compact section count")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

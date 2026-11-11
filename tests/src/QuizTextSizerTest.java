@@ -16,8 +16,15 @@ public class QuizTextSizerTest {
     }
 
     public static void main(String[] args) {
-        ok("T01 题干短文本 30sp", QuizTextSizer.sp("1+1=?") == 30);
-        ok("T02 题干长文本降号", QuizTextSizer.sp(longText(80)) == 19);
+        ok("T01 题干短文本 28sp", QuizTextSizer.sp("1+1=?") == 28);
+        ok("T02 超长题干降到 16sp", QuizTextSizer.sp(longText(80)) == 16);
+        ok("T03 68 字题干降到 18sp", QuizTextSizer.sp(longText(68)) == 18);
+        ok("T04 旧 22sp 三行在 74dp 题干区放不下",
+                !QuizTextSizer.stemFits(22, 3, 74));
+        ok("T05 新 18sp 三行放得下",
+                QuizTextSizer.stemFits(18, 3, 74));
+        ok("T06 通过过滤的最长题干仍放得下",
+                QuizTextSizer.stemFits(QuizTextSizer.sp(longText(89)), 3, 74));
 
         ok("O01 短选项保持 24sp",
                 QuizTextSizer.optionSp(new String[]{"15", "16", "17", "18"}) == 24);

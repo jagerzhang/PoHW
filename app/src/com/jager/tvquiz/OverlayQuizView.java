@@ -86,6 +86,12 @@ public final class OverlayQuizView {
         text = Ui.tv(c, "", 30, Ui.TEXT);
         text.setGravity(Gravity.CENTER);
         text.setPadding(Ui.dp(c, 20), 0, Ui.dp(c, 20), 0);
+        // 题干用 Ui.fill(1) 只拿到剩余高度：去掉字体留白、收紧行距，
+        // 否则 50+ 字题干的第三行会被下面的选项网格压掉半截。
+        text.setIncludeFontPadding(false);
+        text.setLineSpacing(0, 1.05f);
+        text.setMaxLines(5);
+        text.setEllipsize(null);
         card.addView(text, Ui.fill(1));
 
         LinearLayout grid = Ui.hbox(c);

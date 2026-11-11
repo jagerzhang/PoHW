@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="50"' in _mf, "manifest versionCode advances to 50")
-check('VERSION_CODE="50"' in b, "build script versionCode advances to 50")
+check('android:versionCode="52"' in _mf, "manifest versionCode advances to 52")
+check('VERSION_CODE="52"' in b, "build script versionCode advances to 52")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -348,8 +348,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "PROGRESS" in _scope,
       "runtime regression asserts term/edition/unit scoped draws")
-check('android:versionCode="50"' in _mf, "manifest versionCode advances to 50")
-check('VERSION_CODE="50"' in b, "build script versionCode advances to 50")
+check('android:versionCode="52"' in _mf, "manifest versionCode advances to 52")
+check('VERSION_CODE="52"' in b, "build script versionCode advances to 52")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -399,8 +399,8 @@ check("保留所有权利 · Proof of Homework" in _site and "jagerzhang · PoHW
       "footer copyright uses the new wording")
 check('id="year"' not in _site and 'getElementById("year")' not in _site_js,
       "footer year is fixed in HTML, not overwritten by JS")
-check("versionCode 50" in _site and "versionCode 21" in _site_js,
-      "site reports the latest build 50 and keeps the v1.0.2 card note")
+check("versionCode 52" in _site and "versionCode 21" in _site_js,
+      "site reports the latest build 52 and keeps the v1.0.2 card note")
 check("addView(bankRow, rowLp())" in s,
       "bank update and auto-update share one side-by-side row")
 check("track(btnCheck, rowSync)" in s,
@@ -427,10 +427,11 @@ _ch21 = read(os.path.join(ROOT, "CHANGELOG.md"))
 _rm21 = read(os.path.join(ROOT, "README.md"))
 _ci21 = os.path.join(ROOT, ".github/workflows/ci.yml")
 _ci_text = read(_ci21) if os.path.isfile(_ci21) else ""
-check('android:versionName="1.3.4"' in _mf21
-      and 'VERSION_NAME="1.3.4"' in _b21,
-      "display version is 1.3.4 in both manifest and build script")
-check(_site_js.count('version: "v1.3.4"') == 1
+check('android:versionName="1.3.5"' in _mf21
+      and 'VERSION_NAME="1.3.5"' in _b21,
+      "display version is 1.3.5 in both manifest and build script")
+check(_site_js.count('version: "v1.3.5"') == 1
+      and _site_js.count('version: "v1.3.4"') == 1
       and _site_js.count('version: "v1.3.3"') == 1
       and _site_js.count('version: "v1.3.2"') == 1
       and _site_js.count('version: "v1.3.1"') == 1
@@ -446,9 +447,10 @@ check(_site_js.count('version: "v1.3.4"') == 1
       and _site_js.count('version: "v1.0.2"') == 1
       and _site_js.count('version: "v1.0.1"') == 1
       and _site_js.count('version: "v1.0.0"') == 1
-      and _site_js.count('version: "') == 16,
-      "site release notes expose exactly sixteen distinct release versions")
-check(_ch21.count("\n## v1.3.4") == 1
+      and _site_js.count('version: "') == 17,
+      "site release notes expose exactly seventeen distinct release versions")
+check(_ch21.count("\n## v1.3.5") == 1
+      and _ch21.count("\n## v1.3.4") == 1
       and _ch21.count("\n## v1.3.3") == 1
       and _ch21.count("\n## v1.3.2") == 1
       and _ch21.count("\n## v1.3.1") == 1
@@ -462,7 +464,7 @@ check(_ch21.count("\n## v1.3.4") == 1
       and _ch21.count("\n## v1.0.2") == 1 and _ch21.count("\n## v1.0.1") == 1
       and _ch21.count("\n## v1.0.0") == 1
       and _ch21.count("\n## v0.9.0-re") == 1,
-      "changelog groups builds into sixteen releases plus one dev archive")
+      "changelog groups builds into seventeen releases plus one dev archive")
 check("## Dev build v6.0.0" not in _ch21 and "## Dev build v5.0.0" not in _ch21
       and "## v4.1.0" not in _ch21 and "## v1 - v3" not in _ch21,
       "pre-1.0 dev-build sections are collapsed into the 0.9.0-re archive")
@@ -790,8 +792,8 @@ check('canRetrieveWindowContent="false"' in _ax130
       "accessibility watchdog is read-only and permission bound")
 check('stopWithTask="false"' in _mf130,
       "guard service survives task removal")
-check('android:versionName="1.3.4"' in _mf130 and 'android:versionCode="50"' in _mf130,
-      "v1.3.4 is the published version in manifest")
+check('android:versionName="1.3.5"' in _mf130 and 'android:versionCode="52"' in _mf130,
+      "v1.3.5 is the published version in manifest")
 
 
 # ---- v1.3.0 未发布：答题选项长文本不得被固定高度网格裁切 ----
@@ -804,8 +806,8 @@ check("optionSp(" in _qts130 and "optionFits(" in _qts130,
 check("QuizTextSizer.optionSp(q.options)" in _ov130
       and "opts[i].setTextSize(" in _ov130,
       "all four option buttons share the dynamic size")
-check("setMaxLines(4)" in _ov130 and "setIncludeFontPadding(false)" in _ov130
-      and "setEllipsize(null)" in _ov130,
+check("b.setMaxLines(4)" in _ov130 and "b.setIncludeFontPadding(false);" in _ov130
+      and "b.setEllipsize(null)" in _ov130,
       "option buttons allow four lines without font padding or ellipsis")
 check("if (max > 48) return 14;" in _qts130
       and "if (max > 24) return 16;" in _qts130,
@@ -1198,5 +1200,41 @@ check(os.path.isfile(_cl137) and 'id="releases-list"' in read(_cl137)
       "changelog page hosts the release timeline and reuses the shared script")
 check(_site.count('<section') <= 7,
       "home page keeps a compact section count")
+
+# ---- v1.3.5 未发布：长题干不得被加权 TextView 裁掉末行 ----
+check("QuizTextSizer.sp(q.text)" in _ov130
+      and "text.setIncludeFontPadding(false)" in _ov130
+      and "text.setLineSpacing(0, 1.05f)" in _ov130
+      and "text.setMaxLines(5)" in _ov130
+      and "text.setEllipsize(null)" in _ov130,
+      "long stems drop font padding, tighten spacing and never ellipsize")
+check("if (n > 48) return 18;" in _qts130
+      and "if (n > 72) return 16;" in _qts130
+      and "stemFits(" in _qts130,
+      "long stems use safe font bands with a conservative fit calculation")
+
+# ---- v1.3.5：开机自启引导如实说明厂商差异与降级 ----
+_bs135 = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/BootSettings.java")))
+check("BootGuide.fallbackHint()" in _bs135
+      and "BootGuide.pathFor(" in _bs135
+      and "ACTION_APPLICATION_DETAILS_SETTINGS" in _bs135,
+      "boot settings explains the fallback to the app-info page")
+check("开机自启引导" in _mf133 and "厂商自启设置" not in _mf133,
+      "console button no longer promises a vendor-only autostart page")
+check("开机自启引导" in _st131v
+      and "BootGuide.pathFor(" in _st131v
+      and "BootGuide.fallbackHint()" in _st131v,
+      "settings page shows the vendor path and the honest fallback note")
+check(os.path.isfile(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/BootGuide.java"))
+      and os.path.isfile(os.path.join(ROOT, "tests/src/BootGuideTest.java"))
+      and "BootGuideTest" in read(os.path.join(ROOT, "tests/run.sh")),
+      "boot guide is pure Java and covered by a JVM regression")
+
+check("BootSettings.showGuide(MainActivity.this)" in _mf133
+      and "BootSettings.showGuide(SettingsActivity.this)" in _st131v
+      and "AlertDialog" in _bs135 and "去系统设置" in _bs135,
+      "autostart button explains vendor paths in a dialog before jumping")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

@@ -119,11 +119,13 @@ def replace(p, old, new):
 def env_for(with_key):
     env = os.environ.copy()
     env["JAVA_HOME"] = "/opt/jdk17"
-    env["ANDROID_HOME"] = "/tmp/apkbuild/sdk"
+    env["ANDROID_HOME"] = os.environ.get("ANDROID_HOME",
+                                        "/data/workspace/apkbuild/sdk")
     for k in ("POHW_KEYSTORE", "POHW_KEYSTORE_PASS", "POHW_ALLOW_DEV_SIGN"):
         env.pop(k, None)
     if with_key:
-        env["POHW_KEYSTORE"] = "/tmp/apkbuild/debug.keystore"
+        env["POHW_KEYSTORE"] = os.environ.get("POHW_KEYSTORE",
+                                          "/data/workspace/PoHW-release-signing-key.keystore")
         env["POHW_KEYSTORE_PASS"] = "android"
     return env
 

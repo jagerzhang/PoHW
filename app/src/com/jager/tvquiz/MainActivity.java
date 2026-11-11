@@ -245,7 +245,7 @@ public class MainActivity extends Activity {
 
     private boolean canDraw() {
         if (Build.VERSION.SDK_INT < 23) return true;
-        return Settings.canDrawOverlays(this);
+        return Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(this);
     }
 
     private void send(String action) {

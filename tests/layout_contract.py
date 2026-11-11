@@ -179,8 +179,8 @@ check("SubjectWeights.MAX_WEIGHT + 1" in raw_s,
       "UI weight cycle is driven by the same max weight")
 check("Subjects.norm(subject)" in _st and '"w" + s' in _st,
       "settings store persists all four normalized slots")
-check('android:versionCode="47"' in _mf, "manifest versionCode advances to 47")
-check('VERSION_CODE="47"' in b, "build script versionCode advances to 47")
+check('android:versionCode="49"' in _mf, "manifest versionCode advances to 49")
+check('VERSION_CODE="49"' in b, "build script versionCode advances to 49")
 check("SubjectWeights.java" in _run and "SubjectWeightsTest" in _run,
       "new weights class and JVM test are wired into the test runner")
 check("bank_distribution_check.py" in b,
@@ -348,8 +348,8 @@ check("build_syllabus.py --check" in b and "study_scope_check.py" in b,
       "build runs both syllabus consistency and runtime scope regressions")
 check("STUDY_SCOPE_OK" in _scope and "PROGRESS" in _scope,
       "runtime regression asserts term/edition/unit scoped draws")
-check('android:versionCode="47"' in _mf, "manifest versionCode advances to 47")
-check('VERSION_CODE="47"' in b, "build script versionCode advances to 47")
+check('android:versionCode="49"' in _mf, "manifest versionCode advances to 49")
+check('VERSION_CODE="49"' in b, "build script versionCode advances to 49")
 
 
 # ---- code19：品牌口号统一（官网 + TV 横幅生成脚本）----
@@ -776,8 +776,11 @@ check('android.intent.action.USER_PRESENT' in _mf130
 check('.ReviveReceiver' in _mf130
       and 'android:permission="android.permission.RECEIVE_BOOT_COMPLETED"' in _mf130,
       "revive receiver is separate from the protected boot receiver")
-check("setPersisted(true)" in _gw130 and "setInexactRepeating" in _gw130,
-      "watchdog uses both JobScheduler and AlarmManager")
+check("setInexactRepeating" in _gw130
+      and "JobService" not in strip_comments(_gw130)
+      and "android.app.job" not in strip_comments(_gw130)
+      and "setPersisted(true)" not in _gw130,
+      "android4 watchdog uses only AlarmManager, no API21 class references")
 check("GuardWatchdog.schedule(this)" in _o130
       and "GuardWatchdog.scheduleAlarm(this)" in _o130,
       "guard service actually schedules both watchdog paths")
@@ -788,8 +791,8 @@ check('canRetrieveWindowContent="false"' in _ax130
       "accessibility watchdog is read-only and permission bound")
 check('stopWithTask="false"' in _mf130,
       "guard service survives task removal")
-check('android:versionName="1.3.3"' in _mf130 and 'android:versionCode="47"' in _mf130,
-      "v1.3.3 is the published version in manifest")
+check('android:versionName="1.3.3"' in _mf130 and 'android:versionCode="49"' in _mf130,
+      "v1.3.3-legacy compat build is versionCode 49 in manifest")
 
 
 # ---- v1.3.0 未发布：答题选项长文本不得被固定高度网格裁切 ----
@@ -966,8 +969,10 @@ check('getBoolean("overlayWasGranted", false)' in _sto133
 check("blocked_no_channel" in _svc133 and "blocked_no_channel" in _br133
       and "st.lastStartVia(" in _mf133,
       "silent failures now leave a diagnosable trace")
-check("IMPORTANCE_HIGH" in _not133 and "ACTION_MANAGE_OVERLAY_PERMISSION" in _not133,
-      "revocation notice is high priority and links to the system grant page")
+check("setContentIntent(pi)" in _not133
+      and "ACTION_APPLICATION_DETAILS_SETTINGS" in _not133
+      and "NotificationChannel" not in strip_comments(_not133),
+      "android4 revocation notice is clickable without API26 channels")
 check('"## 变更记录"' not in _rm133 and "开机 / 重启后守护没起来" in _rm133,
       "README drops the duplicated changelog table and documents the Hisense case")
 check(os.path.isfile(os.path.join(ROOT, "tests/src/OverlayChannelTest.java")),
@@ -1086,5 +1091,30 @@ check(_set134.count("setMaxLines(4)") >= 4 and "setMaxLines(2)" not in _set134,
 check("word-break:break-word" in _css134 and "white-space:normal" in _css134
       and 'id="form"' in _html134 and "保存并生效" in _html134,
       "phone page wraps long labels and renders the full form")
+
+# ---- Android 4.0 低配：主题 / 字段类型 / 音频焦点不得引用高版本类 ----
+_mf_a4 = read(os.path.join(ROOT, "app/AndroidManifest.xml"))
+_gw_a4 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/GuardWatchdog.java")))
+_mp_a4 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/MediaPauseController.java")))
+_no_a4 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/GuardNotice.java")))
+_sv_a4 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizOverlayService.java")))
+check("Theme.Holo.Light.NoActionBar" in _mf_a4 and "Theme.Material" not in _mf_a4,
+      "android4 manifest uses an API14 theme")
+check('android:minSdkVersion="14"' in _mf_a4
+      and 'android:versionCode="49"' in _mf_a4,
+      "android4 build is minSdk 14 and can upgrade devices on 48")
+check(all(t not in (_gw_a4 + _mp_a4 + _no_a4 + _sv_a4) for t in (
+      "android.app.job", "JobService", "new NotificationChannel",
+      "import android.app.NotificationChannel", "AudioFocusRequest",
+      "AudioAttributes", "Notification.BigTextStyle")),
+      "android4 sources contain no API>14 framework class references")
+check("Class.forName(\"android.app.NotificationChannel\")" in read(
+      os.path.join(ROOT, "app/src/com/jager/tvquiz/NotifCompat.java")),
+      "channel is created reflectively so the dex stays API14-clean")
+check("requestAudioFocus(focusListener" in _mp_a4
+      and "abandonAudioFocus(focusListener)" in _mp_a4,
+      "android4 audio focus uses the deprecated API1 overload")
+check(os.path.isfile(os.path.join(ROOT, "tests/android4_compat_check.py")),
+      "android4 dex compatibility gate ships with the source")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

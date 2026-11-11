@@ -1,7 +1,6 @@
 package com.jager.tvquiz;
 
 import android.app.Notification;
-import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -337,7 +336,7 @@ public class QuizOverlayService extends Service {
 
     private boolean canDraw() {
         if (Build.VERSION.SDK_INT < 23) return true;
-        return Settings.canDrawOverlays(this);
+        return Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(this);
     }
 
     private void startGuard() {
@@ -386,16 +385,8 @@ public class QuizOverlayService extends Service {
     }
 
     private Notification buildNotification() {
-        if (Build.VERSION.SDK_INT >= 26) {
-            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            NotificationChannel ch = new NotificationChannel(CHANNEL,
-                    getString(R.string.guard_channel), NotificationManager.IMPORTANCE_LOW);
-            ch.setDescription(getString(R.string.guard_notification_text));
-            nm.createNotificationChannel(ch);
-        }
-        Notification.Builder b = Build.VERSION.SDK_INT >= 26
-                ? new Notification.Builder(this, CHANNEL)
-                : new Notification.Builder(this);
+        // 反射建 channel：Android 4 不加载任何 API>14 类，高版本前台服务也不崩。
+        Notification.Builder b = NotifCompat.builder(this, CHANNEL);
         b.setSmallIcon(R.drawable.ic_stat_quiz)
                 .setContentTitle(getString(R.string.guard_notification_title))
                 .setContentText(getString(R.string.guard_notification_text))

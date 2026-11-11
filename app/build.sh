@@ -8,8 +8,8 @@ APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
 VERSION_NAME="1.3.3"
-VERSION_CODE="47"
-APK_NAME="PoHW-v${VERSION_NAME}.apk"
+VERSION_CODE="49"
+APK_NAME="PoHW-v${VERSION_NAME}-legacy.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
 : "${ANDROID_HOME:=$HOME/Android/Sdk}"
@@ -141,6 +141,8 @@ python3 tests/study_scope_check.py
 python3 tests/bank_quality_check.py
 # v1.2.5：在线更新清单结构、缓存规则与下载白名单必须与源码同源。
 python3 tools/publish/update_manifest.py --check
+# Android 4.0 低配：源码不得引用 API>14 类，主题必须是 Holo。
+python3 tests/android4_compat_check.py
 # v1.2.4：练习页禁止零高度权重布局（题干 / 选项被压成 0 高度＝「没有内容」）。
 if grep -v -e '^[[:space:]]*//' -e '^[[:space:]]*\*' "$SRC"/*.java \
     | grep -qF 'Ui.fill(0)'; then
@@ -238,7 +240,7 @@ aapt2 link -o "$BUILD/out/base.apk" \
   --manifest "$APP/AndroidManifest.xml" \
   -A "$APP/assets" \
   --java "$BUILD/gen" \
-  --min-sdk-version 21 --target-sdk-version 33 \
+  --min-sdk-version 14 --target-sdk-version 33 \
   --version-code "$VERSION_CODE" --version-name "$VERSION_NAME" \
   "$BUILD/out/res.zip"
 
@@ -253,7 +255,7 @@ javac -source 8 -target 8 -encoding UTF-8 -nowarn \
 
 echo "[6/9] d8"
 find "$BUILD/classes" -name '*.class' > "$BUILD/classes.txt"
-d8 --lib "$ANDROID_JAR" --min-api 21 --output "$BUILD/dexout" @"$BUILD/classes.txt"
+d8 --lib "$ANDROID_JAR" --min-api 14 --output "$BUILD/dexout" @"$BUILD/classes.txt"
 if grep -aq 'v4.1 控制台' "$BUILD/dexout/classes.dex"; then
   echo 'OLD HARDCODED TITLE IN DEX'; exit 1
 fi
@@ -306,6 +308,7 @@ elif [ "$ACTUAL_CERT_SHA256" != "$RELEASE_CERT_SHA256" ]; then
 fi
 
 echo "[9/9] artifact checks"
+python3 tests/android4_compat_check.py --apk "$DIST/$APK_NAME"
 aapt dump badging "$DIST/$APK_NAME" 2>/dev/null | grep -q "versionName='$VERSION_NAME'"
 aapt dump badging "$DIST/$APK_NAME" 2>/dev/null | grep -q "versionCode='$VERSION_CODE'"
 unzip -l "$DIST/$APK_NAME" | grep -q 'assets/quiz.db'

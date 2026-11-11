@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- 在线更新通道：主线 main；Android 4.0 低配分支改为 legacy，本轮低配不接入更新检查。 -->
-    <string name="update_channel">main</string>
+    <string name="update_channel">legacy</string>
 </resources>

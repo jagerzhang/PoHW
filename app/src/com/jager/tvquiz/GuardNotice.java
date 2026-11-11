@@ -1,7 +1,6 @@
 package com.jager.tvquiz;
 
 import android.app.Notification;
-import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -30,28 +29,19 @@ public final class GuardNotice {
             NotificationManager nm = (NotificationManager)
                     c.getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm == null) return;
-            if (Build.VERSION.SDK_INT >= 26) {
-                NotificationChannel ch = new NotificationChannel(CHANNEL,
-                        "守护权限提醒", NotificationManager.IMPORTANCE_HIGH);
-                ch.setDescription("悬浮窗授权被系统撤销时提醒家长重新授权");
-                nm.createNotificationChannel(ch);
-            }
-            Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            // Android 4 没有 NotificationChannel(API 26) 与悬浮窗授权页(API 23)，
+            // 低配统一跳应用详情页，通知用旧 Builder。
+            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     Uri.parse("package:" + c.getPackageName()));
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             int flags = PendingIntent.FLAG_UPDATE_CURRENT;
             if (Build.VERSION.SDK_INT >= 23) flags |= PendingIntent.FLAG_IMMUTABLE;
             PendingIntent pi = PendingIntent.getActivity(c, ID_REVOKED, i, flags);
 
-            Notification.Builder b = Build.VERSION.SDK_INT >= 26
-                    ? new Notification.Builder(c, CHANNEL)
-                    : new Notification.Builder(c);
+            Notification.Builder b = NotifCompat.builder(c, CHANNEL);
             b.setSmallIcon(R.drawable.ic_stat_quiz)
                     .setContentTitle("悬浮窗授权被系统撤销")
                     .setContentText("守护已暂停，设置没有丢失；点此重新授权")
-                    .setStyle(new Notification.BigTextStyle().bigText(
-                            "部分电视重启后会撤销「显示在其他应用上层」权限。"
-                                    + "家长密码、年级与守护开关都还在，重新授权后守护会自动恢复。"))
                     .setContentIntent(pi)
                     .setAutoCancel(true);
             nm.notify(ID_REVOKED, b.build());

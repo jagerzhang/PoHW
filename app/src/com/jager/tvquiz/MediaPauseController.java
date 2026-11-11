@@ -1,8 +1,6 @@
 package com.jager.tvquiz;
 
 import android.content.Context;
-import android.media.AudioAttributes;
-import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.os.Build;
 import android.util.Log;
@@ -38,7 +36,6 @@ public final class MediaPauseController {
                     Log.d(TAG, "onAudioFocusChange=" + focusChange);
                 }
             };
-    private AudioFocusRequest focusRequest;
     private boolean focusHeld = false;
     private boolean pauseRequested = false;
     /** 只有音频焦点没申请到、改用媒体键兜底时才为 true。 */
@@ -57,22 +54,11 @@ public final class MediaPauseController {
         focusHeld = false;
         usedMediaKey = false;
         try {
-            int r;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                focusRequest = new AudioFocusRequest.Builder(
-                        AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-                        .setAudioAttributes(new AudioAttributes.Builder()
-                                .setUsage(AudioAttributes.USAGE_MEDIA)
-                                .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
-                                .build())
-                        .setOnAudioFocusChangeListener(focusListener)
-                        .build();
-                r = am.requestAudioFocus(focusRequest);
-            } else {
-                r = am.requestAudioFocus(focusListener,
-                        AudioManager.STREAM_MUSIC,
-                        AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
-            }
+            // API 1+ 的三参重载；AudioFocusRequest / AudioAttributes 是 API 26/21 类，
+            // 低配 dex 里不能引用，否则类加载即崩。
+            int r = am.requestAudioFocus(focusListener,
+                    AudioManager.STREAM_MUSIC,
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
             focusHeld = (r == AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
         } catch (Exception e) {
             Log.w(TAG, "requestAudioFocus failed", e);
@@ -108,16 +94,11 @@ public final class MediaPauseController {
         // 无论 tryResume 与否，都必须归还 TRANSIENT 音频焦点，绝不把别人的焦点扣在手里。
         if (am != null && focusHeld) {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    if (focusRequest != null) am.abandonAudioFocusRequest(focusRequest);
-                } else {
-                    am.abandonAudioFocus(focusListener);
-                }
+                am.abandonAudioFocus(focusListener);
             } catch (Exception e) {
                 Log.w(TAG, "abandonAudioFocus failed", e);
             }
         }
-        focusRequest = null;
         focusHeld = false;
         pauseRequested = false;
         usedMediaKey = false;

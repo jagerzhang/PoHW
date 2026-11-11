@@ -16,21 +16,27 @@ public class QuizLayoutTest {
     }
 
     public static void main(String[] args) {
-        ok("null 题干安全降级为 30sp", QuizTextSizer.sp(null) == 30);
-        ok("短题 12 字 -> 30sp（老版本统一 34sp）", QuizTextSizer.sp(cn(12)) == 30);
-        ok("17~28 字 -> 28sp", QuizTextSizer.sp(cn(20)) == 28);
-        ok("29~48 字 -> 25sp", QuizTextSizer.sp(cn(40)) == 25);
-        ok("49~72 字 -> 22sp", QuizTextSizer.sp(cn(60)) == 22);
-        ok("超过 72 字 -> 19sp", QuizTextSizer.sp(cn(100)) == 19);
+        // v1.3.5：题干区在 1080p/density 2.0 上只有约 74dp，长题干整体降档，
+        // 否则 22sp 三行会把末行裁成半截（真机「确？」反馈）。
+        ok("null 题干安全降级为 28sp", QuizTextSizer.sp(null) == 28);
+        ok("短题 12 字 -> 28sp", QuizTextSizer.sp(cn(12)) == 28);
+        ok("17~28 字 -> 25sp", QuizTextSizer.sp(cn(20)) == 25);
+        ok("29~48 字 -> 21sp", QuizTextSizer.sp(cn(40)) == 21);
+        ok("49~72 字 -> 18sp", QuizTextSizer.sp(cn(60)) == 18);
+        ok("超过 72 字 -> 16sp", QuizTextSizer.sp(cn(100)) == 16);
 
         boolean mono = true;
         int prev = Integer.MAX_VALUE;
         for (int n = 0; n <= 120; n++) {
             int v = QuizTextSizer.sp(cn(n));
-            if (v > prev || v < 19 || v > 30) mono = false;
+            if (v > prev || v < 16 || v > 28) mono = false;
             prev = v;
         }
-        ok("0~120 字字号单调不增且恒在 19~30sp", mono);
+        ok("0~120 字字号单调不增且恒在 16~28sp", mono);
+        ok("68 字题干三行在 74dp 题干区放得下",
+                QuizTextSizer.stemFits(QuizTextSizer.sp(cn(68)), 3, 74));
+        ok("旧 22sp 三行会裁末行",
+                !QuizTextSizer.stemFits(22, 3, 74));
 
         double oldNeedDp = 18 * 1.25 * 2.0;
         ok("复现裁切根因：两行 18sp 需 45dp > 旧固定 42dp", oldNeedDp > 42);

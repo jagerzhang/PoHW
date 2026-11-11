@@ -1,11 +1,11 @@
 # Changelog
 
-> **版本口径**：对外发布 16 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 17 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
 > **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）、
 > **v1.2.4**（37）、**v1.2.5**（39）、**v1.2.6**（41）、**v1.2.7**（43）、
 > **v1.3.0**（44）、**v1.3.1**（45）、**v1.3.2**（46）、**v1.3.3**（47）、
-> **v1.3.4**（50，低配 51）。
+> **v1.3.4**（50，低配 51）、**v1.3.5**（52，低配 53）。
 > `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
@@ -13,6 +13,26 @@
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.3.5 (versionCode 52) — quiz stem clipping fix and honest boot-autostart guide
+
+Display version 1.3.4 -> **1.3.5**, `versionCode` 50 -> **52**, same release
+keystore (SHA-256 `76eb6063b574...26172`). Seventeenth published release.
+Android 4.0 legacy variant ships as `v1.3.5-legacy` / code 53.
+
+- **Long stems no longer clipped**: the weighted stem TextView only has ~74dp
+  on a 1080p / density-2.0 TV, while a 68-character stem used the 22sp band
+  and lost its third line. `QuizTextSizer.sp()` now drops long stems to 18/16sp;
+  the TextView drops font padding, tightens line spacing to 1.05 and allows 5
+  lines without ellipsis. `stemFits()` plus JVM regressions lock the budget.
+- **Honest boot-autostart guide**: Android has no standard autostart switch.
+  The old button tried a few private vendor Activities and silently fell back
+  to the app-info page, which looked broken. It now opens an in-app guide with
+  per-brand paths (Hisense / Xiaomi / TCL / Skyworth / Huawei), states plainly
+  that many TVs have no autostart screen at all, and only then offers to open
+  system settings. Matches the industry approach: vendor whitelisting is a
+  one-time manual grant, not something an app can toggle.
+- Real-device home screenshot in the release notes refreshed.
 
 ## v1.3.4 (versionCode 50) — phone admin parity, edition systems, active schedule, site slim-down
 
@@ -115,7 +135,7 @@ cover-install 47 -> 49 boots with `9544 / bank-v9`, quiz overlay fires,
 API-14 runtime behaviour remains unverified on real hardware.
 
 
-### 未发布：issue #37 生效时段与内置节假日日历（v1.3.4 待发）
+### 已随 v1.3.4 发布：issue #37 生效时段与内置节假日日历
 
 `main` 已包含以下改动，但**尚未打 tag / 发 Release / 更新 update.json / 部署官网**。
 

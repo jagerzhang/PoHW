@@ -338,12 +338,9 @@ public class MainActivity extends Activity {
                 startActivity(new Intent(MainActivity.this, WrongBookActivity.class));
             }
         });
-        r2[2] = btnBoot = actionButton(row2, "厂商自启设置", 0xFF2C6E8F, new View.OnClickListener() {
+        r2[2] = btnBoot = actionButton(row2, "开机自启引导", 0xFF2C6E8F, new View.OnClickListener() {
             @Override public void onClick(View v) {
-                BootSettings.open(MainActivity.this);
-                Toast.makeText(MainActivity.this,
-                        "请在厂商设置里允许本应用「自启动」，否则收不到开机广播",
-                        Toast.LENGTH_LONG).show();
+                BootSettings.showGuide(MainActivity.this);
             }
         });
         l.addView(row2, Ui.fixed(this, 62));
@@ -533,7 +530,7 @@ public class MainActivity extends Activity {
         if (!text.equals(status.getText().toString())) status.setText(text);
 
         setButtonText(btnWrong, "错题库 · " + WrongBook.cachedCount() + " 题");
-        setButtonText(btnBoot, st.bootAutostart() ? "厂商自启设置" : "自启已关闭");
+        setButtonText(btnBoot, st.bootAutostart() ? "开机自启引导" : "自启已关闭");
 
         if (paintedRunning == null || paintedRunning.booleanValue() != running) {
             paintedRunning = Boolean.valueOf(running);

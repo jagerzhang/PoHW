@@ -2,23 +2,23 @@
   "schema": 1,
   "publishedAt": "2026-11-11",
   "main": {
-    "versionName": "1.3.4",
-    "versionCode": 50,
+    "versionName": "1.3.5",
+    "versionCode": 52,
     "minSdk": 21,
     "latest": "https://pohw.zhangge.net/dl/latest-main.apk",
-    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.4.apk",
-    "sha256": "7a3b24445f845ff9acd7abc5f279c94c0b9d9ba9ce3ee3acc20899008e99f6e9",
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.5.apk",
+    "sha256": "f5011cb5ea33d7cf510ee3e4c04dfbf11309806022f099d7eb0017df0bf0503d",
     "size": 2443171,
-    "notes": "v1.3.4：手机端开放绝大部分设置、教材学制可切换、生效时段与内置 2026-2027 法定节假日/调休、假期模式与当天临时、Web 时段可视化、官网精简；签名证书连续，旧版可直接覆盖安装"
+    "notes": "v1.3.5：修复答题弹窗长题干末行被裁切（长题干降字号、去字体留白、收紧行距，90 字题干也能完整显示）；「厂商自启设置」改为「开机自启引导」，先按电视品牌给出授权路径并说明很多电视没有自启动界面、看到应用信息页属正常。沿用原发布证书，旧版可直接覆盖安装"
   },
   "legacy": {
-    "versionName": "1.3.4",
-    "versionCode": 51,
+    "versionName": "1.3.5",
+    "versionCode": 53,
     "minSdk": 14,
     "latest": "https://pohw.zhangge.net/dl/latest-legacy.apk",
-    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.4-legacy.apk",
-    "sha256": "871777e29f37bd0226d443db280d15855f2a1858fcd07aa1a1d7e11f3c3487f1",
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.5-legacy.apk",
+    "sha256": "44e6a04fa8d5fe24a7e4c5671e15aa1761f605285492c41176af13be7cfec2a9",
     "size": 2443171,
-    "notes": "Android 4.0 低配变体 v1.3.4-legacy（versionCode 51 / minSdk 14）：与主线共用题库与全部新功能，读取 legacy 更新通道；可直接覆盖安装 49"
+    "notes": "Android 4.0 低配变体 v1.3.5-legacy（versionCode 53 / minSdk 14）：与主线共用全部修复，读取 legacy 更新通道；可直接覆盖安装 51"
   }
 }

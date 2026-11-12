@@ -134,6 +134,16 @@ public class BehaviorV601Test {
         ok("G4 forged boolean cannot replace a token",
                 !GuardPolicy.allowStop(true, false));
 
+        ok("S1 media play/pause key maps to speak, not submit",
+                KeyRouter.decide(KeyRouter.ACTION_DOWN, 0, KeyRouter.SEM_SPEAK, 0).action
+                        == KeyRouter.ACT_SPEAK);
+        ok("S2 long-pressed speak key is consumed without repeating",
+                KeyRouter.decide(KeyRouter.ACTION_DOWN, 3, KeyRouter.SEM_SPEAK, 0).action
+                        == KeyRouter.ACT_CONSUME);
+        ok("S3 speak key on non-DOWN is consumed",
+                KeyRouter.decide(1, 0, KeyRouter.SEM_SPEAK, 0).action
+                        == KeyRouter.ACT_CONSUME);
+
         System.out.println("----");
         System.out.println("PASS=" + pass + " FAIL=" + fail);
         if (fail == 0) System.out.println("BEHAVIOR_V601_VERIFY=PASS");

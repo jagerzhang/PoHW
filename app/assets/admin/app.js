@@ -72,6 +72,8 @@
       { group: "02 可选开关", key: "pauseOnQuiz", label: "答题时暂停视频", type: "bool" },
       { group: "02 可选开关", key: "resumePlayback", label: "答对后恢复播放", type: "bool" },
       { group: "02 可选开关", key: "autoCheckUpdate", label: "自动检查版本", type: "bool" },
+      { group: "02 可选开关", key: "readMode", label: "语音朗读（需设备自带中文语音引擎）",
+        type: "sel", opts: [[0, "关闭"], [1, "手动：播放键朗读"], [2, "自动读题 + 播放键朗读"]] },
 
       { group: "03 学科配比", key: "w0", label: "数学配比", type: "num", min: 0, max: maxW },
       { group: "03 学科配比", key: "w1", label: "语文配比", type: "num", min: 0, max: maxW },

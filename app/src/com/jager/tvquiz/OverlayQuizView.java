@@ -32,6 +32,8 @@ public final class OverlayQuizView {
         void onContinue();
         /** 遮罩窗口焦点变化：true=重新拿到遥控器按键，false=被通知栏/系统对话框抢走。 */
         void onWindowFocus(boolean hasFocus);
+        /** 遥控器播放键：朗读当前高亮选项（不提交答案）。 */
+        void onSpeakRequest(int selected);
     }
 
     private static final class Root extends FrameLayout {
@@ -177,6 +179,19 @@ public final class OverlayQuizView {
     /** 供服务的焦点重试任务判断是否已抢回窗口焦点。 */
     public boolean hasWindowFocus() { return root.hasWindowFocus(); }
 
+    /** 按家长设置与引擎检测结果更新提示；默认关闭时与旧版逐字一致。 */
+    public void setReadHint(int mode, int state) {
+        if (mode == 0) {
+            footer.setText("方向键选择 · 确定/数字键 1-4 作答 · 答错 "
+                    + AnswerPolicy.WRONG_LIMIT
+                    + " 次自动换题 · 返回键无效 · 答对才能继续");
+            return;
+        }
+        String tail = state == SpeechReader.STATE_READY
+                ? " · 播放键朗读" : " · 播放键朗读（设备无中文语音引擎）";
+        footer.setText("方向键选择 · 确定/数字键 1-4 作答" + tail + " · 答对才能继续");
+    }
+
     public void bind(QuizEngine.Question q, String meta) {
         String src = "bank".equals(q.source) ? "在线题库" : "本地生成";
         topic.setText("该答题啦  ·  " + q.topic + "  ·  " + src + "\n" + meta);
@@ -268,6 +283,9 @@ public final class OverlayQuizView {
                 if (!flow.isAnswered()) flow.move(d.value);
                 paint();
                 return true;
+            case KeyRouter.ACT_SPEAK:
+                if (listener != null) listener.onSpeakRequest(flow.selected());
+                return true;
             case KeyRouter.ACT_CONSUME:
             default:
                 return true;
@@ -291,8 +309,10 @@ public final class OverlayQuizView {
         if (k == KeyEvent.KEYCODE_VOLUME_UP || k == KeyEvent.KEYCODE_VOLUME_DOWN
                 || k == KeyEvent.KEYCODE_VOLUME_MUTE) return KeyRouter.SEM_VOLUME;
         if (k == KeyEvent.KEYCODE_BACK) return KeyRouter.SEM_BACK;
+        // 播放/暂停键在答题期间没有别的用途：朗读当前高亮项，绝不提交答案。
+        if (k == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) return KeyRouter.SEM_SPEAK;
         if (k == KeyEvent.KEYCODE_MEDIA_PLAY || k == KeyEvent.KEYCODE_MEDIA_PAUSE
-                || k == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || k == KeyEvent.KEYCODE_MEDIA_NEXT
+                || k == KeyEvent.KEYCODE_MEDIA_NEXT
                 || k == KeyEvent.KEYCODE_MEDIA_PREVIOUS
                 || k == KeyEvent.KEYCODE_MEDIA_FAST_FORWARD
                 || k == KeyEvent.KEYCODE_MEDIA_REWIND) return KeyRouter.SEM_MEDIA;

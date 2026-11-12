@@ -19,6 +19,7 @@ public final class KeyRouter {
     public static final int SEM_CONFIRM = 4;
     public static final int SEM_ANSWER = 5;   // value = 选项下标 0..3
     public static final int SEM_MOVE = 6;     // value = 方向 0左/1右/2上/3下
+    public static final int SEM_SPEAK = 7;    // 媒体播放键：朗读当前高亮项，不提交答案
 
     // 决策结果
     public static final int ACT_PASS_THROUGH = 0;
@@ -26,6 +27,7 @@ public final class KeyRouter {
     public static final int ACT_CONFIRM = 2;
     public static final int ACT_ANSWER = 3;
     public static final int ACT_MOVE = 4;
+    public static final int ACT_SPEAK = 5;
 
     public static final class Decision {
         public final int action;
@@ -66,6 +68,10 @@ public final class KeyRouter {
             // 不过滤会导致高亮连续跳格、一次按键跨过多个选项。
             return repeatCount > 0 ? new Decision(ACT_CONSUME, 0)
                     : new Decision(ACT_MOVE, value);
+        }
+        if (semantic == SEM_SPEAK) {
+            return repeatCount > 0 ? new Decision(ACT_CONSUME, 0)
+                    : new Decision(ACT_SPEAK, 0);
         }
         // BACK / MEDIA / 其它：全部吞掉
         return new Decision(ACT_CONSUME, 0);

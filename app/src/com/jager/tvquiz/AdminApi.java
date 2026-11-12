@@ -25,7 +25,8 @@ public final class AdminApi {
             "grade", "interval", "questionsPerRound", "passPercent", "roundMode",
             "termIndex", "unitLimit", "editionMode", "unlockStreak",
             "questionSource", "difficultyLevel", "syncIndex",
-            "w0", "w1", "w2", "w3"
+            "w0", "w1", "w2", "w3",
+            "readMode"
     };
     private static final String[] BOOL_KEYS = {
             "allSubjects", "strictOneShot", "cooldownEnabled", "autoContinueOnCorrect",
@@ -115,6 +116,10 @@ public final class AdminApi {
         s.append(",\"autoCheckUpdate\":").append(st.autoCheckUpdate());
         s.append(",\"scheduleEnabled\":").append(st.scheduleEnabled());
         s.append(",\"skipHolidays\":").append(st.skipHolidays());
+        s.append(",\"readMode\":").append(st.readMode());
+        s.append(",\"ttsState\":").append(st.ttsState());
+        s.append(",\"ttsStateText\":\"")
+                .append(SpeechReader.stateLabel(st.ttsState())).append("\"");
         s.append(",\"schoolWindows\":\"").append(st.schoolWindows()).append("\"");
         s.append(",\"homeWindows\":\"").append(st.homeWindows()).append("\"");
         s.append(",\"vacationRange\":\"").append(st.vacationRange()).append("\"");
@@ -191,6 +196,8 @@ public final class AdminApi {
             else if ("difficultyLevel".equals(key)) st.difficultyLevel(clamp(v, 0, 3));
             else if ("syncIndex".equals(key)) st.syncIndex(clamp(v, 0,
                     SettingsStore.SYNC_HOURS.length - 1));
+            else if ("readMode".equals(key)) st.readMode(clamp(v, 0,
+                    SettingsStore.READ_MODE_LABELS.length - 1));
             else if (key.length() == 2 && key.charAt(0) == 'w') {
                 int idx = key.charAt(1) - '0';
                 if (idx >= 0 && idx < Subjects.COUNT) {

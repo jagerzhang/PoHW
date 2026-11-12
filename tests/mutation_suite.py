@@ -76,6 +76,9 @@ BOOTSET = os.path.join(SRC, "BootSettings.java")
 RUNSH = os.path.join(ROOT, "tests/run.sh")
 SPEECH = os.path.join(SRC, "SpeechReader.java")
 KROUT = os.path.join(SRC, "KeyRouter.java")
+TF = os.path.join(SRC, "TextFit.java")
+AF = os.path.join(SRC, "AutoFitText.java")
+SF = os.path.join(SRC, "SpeakFocus.java")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
 for _i, p in enumerate((M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
@@ -83,7 +86,7 @@ for _i, p in enumerate((M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, 
            RP, GW, OVL, AXML, OVLQ, ADMAS, QRJ, QTS,
            GP, BR, PV, PAIR, LAN, SGT, API, AIDX, AJS, ACSS,
            HC, SP, HA, HOLJ, HOLV, HCHK, HFETCH, SPT, RUNSH, BOOTSET,
-           SPEECH, KROUT)):
+           SPEECH, KROUT, TF, AF, SF)):
     # 不同目录下的同名文件（site/index.html 与 admin/index.html）必须用不同备份名，
     # 否则 restore() 会把手机管理页写回官网首页。
     BK[p] = os.path.join(BK_DIR, "%03d_%s.bk" % (_i, os.path.basename(p)))

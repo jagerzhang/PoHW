@@ -9,7 +9,7 @@
 不上架应用商店 · 家长自行侧载 · 默认离线 · 不收集任何数据
 
 [![Release](https://img.shields.io/github/v/release/jagerzhang/PoHW?style=for-the-badge&logo=github&label=Release)](https://github.com/jagerzhang/PoHW/releases/latest)
-[![官网](https://img.shields.io/badge/官网-在线体验-3DDC84?style=for-the-badge&logo=googlechrome)](https://pohw.zhangge.net/)
+[![官网](https://img.shields.io/badge/官网-下载-3DDC84?style=for-the-badge&logo=googlechrome)](https://pohw.zhangge.net/)
 [![Android TV](https://img.shields.io/badge/Android%20TV-5.0%2B-3DDC84?style=for-the-badge&logo=android)](https://pohw.zhangge.net/#download)
 [![内置题库](https://img.shields.io/badge/内置题库-9%2C544%20题-2F80ED?style=for-the-badge&logo=book)](docs/BANK_STATS.md)
 

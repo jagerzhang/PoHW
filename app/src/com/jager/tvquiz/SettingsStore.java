@@ -21,6 +21,9 @@ public final class SettingsStore implements PinGate.Store {
     public static final int[] INTERVALS = {15, 30, 60, 300, 600, 1200, 1800};
     public static final String[] INTERVAL_LABELS = {"15 秒(演示)", "30 秒(演示)", "1 分钟", "5 分钟", "10 分钟", "20 分钟", "30 分钟"};
     public static final int[] SYNC_HOURS = {1, 6, 12, 24};
+    /** 语音朗读三态：0 关闭（默认）/ 1 手动 / 2 自动读题 + 手动。 */
+    public static final String[] READ_MODE_LABELS = {
+            "关闭（默认）", "手动朗读", "自动读题 + 手动朗读"};
     public static final String[] SYNC_LABELS = {"每 1 小时", "每 6 小时", "每 12 小时", "每天"};
 
     private final SharedPreferences sp;
@@ -470,6 +473,18 @@ public final class SettingsStore implements PinGate.Store {
             out[i] = (byte) ((hi << 4) | lo);
         }
         return out;
+    }
+
+    public int readMode() { return clamp(sp.getInt("readMode", 0), 0,
+            READ_MODE_LABELS.length - 1); }
+    public void readMode(int v) {
+        sp.edit().putInt("readMode", clamp(v, 0, READ_MODE_LABELS.length - 1)).commit();
+    }
+
+    /** 引擎检测结果由 SpeechReader 异步写回，供设置页与手机后台如实显示。 */
+    public int ttsState() { return clamp(sp.getInt("ttsState", 0), 0, 3); }
+    public void ttsState(int v) {
+        sp.edit().putInt("ttsState", clamp(v, 0, 3)).commit();
     }
 
     /** 兼容既有调用与单测；实现统一收敛到 Hashes。 */

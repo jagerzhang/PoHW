@@ -1063,7 +1063,7 @@ _keys134 = ("grade", "interval", "questionsPerRound", "passPercent", "roundMode"
             "cooldownEnabled", "autoContinueOnCorrect", "bootAutostart",
             "autoGuardOnBoot", "pauseOnQuiz", "resumePlayback", "autoCheckUpdate",
             "scheduleEnabled", "skipHolidays", "schoolWindows", "homeWindows",
-            "vacationRange", "todayOverride")
+            "vacationRange", "todayOverride", "readMode")
 check(all(('"' + k + '"') in _api134 for k in _keys134)
       and _api134.count("NUM_KEYS") >= 2 and "BOOL_KEYS" in _api134
       and "statusJson(" in _api134 and "applyConfig(" in _api134,
@@ -1295,5 +1295,37 @@ check('href="https://pohw.zhangge.net/dl/latest-legacy.apk"' in _ob_site
 check('仅提供 APK 下载' in _ob_site and '侧载' not in _ob_site
       and '家长自行下载' in _rm_ob and '家长自行侧载' not in _rm_ob,
       "user-facing wording uses download instead of side-load")
+
+# ---- 未发布：系统 TTS 朗读（默认关闭 / 只用 API 4 / 无引擎如实提示）----
+_sr = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SpeechReader.java"))
+_sr_code = strip_comments(_sr)
+_kr_sr = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/KeyRouter.java"))
+_oq_sr = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/OverlayQuizView.java"))
+_svc_sr = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizOverlayService.java"))
+_st_sr = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsStore.java"))
+_set_sr = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsActivity.java"))
+_api_sr = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/AdminApi.java"))
+_js_sr = read(os.path.join(ROOT, "app/assets/admin/app.js"))
+check("android.speech.tts.TextToSpeech" in _sr_code
+      and "UtteranceProgressListener" not in _sr_code
+      and "Bundle" not in _sr_code and "QUEUE_FLUSH" in _sr_code,
+      "system TTS wrapper uses only API 4 interfaces (Android 4 dex stays clean)")
+check('sp.getInt("readMode", 0)' in _st_sr and "READ_MODE_LABELS" in _st_sr,
+      "read-aloud mode defaults to off so covering installs keep old behavior")
+check("STATE_NO_ENGINE" in _sr and "未检测到中文语音引擎" in _sr
+      and "state != STATE_READY" in _sr_code,
+      "missing engine is reported honestly and never blocks quiz flow")
+check("SEM_SPEAK" in _kr_sr and "new Decision(ACT_SPEAK, 0)" in _kr_sr,
+      "key router has a dedicated speak action")
+check("KEYCODE_MEDIA_PLAY_PAUSE) return KeyRouter.SEM_SPEAK" in _oq_sr
+      and "listener.onSpeakRequest(flow.selected())" in _oq_sr,
+      "media key reads the highlighted option instead of submitting")
+check("view.setReadHint(st.readMode(), st.ttsState())" in _svc_sr
+      and "if (st.readMode() == 2) speakCurrent(-1);" in _svc_sr
+      and "if (speech != null) speech.close();" in _svc_sr,
+      "auto read happens on quiz show and the TTS handle is released")
+check('"readMode"' in _api_sr and "st.readMode(clamp(v, 0" in _api_sr
+      and '"readMode"' in _js_sr and "rowReadAloud" in _set_sr,
+      "read mode is exposed on TV settings and the phone admin page")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

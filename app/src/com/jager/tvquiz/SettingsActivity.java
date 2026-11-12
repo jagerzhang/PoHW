@@ -63,7 +63,7 @@ public class SettingsActivity extends Activity {
     /** 在线源并排行：左检查题库更新 / 右自动更新，供行内左右焦点链使用。 */
     private Button[] bankPair;
     private Button[] rowWt = new Button[Subjects.COUNT];
-    private Button rowBoot, rowAutoGuard, rowPause, rowResume;
+    private Button rowBoot, rowAutoGuard, rowPause, rowResume, rowReadAloud;
     /** v1.2.5 在线版本更新：自动检查开关 / 状态 / 手动下载安装。 */
     private Button rowUpdate, btnUpdateInstall;
     /** v1.3.0 未发布：按组答题的两项设置。 */
@@ -467,6 +467,25 @@ public class SettingsActivity extends Activity {
         rowResume = addRow(boot, "恢复播放", new View.OnClickListener() {
             @Override public void onClick(View v) { st.resumePlayback(!st.resumePlayback()); refreshRows(); }
         });
+        rowReadAloud = addRow(boot, "语音朗读", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                st.readMode((st.readMode() + 1) % SettingsStore.READ_MODE_LABELS.length);
+                if (st.readMode() != 0) {
+                    SpeechReader.get(SettingsActivity.this,
+                            new SpeechReader.StateListener() {
+                        @Override public void onState(int state) {
+                            st.ttsState(state);
+                            runOnUiThread(new Runnable() {
+                                @Override public void run() { refreshRows(); }
+                            });
+                        }
+                    });
+                }
+                refreshRows();
+            }
+        });
+        note(boot, "语音朗读需电视自带中文语音引擎；默认关闭，缺失时自动静默、不影响答题。"
+                + "开启后按遥控器播放键朗读当前高亮项，自动模式会在弹题时读题干。");
         addButton(boot, "开机自启引导", 0xFF2C6E8F, new View.OnClickListener() {
             @Override public void onClick(View v) {
                 BootSettings.showGuide(SettingsActivity.this);
@@ -905,6 +924,8 @@ public class SettingsActivity extends Activity {
 
     private void refreshRows() {
         rowGrade.setText(st.gradeLabel());
+        rowReadAloud.setText(SettingsStore.READ_MODE_LABELS[st.readMode()]
+                + (st.readMode() == 0 ? "" : " · " + SpeechReader.stateLabel(st.ttsState())));
         rowInterval.setText(intervalLabel());
         rowStreak.setText(st.unlockStreak() > 1
                 ? ("连续答对 " + st.unlockStreak() + " 题") : "答对 1 题即可");

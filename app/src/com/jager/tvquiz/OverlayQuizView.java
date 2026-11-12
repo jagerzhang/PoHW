@@ -3,6 +3,7 @@ package com.jager.tvquiz;
 import android.content.Context;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.ViewTreeObserver;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,6 +35,8 @@ public final class OverlayQuizView {
         void onWindowFocus(boolean hasFocus);
         /** 遥控器播放键：朗读当前高亮选项（不提交答案）。 */
         void onSpeakRequest(int selected);
+        /** 可见朗读按钮：连题干带当前高亮选项一起读，关闭状态也允许试听。 */
+        void onSpeakAll(int selected);
     }
 
     private static final class Root extends FrameLayout {
@@ -56,9 +59,11 @@ public final class OverlayQuizView {
     private final Root root;
     private final TextView topic, text, result, explain, footer;
     private final Button[] opts = new Button[4];
-    private final Button cont;
+    private final Button cont, speakBtn;
     private final Listener listener;
     private final QuizFlow flow = new QuizFlow();
+    /** 第 5 个遥控器目标：题干右上角可见的朗读按钮。 */
+    private boolean speakFocused = false;
 
     public OverlayQuizView(Context ctx, Listener l) {
         c = ctx;
@@ -79,14 +84,29 @@ public final class OverlayQuizView {
         card.setLayoutParams(cp);
         card.setPadding(Ui.dp(c, 26), Ui.dp(c, 12), Ui.dp(c, 26), Ui.dp(c, 8));
 
+        LinearLayout topRow = Ui.hbox(c);
+        topRow.setGravity(Gravity.CENTER_VERTICAL);
         topic = Ui.tv(c, "", 16, Ui.BLUE);
         topic.setLineSpacing(0, 1.15f);
         topic.setPadding(0, Ui.dp(c, 2), 0, Ui.dp(c, 6));
-        card.addView(topic, new LinearLayout.LayoutParams(
+        topRow.addView(topic, new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        // B 方案：朗读入口常驻可见，不需要家长先进设置页打开开关才发现。
+        speakBtn = Ui.button(c, "朗读", Ui.BLUE_LIGHT, Ui.BLUE, 18);
+        speakBtn.setFocusable(false);
+        speakBtn.setFocusableInTouchMode(false);
+        speakBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { requestSpeakAll(); }
+        });
+        LinearLayout.LayoutParams speakLp = new LinearLayout.LayoutParams(
+                Ui.dp(c, 96), Ui.dp(c, 40));
+        speakLp.setMargins(Ui.dp(c, 8), 0, 0, 0);
+        topRow.addView(speakBtn, speakLp);
+        card.addView(topRow, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         text = Ui.tv(c, "", 30, Ui.TEXT);
-        text.setGravity(Gravity.CENTER);
+        text.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
         text.setPadding(Ui.dp(c, 20), 0, Ui.dp(c, 20), 0);
         // 题干用 Ui.fill(1) 只拿到剩余高度：去掉字体留白、收紧行距，
         // 否则 50+ 字题干的第三行会被下面的选项网格压掉半截。
@@ -153,7 +173,55 @@ public final class OverlayQuizView {
         card.addView(footer, Ui.fixed(c, 26));
 
         root.addView(card, cp);
+        // 首次绘制前宽高才确定，此时按真实折行结果降字号，杜绝按字数猜档裁切。
+        root.getViewTreeObserver().addOnPreDrawListener(
+                new ViewTreeObserver.OnPreDrawListener() {
+            @Override public boolean onPreDraw() {
+                if (root.getViewTreeObserver().isAlive()) {
+                    root.getViewTreeObserver().removeOnPreDrawListener(this);
+                }
+                fitAll();
+                return true;
+            }
+        });
         paint();
+    }
+
+    /** 题干与四个选项都按实测宽高自适应；四个选项取共同可放下的最大字号。 */
+    private void fitAll() {
+        AutoFitText.fit(text, QuizTextSizer.sp(String.valueOf(text.getText())),
+                5, 1.05f);
+        int common = Integer.MAX_VALUE;
+        for (int i = 0; i < 4; i++) {
+            int one = AutoFitText.fit(opts[i],
+                    QuizTextSizer.optionSp(
+                            new String[]{String.valueOf(opts[i].getText())}),
+                    4, 1.0f);
+            if (one > 0) common = Math.min(common, one);
+        }
+        if (common != Integer.MAX_VALUE && common > 0) {
+            for (int i = 0; i < 4; i++) {
+                opts[i].setTextSize(TypedValue.COMPLEX_UNIT_SP, common);
+            }
+        }
+    }
+
+    /** 遥控器在 2x2 选项网格之外还能到达朗读按钮。 */
+    private void moveFocus(int dir) {
+        if (SpeakFocus.shouldLeave(speakFocused, dir)) {
+            speakFocused = false;
+            return;
+        }
+        if (SpeakFocus.shouldEnter(speakFocused, dir, flow.selected())) {
+            speakFocused = true;
+            return;
+        }
+        if (speakFocused) return;
+        flow.move(dir);
+    }
+
+    private void requestSpeakAll() {
+        if (listener != null) listener.onSpeakAll(flow.selected());
     }
 
     public View view() { return root; }
@@ -164,6 +232,10 @@ public final class OverlayQuizView {
     /** addView 之后 post 调用，确保窗口已完成首次 attach/traversal。 */
     public void focusFirst() {
         root.requestFocus();
+        // 焦点重试可能重建窗口，post 一次保证即使 OnPreDraw 首次宽高为 0 也会补量。
+        root.post(new Runnable() {
+            @Override public void run() { fitAll(); }
+        });
         paint();
     }
 
@@ -179,17 +251,15 @@ public final class OverlayQuizView {
     /** 供服务的焦点重试任务判断是否已抢回窗口焦点。 */
     public boolean hasWindowFocus() { return root.hasWindowFocus(); }
 
-    /** 按家长设置与引擎检测结果更新提示；默认关闭时与旧版逐字一致。 */
+    /** footer 常驻朗读提示：关闭状态也告诉家长这个入口存在。 */
     public void setReadHint(int mode, int state) {
-        if (mode == 0) {
-            footer.setText("方向键选择 · 确定/数字键 1-4 作答 · 答错 "
-                    + AnswerPolicy.WRONG_LIMIT
-                    + " 次自动换题 · 返回键无效 · 答对才能继续");
-            return;
-        }
-        String tail = state == SpeechReader.STATE_READY
-                ? " · 播放键朗读" : " · 播放键朗读（设备无中文语音引擎）";
-        footer.setText("方向键选择 · 确定/数字键 1-4 作答" + tail + " · 答对才能继续");
+        String engine = state == SpeechReader.STATE_READY
+                ? "" : "（无语音引擎）";
+        String speak = mode == 0 ? "朗读键试听"
+                : (mode == 2 ? "自动读题已开 · 朗读键复读" : "朗读键读题");
+        String tail = mode == 0 ? " · 答对继续"
+                : " · 播放键读选项 · 答对继续";
+        footer.setText("方向键选择 · 确定/1-4 作答 · " + speak + engine + tail);
     }
 
     public void bind(QuizEngine.Question q, String meta) {
@@ -273,18 +343,22 @@ public final class OverlayQuizView {
             case KeyRouter.ACT_PASS_THROUGH:
                 return false; // 音量键 DOWN/UP 都交回系统
             case KeyRouter.ACT_CONFIRM:
+                if (speakFocused) { requestSpeakAll(); return true; }
                 if (flow.isAnswered()) requestContinue();
                 else submit(flow.selected());
                 return true;
             case KeyRouter.ACT_ANSWER:
+                speakFocused = false;
                 if (!flow.isAnswered()) submit(d.value);
+                paint();
                 return true;
             case KeyRouter.ACT_MOVE:
-                if (!flow.isAnswered()) flow.move(d.value);
+                if (!flow.isAnswered()) moveFocus(d.value);
                 paint();
                 return true;
             case KeyRouter.ACT_SPEAK:
-                if (listener != null) listener.onSpeakRequest(flow.selected());
+                if (speakFocused) requestSpeakAll();
+                else if (listener != null) listener.onSpeakRequest(flow.selected());
                 return true;
             case KeyRouter.ACT_CONSUME:
             default:
@@ -357,6 +431,13 @@ public final class OverlayQuizView {
                 b.setBackground(Ui.round(Ui.BLUE_LIGHT, 10, c));
                 b.setTextColor(Ui.TEXT);
             }
+        }
+        if (speakFocused) {
+            speakBtn.setBackground(Ui.round(Ui.BLUE, 10, c));
+            speakBtn.setTextColor(0xFFFFFFFF);
+        } else {
+            speakBtn.setBackground(Ui.round(Ui.BLUE_LIGHT, 10, c));
+            speakBtn.setTextColor(Ui.BLUE);
         }
     }
 }

@@ -1328,4 +1328,37 @@ check('"readMode"' in _api_sr and "st.readMode(clamp(v, 0" in _api_sr
       and '"readMode"' in _js_sr and "rowReadAloud" in _set_sr,
       "read mode is exposed on TV settings and the phone admin page")
 
+# ---- 可见朗读按钮 / 运行时实测自适应 / 题干左对齐 ----
+_v_b = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/OverlayQuizView.java")))
+_af_b = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/AutoFitText.java")))
+_tf_b = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/TextFit.java")))
+_sf_b = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/SpeakFocus.java")))
+_svc_b = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/QuizOverlayService.java")))
+_run_b = read(os.path.join(ROOT, "tests/run.sh"))
+check("Gravity.LEFT | Gravity.CENTER_VERTICAL" in _v_b,
+      "quiz stem is left aligned instead of centred")
+check(_v_b.count("AutoFitText.fit(") >= 2,
+      "stem and all four options are measured at runtime, not by char count alone")
+check("new StaticLayout(" in _af_b and "TextFit.choose(" in _af_b,
+      "fitter measures real line wrapping and delegates the size decision")
+check("lineCounts[i] > maxLines" in _tf_b and "heightsDp[i] > availableDp" in _tf_b,
+      "both line-count and measured-height constraints are enforced")
+check('Ui.button(c, "朗读"' in _v_b and "void onSpeakAll(int selected)" in _v_b,
+      "read-aloud button is visible on the quiz card and declares its callback")
+check("SpeakFocus.shouldEnter(" in _v_b and "SpeakFocus.shouldLeave(" in _v_b
+      and "DIR_UP = 2" in _sf_b,
+      "read-aloud button is reachable by the TV remote")
+check("speakAll(selected)" in _svc_b and "b.append(current.text)" in _svc_b
+      and "\"。选项：\"" in _svc_b,
+      "button reads both the stem and the highlighted option")
+check('mode == 0 ? "朗读键试听"' in _v_b,
+      "footer keeps the read-aloud hint even when the mode is off")
+check("TextFitTest" in _run_b and "TextFit.java" in _run_b,
+      "new fit policy and focus policy are wired into the JVM runner")
+
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

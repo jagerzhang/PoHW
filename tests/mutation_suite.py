@@ -447,11 +447,27 @@ MUTATIONS = [
      lambda: replace(KROUT, "new Decision(ACT_SPEAK, 0)",
                      "new Decision(ACT_CONSUME, 0)"),
      False, True, False),
-    ("DK", "read-aloud defaults to auto",
-     lambda: replace(ST, 'sp.getInt("readMode", 0)',
-                     'sp.getInt("readMode", 2)'),
-     False, True, False),
-]
+     ("DK", "read-aloud defaults to auto",
+       lambda: replace(ST, 'sp.getInt("readMode", 0)',
+                       'sp.getInt("readMode", 2)'),
+       False, True, False),
+     ("DL", "stem alignment reverted to centre",
+       lambda: replace(OVLQ, "Gravity.LEFT | Gravity.CENTER_VERTICAL",
+                       "Gravity.CENTER"), False, True, False),
+     ("DM", "runtime text measurement dropped",
+       lambda: replace(OVLQ, "AutoFitText.fit(text,",
+                       "// AutoFitText.fit(text,"), False, True, False),
+     ("DN", "visible read-aloud button loses its label",
+       lambda: replace(OVLQ, 'Ui.button(c, "朗读",', 'Ui.button(c, "",'),
+       False, True, False),
+     ("DO", "footer read-aloud hint hidden when mode is off",
+       lambda: replace(OVLQ, 'mode == 0 ? "朗读键试听"',
+                       'mode == 0 ? ""'), False, True, False),
+     ("DP", "line-count constraint removed from the fit policy",
+       lambda: replace(os.path.join(SRC, "TextFit.java"),
+                       "if (lineCounts[i] > maxLines) continue;", ""),
+       False, True, False),
+  ]
 
 print("--- baseline ---")
 base = contract()

@@ -94,6 +94,9 @@ grep -q 'MediaPauseController' "$SVC"
 grep -q 'BootPolicy.shouldStartGuard' "$APP/src/com/jager/tvquiz/BootReceiver.java"
 grep -q 'new OverlayQuizView' "$SVC"             # 每次弹题不复用 View
 grep -q 'setFocusable(false)' "$VIEW"            # 子按钮不参与焦点树
+grep -qF 'Gravity.LEFT | Gravity.CENTER_VERTICAL' "$VIEW"   # 题干左对齐
+grep -qF 'AutoFitText.fit(' "$VIEW"                          # 实测自适应
+grep -qF 'Ui.button(c, "朗读"' "$VIEW"                       # 朗读入口常驻可见
 grep -q 'WrongBookActivity' "$APP/AndroidManifest.xml"
 # v1.0.1 UI consolidation: one toggle, subject rows, bank entry only in settings
 MAIN="$APP/src/com/jager/tvquiz/MainActivity.java"

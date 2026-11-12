@@ -132,6 +132,11 @@ grep -qF 'bankPair[0].setNextFocusRightId(rightId);' "$SET"
 [ -f "$APP/res/drawable-nodpi/donate_wechat.png" ] || { echo "MISSING wechat QR"; exit 1; }
 [ -f "$APP/res/drawable-nodpi/donate_alipay.png" ] || { echo "MISSING alipay QR"; exit 1; }
 [ -f "$ROOT/tools/branding/make_icons.py" ] || { echo "MISSING icon generator"; exit 1; }
+# 系统 TTS 朗读：不允许静默退化成「按键提交答案」或默认开启。
+grep -qF 'class SpeechReader' "$APP/src/com/jager/tvquiz/SpeechReader.java" \
+  || { echo "MISSING SpeechReader"; exit 1; }
+grep -qF 'SEM_SPEAK' "$APP/src/com/jager/tvquiz/KeyRouter.java"
+grep -qF 'st.readMode()' "$APP/src/com/jager/tvquiz/QuizOverlayService.java"
 python3 tests/layout_contract.py
 # issue #37：内置节假日日历必须与国务院通知同源，且全年日期类型回归通过。
 [ -f "$APP/assets/holidays.json" ] || { echo "MISSING holidays.json"; exit 1; }

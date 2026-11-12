@@ -111,6 +111,8 @@ public class QuizOverlayService extends Service {
     private int quizChannel = OverlayChannel.NONE;
     private static volatile QuizOverlayService serviceInstance = null;
     private MediaPauseController media;
+    /** 系统 TTS 朗读；只在家长开启时懒初始化。 */
+    private SpeechReader speech;
     private QuizEngine engine;
     private QuizEngine.Question current;
     private SettingsStore st;
@@ -178,6 +180,7 @@ public class QuizOverlayService extends Service {
         @Override public void onAnswer(int idx) { answer(idx); }
         @Override public void onContinue() { finishQuiz(); }
         @Override public void onWindowFocus(boolean hasFocus) { onQuizWindowFocus(hasFocus); }
+        @Override public void onSpeakRequest(int selected) { speakCurrent(selected); }
     };
 
     private final Runnable focusCheck = new Runnable() {
@@ -316,6 +319,7 @@ public class QuizOverlayService extends Service {
         handler.removeCallbacks(pendingSwapTask);
         hideQuiz();
         if (media != null) media.release();
+        if (speech != null) speech.close();
         running = false;
         // 系统/force-stop 路径不会走 stopAll()，这里兜底显式退出前台。
         leaveForeground();
@@ -488,6 +492,27 @@ public class QuizOverlayService extends Service {
         return st.gradeLabel() + " · " + Subjects.name(q.subject) + " · " + gate;
     }
 
+    private void ensureSpeech() {
+        if (speech == null) {
+            speech = SpeechReader.get(this, new SpeechReader.StateListener() {
+                @Override public void onState(int state) { st.ttsState(state); }
+            });
+        }
+    }
+
+    /** 有高亮就读该选项，否则读题干；引擎不可用或模式关闭时什么都不做。 */
+    private void speakCurrent(int selected) {
+        if (st.readMode() == 0 || current == null) return;
+        ensureSpeech();
+        if (speech.state() != SpeechReader.STATE_READY) return;
+        String s = current.text;
+        if (selected >= 0 && selected < 4 && current.options != null
+                && selected < current.options.length) {
+            s = current.options[selected];
+        }
+        if (s != null && s.length() > 0) speech.speak(s);
+    }
+
     private void showQuiz() {
         if (practiceMode) { remainSec = interval; return; }
         if (quizShowing) return;
@@ -532,6 +557,8 @@ public class QuizOverlayService extends Service {
         pendingSwapHint = null;
         cancelPendingSwap();
         view.bind(current, metaFor(current));
+        view.setReadHint(st.readMode(), st.ttsState());
+        if (st.readMode() == 2) speakCurrent(-1);
         quizView = view;
         focusRetry = 0;
         focusRecovering = false;
@@ -775,6 +802,7 @@ public class QuizOverlayService extends Service {
      * removeView，并始终保留 View 引用到该 Runnable 中，不会因置空而丢失。
      */
     private void removeOverlayNow() {
+        if (speech != null) speech.stop();
         if (quizView == null) return;
         final View v = quizView.view();
         quizView = null;

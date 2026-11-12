@@ -74,13 +74,16 @@ HFETCH = os.path.join(ROOT, "tools/holidays/fetch_holidays.py")
 SPT = os.path.join(ROOT, "tests/src/SchedulePolicyTest.java")
 BOOTSET = os.path.join(SRC, "BootSettings.java")
 RUNSH = os.path.join(ROOT, "tests/run.sh")
+SPEECH = os.path.join(SRC, "SpeechReader.java")
+KROUT = os.path.join(SRC, "KeyRouter.java")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
 for _i, p in enumerate((M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
            RM, CH, SJS, CI, APNG, UP, CD, DP, MP, PA, PC, UI, UCFG,
            RP, GW, OVL, AXML, OVLQ, ADMAS, QRJ, QTS,
            GP, BR, PV, PAIR, LAN, SGT, API, AIDX, AJS, ACSS,
-           HC, SP, HA, HOLJ, HOLV, HCHK, HFETCH, SPT, RUNSH, BOOTSET)):
+           HC, SP, HA, HOLJ, HOLV, HCHK, HFETCH, SPT, RUNSH, BOOTSET,
+           SPEECH, KROUT)):
     # 不同目录下的同名文件（site/index.html 与 admin/index.html）必须用不同备份名，
     # 否则 restore() 会把手机管理页写回官网首页。
     BK[p] = os.path.join(BK_DIR, "%03d_%s.bk" % (_i, os.path.basename(p)))
@@ -434,6 +437,19 @@ MUTATIONS = [
                      "text.setIncludeFontPadding(true);"), False, True, False),
     ("DH", "boot guide confirm button removed",
      lambda: replace(BOOTSET, '"去系统设置"', '"关闭"'),
+     False, True, False),
+    ("DI", "media key no longer maps to speak",
+     lambda: replace(OVLQ,
+                     "if (k == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) return KeyRouter.SEM_SPEAK;",
+                     "if (false) return KeyRouter.SEM_SPEAK;"),
+     False, True, False),
+    ("DJ", "speak decision collapses into consume",
+     lambda: replace(KROUT, "new Decision(ACT_SPEAK, 0)",
+                     "new Decision(ACT_CONSUME, 0)"),
+     False, True, False),
+    ("DK", "read-aloud defaults to auto",
+     lambda: replace(ST, 'sp.getInt("readMode", 0)',
+                     'sp.getInt("readMode", 2)'),
      False, True, False),
 ]
 

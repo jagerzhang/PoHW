@@ -1,166 +1,79 @@
-# PoHW — Proof of Homework
+<div align="center">
 
-> 给 Android 电视加一道门槛：**到点弹出一道题，答对才能继续看**。
-> 一个不上架应用商店、供家长自行侧载的家庭小工具，默认离线可用、不访问互联网。
+<img src="app/res/drawable-xhdpi/ic_launcher.png" width="92" alt="PoHW 图标">
 
-**MIT 协议 · 纯 Java / 原生 View · 零第三方 SDK · 可离线复现构建 · 不收集任何数据**
+# PoHW · Proof of Homework
 
-| 我想…… | 看这里 |
-| --- | --- |
-| 马上装到电视 | [官网下载最新版](https://pohw.zhangge.net/#download)（U 盘侧载，不需要电脑连电视） |
-| 了解功能与边界 | [它能做什么](#它能做什么) / [它不能做什么](#它不能做什么) |
-| 自己出包 | [构建](docs/BUILD.md) |
-| 看题库怎么来的 | [题库统计](docs/BANK_STATS.md) / [数据来源](docs/DATA_SOURCES.md) |
-| 看版本历史 | [CHANGELOG.md](CHANGELOG.md) / [Releases](https://github.com/jagerzhang/PoHW/releases) |
-| 参与或反馈 | [Issue](https://github.com/jagerzhang/PoHW/issues) · 提交 PR 前请先看 CI 自动审核 |
+**给 Android 电视加一道门槛：到点弹出一道题，答对才能继续看。**
 
-> 家长既可以在电视上用遥控器进「家长设置」，也可以**可选**开启同一 WiFi 下的
-> 手机扫码管理页（默认不监听、进入页面后开启、数据不出局域网）；两个入口互不影响，电视端设置始终完整保留。
+不上架应用商店 · 家长自行下载 · 默认离线 · 不收集任何数据
 
-| | |
-| --- | --- |
-| 当前版本 | **v1.3.5**（`versionCode 52`） |
-| 运行平台 | Android TV / 电视盒子，`minSdk 21`，遥控器操作 |
-| 分发方式 | 自行侧载 APK（U 盘直装），**不在任何应用商店上架** |
-| 签名证书 | SHA-256 `76eb6063…6172`，历次构建连续，旧版可直接覆盖安装 |
-| 仓库 | https://github.com/jagerzhang/PoHW |
-| 发布方式 | feature 分支 → Pull Request → 自动审核 → 合入 `main`；tag / Release 由维护者指定 |
+[![Release](https://img.shields.io/github/v/release/jagerzhang/PoHW?style=for-the-badge&logo=github&label=Release)](https://github.com/jagerzhang/PoHW/releases/latest)
+[![官网](https://img.shields.io/badge/官网-下载-3DDC84?style=for-the-badge&logo=googlechrome)](https://pohw.zhangge.net/)
+[![Android TV](https://img.shields.io/badge/Android%20TV-5.0%2B-3DDC84?style=for-the-badge&logo=android)](https://pohw.zhangge.net/#download)
+[![内置题库](https://img.shields.io/badge/内置题库-9%2C544%20题-2F80ED?style=for-the-badge&logo=book)](docs/BANK_STATS.md)
 
-![PoHW 图标](app/res/drawable-xhdpi/ic_launcher.png)
+[![默认离线](https://img.shields.io/badge/默认-零网络请求-6C4F9E?style=for-the-badge&logo=shield)](docs/ARCHITECTURE.md)
+[![纯原生](https://img.shields.io/badge/纯%20Java-零第三方%20SDK-FF9800?style=for-the-badge&logo=openjdk)](docs/ARCHITECTURE.md)
+[![CI](https://img.shields.io/github/actions/workflow/status/jagerzhang/PoHW/ci.yml?style=for-the-badge&logo=githubactions&label=CI)](https://github.com/jagerzhang/PoHW/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge&logo=open-source-initiative)](LICENSE)
+
+</div>
 
 ---
 
 ## 它能做什么
 
-- **跨应用全屏答题**：到点把四选一遮罩盖在任意界面之上，答对才放行；连错 2 次自动换题并记入错题库。
-- **完全离线题库**：内置 9,544 道 1–6 年级题，随 APK 发布、零网络请求；抽题每层都带年级上限，另有参数化算式兜底。
-- **按组闯关**：默认一组 5 题、答对 60% 才通过，题量与门槛可配；答对自动继续，答题时尽力暂停 / 恢复播放。
-- **练习模式**：独立自由答题页，可切学科 / 年级 / 难度并显示统计；练习期间挂起守护弹题，退出自动恢复。
-- **年级与学科设置**：四槽学科配比（`0–5`）与「全学科」开关；题库按真实教材册次与课标知识点组织。
-- **家长密码**：首次开启守护必须先设 4–8 位数字密码（PBKDF2 + 随机盐）；关闭守护需就地验证，界面不退出。
-- **开机与自愈**：支持厂商开机广播、休眠唤醒与 Job / Alarm 双兜底；悬浮窗授权被电视固件撤销时主动通知，可选无障碍服务作为备用弹题通道。
-- **双后台**：电视遥控器设置 + 可选手机扫码管理（默认不监听、数据不出局域网）；首页有答对率、错题库与静态打赏码。
+- **跨应用答题**：到点用全屏遮罩盖住任意界面，四选一答对才放行；连错 2 次自动换题并记入错题库。
+- **9,544 道内置题**：随 APK 发布、零网络请求，覆盖小学 1–6 年级语数外，按教材册次、单元与课标知识点组织。
+- **按组闯关**：默认一组 5 题、答对 60% 通过，题量与门槛可配；答题时尽力暂停 / 恢复播放。
+- **跟着进度走**：年级、上下学期、已学单元、教材学制（自动 / 六三制 / 五四制）都可设，不抽超纲题。
+- **生效时段与节假日**：内置 2026–2027 法定节假日与调休补班，另有假期模式与「今天临时」，上学时段不打扰。
+- **家长密码**：4–8 位数字密码，关闭守护需就地验证；悬浮窗授权被撤销时主动提示，可选无障碍备用通道。
+- **两个后台**：电视遥控器设置 + 可选手机扫码管理（默认不监听、数据不出局域网），两端设置同步。
+- **练习模式**：独立自由答题页，切学科 / 年级 / 难度并显示统计，退出自动恢复守护。
 
-## 它不能做什么
+[功能细节](docs/ARCHITECTURE.md) · [题库统计](docs/BANK_STATS.md) · [官网](https://pohw.zhangge.net/)
 
-- 不是家长控制 / 设备锁 / 应用锁，也不阻止卸载、不阻止用其他设备看视频。
-- 不联网收集任何数据；`INTERNET` 权限仅供家长**自行配置**的可选在线题库源，地址为空时一次请求都不发。
-- 不控制第三方视频 App 的播放状态，暂停/恢复是尽力而为的系统级请求。
-- 按教材知识点与课标纲目组织的四选一题，不含出版社原题扫描件或付费题库数据。
+## 安装（U 盘，不需要电脑连电视）
 
----
+1. 到 [官网下载最新版](https://pohw.zhangge.net/#download)（历史版本见 [Releases](https://github.com/jagerzhang/PoHW/releases/latest)）。
+2. APK 拷进 U 盘 → 插到电视 → 用电视自带「文件管理器」打开安装，按提示允许「未知来源」。
+3. 打开 APP：授权悬浮窗 → 设置 4–8 位家长密码 → 设年级 / 频率 / 学科配比 → 首页点「开启守护」。
 
-## 快速开始（U 盘安装，不需要电脑连电视）
+已有旧版**直接覆盖安装**即可（同一签名证书，密码、设置与错题库都保留）；换签名才需要卸载重装。
 
-1. **拿到 APK**：到 [官网下载页](https://pohw.zhangge.net/#download) 直接下载最新版（历史版本见 [Releases](https://github.com/jagerzhang/PoHW/releases/latest)），或按下方「构建」自行出包。
-2. **拷进 U 盘**：把 APK 文件复制到 U 盘（FAT32 / exFAT 均可）。
-3. **电视上安装**：U 盘插到电视 USB 口 → 打开电视自带的「文件管理器」→ 找到 APK 点击安装；首次安装若提示「未知来源」，按系统提示允许即可。
-4. **授权悬浮窗**：打开 APP，点「授权悬浮窗」，在系统设置里允许「显示在其他应用上层」。
-5. **家长设置**：首次进入会要求初始化 4-8 位数字密码；设好年级 / 出题频率 / 学科配比，点「保存并返回」。
-6. **开启守护**：回首页点「开启守护」，按 Home 切到任意视频 App，到点会弹题。
+## 边界
 
-已有旧版时**直接覆盖安装**即可（同一签名证书 + `versionCode` 递增），家长密码、设置与错题库都会保留。
-忘记密码：在电视「设置 → 应用管理 → PoHW → 清除数据」重置（会清空设置、统计与错题库）；
-遮罩卡住卸载流程时，在同一页面点「强制停止」，或先关闭守护。
+- **开机 / 重启后守护没起来？** 先看首页状态栏：部分电视（海信 VIDAA、TCL 等）重启后会撤销悬浮窗授权，重新授权即可；「开机自启」默认关闭，还需在厂商设置里放行。「自动守护」只管打开 APP 时拉起，不等于开机自启。详见 [开机自启引导](docs/ARCHITECTURE.md) 与 [Issue #20](https://github.com/jagerzhang/PoHW/issues/20)。
+- 不是设备锁 / 应用锁，不阻止卸载，也不阻止换设备看视频；暂停视频是尽力而为的系统级请求。
+- 默认零请求：版本检查、在线题库源、手机管理三项都可关，全关后不产生对外请求；不含统计 / 广告 / 支付 SDK。
+- 难度是倾向加权不是硬过滤；站点难度系数噪声大，选「高」仍可能遇到偏易题。完整边界见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
 
----
+## 可选能力
 
-## 学习进度：上下学期 + 已学单元
-
-题库按真实教材册次与课标知识点组织：每题带 `term`（上 / 下册）、`textbook`、
-`edition_family`、`unit_no` / `unit_title` 与 `knowledge_point`。
-
-| 维度 | 说明 |
-| --- | --- |
-| 所在年级 | 抽题附加 `grade<=?`，**只抽不高于该年级的题**（`grade` 为教材年级） |
-| 学习学期 | 全学年 / 上册 / 下册，按 `term` 过滤 |
-| 已学单元 | 不限 / 第 1…N 单元，按 `syllabus.json` 的有序单元别名过滤 |
-| 教材版本 | 同一格子有多套教材时自动匹配题量最多的版本族，单元过滤按 `edition_family` 隔离，不串题 |
-| 难度倾向 | 低 / 中 / 高，80/20 加权，不硬过滤 |
-
-- **年级防超纲**：`QuizDb` 的四个池谓词、最后一层保底查询与两个计数方法都带
-  `grade<=?`。空池时依次放宽单元 → 学期 → 年级，**绝不换学科**。
-- **进度表**：`app/assets/syllabus.json` 覆盖 30 个「年级 × 册次 × 学科」格子、
-  287 个有序单元；`build_syllabus.py --check` 校验它与题库同源。
-- **小学英语三年级起点**：1–2 年级没有英语题，抽题池如实跳过。
-- **升级安全**：三个设置默认值不变，覆盖安装不改变原有抽题范围。
-
----
-
-## 练习模式
-
-控制台第 1 行第 2 个按钮（原「立即出题」）是「练习模式」，点击进入独立全屏自由答题页：顶部可切
-学科（数学 / 语文 / 英语 / 混合）、年级（1–9）、难度（不限 / 低 / 中 / 高），
-中间四选一答题（方向键 + 确定键，或数字键 1–4），答对即时反馈并自动出下一题，
-底部显示已练 / 正确 / 连对统计；「换一题」和返回键随时可用。
-
-进入练习页会**挂起守护弹题**，退出后自动恢复。守护服务本身不停止，因此练习模式
-不会变成零成本绕过口子；即使练习页被强制关闭，服务恢复运行后守护照常计时。
-练习参数保存在 `PracticeConfig`，与家长设置里的守护参数完全隔离。
-
-「授权悬浮窗」按钮已恢复在控制台第 2 行第 1 个，点击直接打开系统授权页；「家长设置 → 03 开机与播放」也保留同样入口，与开机自启、厂商自启动设置放在一起。
-
-## 内置题库、难度与许可证
-
-`app/assets/quiz.db` 含 4 张表、**9544 道题**，全部带 1–6 年级标签、教材册次与难度分档。
-题目由本项目按课标自编的低年级题，与整理自互联网公开渠道、经逐题校验清洗后的题目组成；
-当前库先由 `tools/quizbank/rebuild_bank.py` 完成课标重标定，再由 `tools/quizbank/apply_review.py` 按逐题处置台账落地复核结果，v1.3.2 又由 `tools/quizbank/apply_drop_v132.py` 按 `review/drop-v132.csv` 剔除 54 道学段错配 / TV 不适配题；台账与补题源文件在 `tools/quizbank/review/`，可完整复现。
-
-| 年级 | 数学 | 语文 | 英语 | 合计 | 累积可用（≤ 本年级） |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| 1 | 972 | 281 | 0 | 1253 | 1253 |
-| 2 | 909 | 515 | 0 | 1424 | 2677 |
-| 3 | 1047 | 716 | 1026 | 2789 | 5466 |
-| 4 | 972 | 329 | 373 | 1674 | 7140 |
-| 5 | 902 | 465 | 472 | 1839 | 8979 |
-| 6 | 314 | 251 | 0 | 565 | 9544 |
-
-**年级防超纲**：`QuizDb` 的四个池谓词与最后一层兜底都带 `grade<=?`，只抽不高于当前年级的题；
-`tests/bank_quality_check.py` 把年级标签、选项合法性、同一教材单元内的重复题、
-确证超小学内容与累积池题量固化进自动审核门禁。
-
-**题目难度**：每题带 `difficulty` 与 `difficulty_level`（低 / 中 / 高），按同年级同学科的题面复杂度分三档。
-家长可设「题目难度」，默认**不限**；选择后做 **80/20 倾向加权**（约 80% 从所选档抽、20% 走全库），
-因为站点系数是众包「点击修正」值，同一道题常被标成不同难度，不适合硬过滤。
-
-**题库**：内置四选一题随 APK 发布，按教材册次与课标知识点组织。本项目为个人非商业的家庭自用工具，代码部分沿用 MIT 许可证，
-题库内容的权利归各自权利人所有，不随 MIT 许可证一并授权。
-**如相关内容涉及版权或其他权益问题，请通过 GitHub Issue 联系维护者，核实后会及时删除或替换。**
-完整说明见 [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md)。构建时 `tools/quizbank/verify.py`
-校验表结构、选项、meta 与难度分档并做篡改检测；`tests/bank_quality_check.py`
-另查年级标签、选项合法性、重复题与确证超小学内容。
-
-> 进度表 `syllabus.json` 与题库同源，按教材版本族隔离单元；重建脚本见
-> `tools/quizbank/rebuild_bank_v9.py`。
-
-在线题库源是**可选预留**：家长填了自己的 `index.json` 地址后才会按周期联网，默认关闭。
-
----
-
-## 家长设置速查
-
-| 分组 | 设置 | 默认 |
+| 能力 | 怎么开 | 默认 |
 | --- | --- | --- |
-| 出题基础 | 年级、频率、出题范围、学习学期、已学单元、教材版本 | 三年级 / 30 秒 / 仅数语英 / 全学年 / 不限 / 自动 |
-| 学科设置 | 数 / 语 / 英 / 其他各自配比 `0–5` | `5:3:2:2` |
-| 开机与播放 | 开机自启、自动守护（启动即守护）、暂停视频、恢复播放、厂商自启设置入口 | 关 / 开 / 开 / 开 |
-| 错题库 | 查看错题库（答错 2 次记录） | — |
-| 在线题库源 | 源地址、检查题库更新 / 自动更新（同一行并排）、打赏作者 | 源为空（离线） |
-| 手机扫码管理 | 家长设置 → 01 出题基础 → 手机扫码管理（进页即显示二维码） | 默认不监听（局域网 18730，占用顺延） |
-| 可选加固 | 连续答对、严格模式、冷却惩罚、出题偏好 | 答对 1 题 / 关 / 关 / 全部题目 |
-| 题目难度 | 不限 / 低 · 偏易 / 中 / 高 · 偏难（80/20 倾向加权） | 不限（默认） |
+| 在线题库（自建题目） | [格式模板 + 部署说明](docs/online-bank/README.md)，填目录 URL | 关闭，完全离线 |
+| 手机扫码管理 | 家长设置 → 手机扫码管理 → 扫码打开 Web 后台 | 关闭，不监听 |
+| 生效时段与节假日 | 家长设置 → 07 生效时段与节假日 | 关闭，全天可弹题 |
+| Android 4.0 低配包 | [官网下载区直链](https://pohw.zhangge.net/#download) | 与主线同题库、同功能 |
 
-**可选加固默认全部关闭**（Issue #1）：覆盖安装后行为与 v1.0.2 完全一致，家长在设置里主动开启才生效。
-「连续答对」可设 1–5 题；「严格模式」每题只给 1 次机会；「冷却惩罚」答错后按 30 秒 / 1 分 / 2 分 / 5 分递增，只延迟换题、不拦截答对，截止时间戳持久化以抗重启；
-「出题偏好」可选仅知识 / 计算题（题库数据不删除）：开启后只抽 `qtype='knowledge'` 的
-9544 道四选一题；题库已不含辨识 / 分类模板题，`qtype` 全为 `knowledge`。
-任一层兜底都不会突破年级上限或换学科。
+> 在线题库是**可选的**：想补充自己的题目，直接抄 `docs/online-bank/` 里的 `index.json` 模板，
+> 改完题目跑一次 `build_index.py` 重新生成 sha256，整目录托管到 HTTPS 静态服务即可。
 
-设置页是单列卡片流 + 底部固定「保存并返回」操作条，所有取值行显式串好遥控器上下焦点链。
+## 文档
 
----
+| 我想…… | 看这里 |
+| --- | --- |
+| 自己出包 / 复现构建 | [docs/BUILD.md](docs/BUILD.md) |
+| 补自己的在线题库 | [docs/online-bank/README.md](docs/online-bank/README.md) |
+| 看架构与边界 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| 看题库怎么来的 | [题库统计](docs/BANK_STATS.md) · [设计与校验](docs/QUESTION_BANK.md) · [数据来源](docs/DATA_SOURCES.md) |
+| 看版本历史 | [CHANGELOG.md](CHANGELOG.md) · [官网版本记录](https://pohw.zhangge.net/changelog.html) · [Releases](https://github.com/jagerzhang/PoHW/releases) |
+| 参与或反馈 | [Issue](https://github.com/jagerzhang/PoHW/issues) · 提交 PR 前请先看 CI 自动审核 |
 
-## 发布流程与构建
+## 发布流程
 
 零 Gradle：JDK 17 + Android SDK 34，命令行 `aapt2 → javac → d8 → zipalign → apksigner`。
 
@@ -173,42 +86,13 @@ bash tests/run.sh                  # JVM 单测
 python3 tests/mutation_suite.py    # 发布前负向变异回归
 ```
 
-`build.sh` 先跑完整门禁，再从成品 APK 读证书 SHA-256 与已发布证书
-`76eb6063b574…26172` 比对，不一致直接失败（覆盖安装要求签名连续）；
-本地实验构建须显式 `POHW_ALLOW_DEV_SIGN=1`。`versionName` 语义化、
-`versionCode` 单调递增且不随展示版本重置，否则旧设备会报
-`INSTALL_FAILED_VERSION_DOWNGRADE`。
-
 所有改动走 feature 分支 → **Pull Request** → `.github/workflows/ci.yml` 的
 `auto-review` 检查 → 合入 `main`；tag / Release 由维护者用同一发布密钥创建。
-逐次变更见 [CHANGELOG.md](CHANGELOG.md)；构建、架构与题库口径见 `docs/` 下的
-`BUILD.md` / `ARCHITECTURE.md` / `QUESTION_BANK.md` / `BANK_STATS.md` / `DATA_SOURCES.md`。
-
-## 权限
-
-| 权限 | 用途 |
-| --- | --- |
-| `SYSTEM_ALERT_WINDOW` | 跨应用全屏答题遮罩（需家长手动在系统设置授权） |
-| `FOREGROUND_SERVICE` / `POST_NOTIFICATIONS` | 后台计时守护与常驻通知 |
-| `RECEIVE_BOOT_COMPLETED` | 可选的开机自启（默认关） |
-| `INTERNET` | 仅家长自配在线题库源时才用，默认零请求 |
-
-`allowBackup="false"`，默认禁止明文 HTTP，不含任何统计 / 广告 / 支付 SDK。
-可选的无障碍服务（`BIND_ACCESSIBILITY_SERVICE`）只监听窗口切换、不读取界面内容；
-在悬浮窗授权被电视固件撤销时可作为备用弹题通道，默认不启用。
-
----
-
-## 已知边界 / FAQ
-
-- **开机 / 重启后守护没起来？** 先看首页状态栏的两行：①「悬浮窗权限」——部分电视（海信 VIDAA、TCL 等）固件会在重启后**撤销悬浮窗授权**，这不是 APP 设置丢失，重新点「授权悬浮窗」即可；②「开机自启」——它默认是关的，需要家长到「家长设置 → 03 开机与播放」单独打开，并在厂商设置里放行本应用自启动。注意「自动守护（启动即守护）」只管**打开 APP 时**自动拉起，不等于开机自启。不同厂商的待机 / 快速开机广播与后台限制差异很大，请在实际电视上验证，详见 [Issue #20](https://github.com/jagerzhang/PoHW/issues/20)。
-- **暂停视频是 best-effort**：靠音频焦点 + 媒体键请求，不保证所有视频 App 响应；小米等 ROM 的自启动权限也需家长手动放行。
-- **多套教材共存**：同一格子有多套教材时按题量最多的版本族建进度表，并按 `edition_family` 隔离单元，不会把不同教材的 U1 串在一起。
-- **难度是倾向不是保证**：站点难度系数噪声大（严格同题比对下 83% 的重复组难度值不一致），选「高」仍可能遇到偏易题。
-- **题库来源与版权**：见 `docs/DATA_SOURCES.md`；如有侵权请通过 GitHub Issue 联系删除。
-- **真机待确认**：不同 ROM 的悬浮窗权限、`HIDE_OVERLAY_WINDOWS`、字体 150% 下的长文案、二维码远距离可扫、DPAD 切渠道。
-- **覆盖安装**：务必使用同一签名证书；换 keystore 只能先卸载，会丢设置与错题库。
+`build.sh` 会比对成品证书与已发布证书，不一致直接失败，保证旧设备能覆盖安装。
+逐次变更见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 许可证与题库来源
 
-代码许可证见 [LICENSE](LICENSE)；题库来源与版权说明见 `docs/DATA_SOURCES.md`。
+代码沿用 [MIT](LICENSE)。题库内容权利归各自权利人所有，**不随 MIT 一并授权**；
+如涉及版权或其他权益问题，请通过 GitHub Issue 联系，核实后会及时删除或替换。
+完整说明见 [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md)。

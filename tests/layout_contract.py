@@ -1068,7 +1068,7 @@ _keys134 = ("grade", "interval", "questionsPerRound", "passPercent", "roundMode"
             "cooldownEnabled", "autoContinueOnCorrect", "bootAutostart",
             "autoGuardOnBoot", "pauseOnQuiz", "resumePlayback", "autoCheckUpdate",
             "scheduleEnabled", "skipHolidays", "schoolWindows", "homeWindows",
-            "vacationRange", "todayOverride")
+            "vacationRange", "todayOverride", "readMode")
 check(all(('"' + k + '"') in _api134 for k in _keys134)
       and _api134.count("NUM_KEYS") >= 2 and "BOOL_KEYS" in _api134
       and "statusJson(" in _api134 and "applyConfig(" in _api134,
@@ -1265,5 +1265,96 @@ check("BootSettings.showGuide(MainActivity.this)" in _mf133
       and "BootSettings.showGuide(SettingsActivity.this)" in _st131v
       and "AlertDialog" in _bs135 and "去系统设置" in _bs135,
       "autostart button explains vendor paths in a dialog before jumping")
+
+# ---- 未发布：自建在线题库模板 / 精简 README ----
+import json as _json_ob
+
+_ob_dir = os.path.join(ROOT, "docs", "online-bank")
+_ob_idx_path = os.path.join(_ob_dir, "index.json")
+_ob_readme = read(os.path.join(_ob_dir, "README.md"))
+_ob_tool_path = os.path.join(ROOT, "tools/onlinebank/build_index.py")
+_rm_ob = read(os.path.join(ROOT, "README.md"))
+
+check(os.path.isfile(_ob_idx_path) and os.path.isfile(_ob_tool_path),
+      "self-hosted bank template and generator ship with the source")
+_ob_idx = _json_ob.loads(read(_ob_idx_path))
+_ob_packs = _ob_idx.get("packs", [])
+check(_ob_idx.get("schema") == 1
+      and isinstance(_ob_idx.get("version"), str) and _ob_idx["version"]
+      and len(_ob_packs) >= 1,
+      "online bank index declares schema 1, a version and at least one pack")
+_ob_p0 = _ob_packs[0]
+check(not _ob_p0.get("url", "").startswith(("http://", "https://")),
+      "template pack stays on a same-host relative URL")
+_ob_bytes = open(os.path.join(_ob_dir, _ob_p0["url"]), "rb").read()
+check(hashlib.sha256(_ob_bytes).hexdigest() == _ob_p0.get("sha256")
+      and len(_ob_bytes) <= 4 * 1024 * 1024,
+      "template pack sha256 covers the exact bytes and stays under 4 MB")
+_ob_pack = _json_ob.loads(_ob_bytes.decode("utf-8"))
+_ob_qs = _ob_pack.get("questions", [])
+check(len(_ob_qs) >= 1 and all(
+        isinstance(q.get("text"), str) and len(q["text"].strip()) >= 3
+        and isinstance(q.get("options"), list) and len(q["options"]) == 4
+        and all(isinstance(o, str) and o.strip() for o in q["options"])
+        and len(set(q["options"])) == 4
+        and isinstance(q.get("answerIndex"), int)
+        and not isinstance(q.get("answerIndex"), bool)
+        and 0 <= q["answerIndex"] <= 3
+        for q in _ob_qs),
+      "every template question survives QuizEngine.fromBank validation")
+check(_ob_p0.get("count") == len(_ob_qs)
+      and _ob_pack.get("id") == _ob_p0.get("id")
+      and _ob_pack.get("grade") == _ob_p0.get("grade"),
+      "pack metadata agrees with its index entry")
+check("answerIndex" in _ob_readme and "不是 `answer_index`" in _ob_readme
+      and "network_security_config" in _ob_readme and "4 MB" in _ob_readme,
+      "online bank docs spell out camelCase, HTTPS-only and size limits")
+check("--check" in read(_ob_tool_path) and "hashlib.sha256" in read(_ob_tool_path),
+      "generator re-verifies sha256 instead of trusting hand-written values")
+check("docs/online-bank/README.md" in _rm_ob
+      and _rm_ob.count("img.shields.io") >= 6
+      and "## 发布流程" in _rm_ob and "auto-review" in _rm_ob,
+      "slim README links the bank template and keeps the release section")
+
+# ---- 未发布：官网 Android 4.0 直链 / 面向家长的「下载」文案 ----
+_ob_site = read(os.path.join(ROOT, "site/index.html"))
+check('href="https://pohw.zhangge.net/dl/latest-legacy.apk"' in _ob_site
+      and 'Android 4.0 低配版（本站直链）' in _ob_site,
+      "site exposes a direct Android 4.0 legacy APK download")
+check('仅提供 APK 下载' in _ob_site and '侧载' not in _ob_site
+      and '家长自行下载' in _rm_ob and '家长自行侧载' not in _rm_ob,
+      "user-facing wording uses download instead of side-load")
+
+# ---- 未发布：系统 TTS 朗读（默认关闭 / 只用 API 4 / 无引擎如实提示）----
+_sr = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SpeechReader.java"))
+_sr_code = strip_comments(_sr)
+_kr_sr = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/KeyRouter.java"))
+_oq_sr = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/OverlayQuizView.java"))
+_svc_sr = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizOverlayService.java"))
+_st_sr = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsStore.java"))
+_set_sr = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsActivity.java"))
+_api_sr = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/AdminApi.java"))
+_js_sr = read(os.path.join(ROOT, "app/assets/admin/app.js"))
+check("android.speech.tts.TextToSpeech" in _sr_code
+      and "UtteranceProgressListener" not in _sr_code
+      and "Bundle" not in _sr_code and "QUEUE_FLUSH" in _sr_code,
+      "system TTS wrapper uses only API 4 interfaces (Android 4 dex stays clean)")
+check('sp.getInt("readMode", 0)' in _st_sr and "READ_MODE_LABELS" in _st_sr,
+      "read-aloud mode defaults to off so covering installs keep old behavior")
+check("STATE_NO_ENGINE" in _sr and "未检测到中文语音引擎" in _sr
+      and "state != STATE_READY" in _sr_code,
+      "missing engine is reported honestly and never blocks quiz flow")
+check("SEM_SPEAK" in _kr_sr and "new Decision(ACT_SPEAK, 0)" in _kr_sr,
+      "key router has a dedicated speak action")
+check("KEYCODE_MEDIA_PLAY_PAUSE) return KeyRouter.SEM_SPEAK" in _oq_sr
+      and "listener.onSpeakRequest(flow.selected())" in _oq_sr,
+      "media key reads the highlighted option instead of submitting")
+check("view.setReadHint(st.readMode(), st.ttsState())" in _svc_sr
+      and "if (st.readMode() == 2) speakCurrent(-1);" in _svc_sr
+      and "if (speech != null) speech.close();" in _svc_sr,
+      "auto read happens on quiz show and the TTS handle is released")
+check('"readMode"' in _api_sr and "st.readMode(clamp(v, 0" in _api_sr
+      and '"readMode"' in _js_sr and "rowReadAloud" in _set_sr,
+      "read mode is exposed on TV settings and the phone admin page")
 
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

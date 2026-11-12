@@ -1237,4 +1237,54 @@ check("BootSettings.showGuide(MainActivity.this)" in _mf133
       and "AlertDialog" in _bs135 and "去系统设置" in _bs135,
       "autostart button explains vendor paths in a dialog before jumping")
 
+# ---- 未发布：自建在线题库模板 / 精简 README ----
+import json as _json_ob
+
+_ob_dir = os.path.join(ROOT, "docs", "online-bank")
+_ob_idx_path = os.path.join(_ob_dir, "index.json")
+_ob_readme = read(os.path.join(_ob_dir, "README.md"))
+_ob_tool_path = os.path.join(ROOT, "tools/onlinebank/build_index.py")
+_rm_ob = read(os.path.join(ROOT, "README.md"))
+
+check(os.path.isfile(_ob_idx_path) and os.path.isfile(_ob_tool_path),
+      "self-hosted bank template and generator ship with the source")
+_ob_idx = _json_ob.loads(read(_ob_idx_path))
+_ob_packs = _ob_idx.get("packs", [])
+check(_ob_idx.get("schema") == 1
+      and isinstance(_ob_idx.get("version"), str) and _ob_idx["version"]
+      and len(_ob_packs) >= 1,
+      "online bank index declares schema 1, a version and at least one pack")
+_ob_p0 = _ob_packs[0]
+check(not _ob_p0.get("url", "").startswith(("http://", "https://")),
+      "template pack stays on a same-host relative URL")
+_ob_bytes = open(os.path.join(_ob_dir, _ob_p0["url"]), "rb").read()
+check(hashlib.sha256(_ob_bytes).hexdigest() == _ob_p0.get("sha256")
+      and len(_ob_bytes) <= 4 * 1024 * 1024,
+      "template pack sha256 covers the exact bytes and stays under 4 MB")
+_ob_pack = _json_ob.loads(_ob_bytes.decode("utf-8"))
+_ob_qs = _ob_pack.get("questions", [])
+check(len(_ob_qs) >= 1 and all(
+        isinstance(q.get("text"), str) and len(q["text"].strip()) >= 3
+        and isinstance(q.get("options"), list) and len(q["options"]) == 4
+        and all(isinstance(o, str) and o.strip() for o in q["options"])
+        and len(set(q["options"])) == 4
+        and isinstance(q.get("answerIndex"), int)
+        and not isinstance(q.get("answerIndex"), bool)
+        and 0 <= q["answerIndex"] <= 3
+        for q in _ob_qs),
+      "every template question survives QuizEngine.fromBank validation")
+check(_ob_p0.get("count") == len(_ob_qs)
+      and _ob_pack.get("id") == _ob_p0.get("id")
+      and _ob_pack.get("grade") == _ob_p0.get("grade"),
+      "pack metadata agrees with its index entry")
+check("answerIndex" in _ob_readme and "不是 `answer_index`" in _ob_readme
+      and "network_security_config" in _ob_readme and "4 MB" in _ob_readme,
+      "online bank docs spell out camelCase, HTTPS-only and size limits")
+check("--check" in read(_ob_tool_path) and "hashlib.sha256" in read(_ob_tool_path),
+      "generator re-verifies sha256 instead of trusting hand-written values")
+check("docs/online-bank/README.md" in _rm_ob
+      and _rm_ob.count("img.shields.io") >= 6
+      and "## 发布流程" in _rm_ob and "auto-review" in _rm_ob,
+      "slim README links the bank template and keeps the release section")
+
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

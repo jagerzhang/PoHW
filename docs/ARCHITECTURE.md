@@ -154,6 +154,8 @@ Android 8+ 的「5 秒内前台化」要求；`onDestroy()` 还会显式 `stopFo
   回退该年级全学科，再回退全库；`QuizEngine` 最后还有参数化生成器兜底。
 - 在线源为**可选项**：`bankUrl` 为空时不发请求；非空时 `BankRepository` 在单线程池
   下载、`index.json` 版本比对、逐包 SHA-256 校验、原子落盘，回调切回主线程。
+- 自建题库的 `index.json` 格式、可拷贝模板与一键生成脚本见
+  [`docs/online-bank/README.md`](online-bank/README.md)。
 - 默认禁止明文 HTTP（`res/xml/network_security_config.xml` 仅放行本机调试地址）。
 
 ## 已知技术债（欢迎 PR）

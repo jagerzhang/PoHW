@@ -6,10 +6,10 @@
 
 **给 Android 电视加一道门槛：到点弹出一道题，答对才能继续看。**
 
-不上架应用商店 · 家长自行侧载 · 默认离线 · 不收集任何数据
+不上架应用商店 · 家长自行下载 · 默认离线 · 不收集任何数据
 
 [![Release](https://img.shields.io/github/v/release/jagerzhang/PoHW?style=for-the-badge&logo=github&label=Release)](https://github.com/jagerzhang/PoHW/releases/latest)
-[![官网](https://img.shields.io/badge/官网-在线体验-3DDC84?style=for-the-badge&logo=googlechrome)](https://pohw.zhangge.net/)
+[![官网](https://img.shields.io/badge/官网-下载-3DDC84?style=for-the-badge&logo=googlechrome)](https://pohw.zhangge.net/)
 [![Android TV](https://img.shields.io/badge/Android%20TV-5.0%2B-3DDC84?style=for-the-badge&logo=android)](https://pohw.zhangge.net/#download)
 [![内置题库](https://img.shields.io/badge/内置题库-9%2C544%20题-2F80ED?style=for-the-badge&logo=book)](docs/BANK_STATS.md)
 
@@ -57,7 +57,7 @@
 | 在线题库（自建题目） | [格式模板 + 部署说明](docs/online-bank/README.md)，填目录 URL | 关闭，完全离线 |
 | 手机扫码管理 | 家长设置 → 手机扫码管理 → 扫码打开 Web 后台 | 关闭，不监听 |
 | 生效时段与节假日 | 家长设置 → 07 生效时段与节假日 | 关闭，全天可弹题 |
-| Android 4.0 低配包 | [官网下载页](https://pohw.zhangge.net/#download) 选 legacy 通道 | 与主线同题库 |
+| Android 4.0 低配包 | [官网下载区直链](https://pohw.zhangge.net/#download) | 与主线同题库、同功能 |
 
 > 在线题库是**可选的**：想补充自己的题目，直接抄 `docs/online-bank/` 里的 `index.json` 模板，
 > 改完题目跑一次 `build_index.py` 重新生成 sha256，整目录托管到 HTTPS 静态服务即可。

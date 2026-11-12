@@ -1342,8 +1342,9 @@ _svc_b = strip_comments(read(os.path.join(ROOT,
 _run_b = read(os.path.join(ROOT, "tests/run.sh"))
 check("Gravity.LEFT | Gravity.CENTER_VERTICAL" in _v_b,
       "quiz stem is left aligned instead of centred")
-check(_v_b.count("AutoFitText.fit(") >= 2,
-      "stem and all four options are measured at runtime, not by char count alone")
+check("AutoFitText.fit(text," in _v_b and "AutoFitText.fit(opts[i]," in _v_b
+      and "AutoFitText.fit(result," in _v_b,
+      "stem, all four options and the dynamic result line are measured at runtime")
 check("new StaticLayout(" in _af_b and "TextFit.choose(" in _af_b,
       "fitter measures real line wrapping and delegates the size decision")
 check("lineCounts[i] > maxLines" in _tf_b and "heightsDp[i] > availableDp" in _tf_b,

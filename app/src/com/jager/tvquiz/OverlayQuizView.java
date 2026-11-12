@@ -149,6 +149,9 @@ public final class OverlayQuizView {
                 ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(c, 200)));
 
         result = Ui.tv(c, "", 21, Ui.GREEN);
+        result.setIncludeFontPadding(false);
+        result.setMaxLines(1);
+        result.setEllipsize(null);
         card.addView(result, Ui.fixed(c, 34));
         explain = Ui.tv(c, "", 15, 0xFF5F6B7F);
         explain.setMinHeight(Ui.dp(c, 34));
@@ -204,6 +207,12 @@ public final class OverlayQuizView {
                 opts[i].setTextSize(TypedValue.COMPLEX_UNIT_SP, common);
             }
         }
+        fitResult();
+    }
+
+    /** 结果提示是动态文案，最长的一句也会在固定高度行里被右侧截断。 */
+    private void fitResult() {
+        AutoFitText.fit(result, 21, 1, 1.0f);
     }
 
     /** 遥控器在 2x2 选项网格之外还能到达朗读按钮。 */
@@ -439,5 +448,6 @@ public final class OverlayQuizView {
             speakBtn.setBackground(Ui.round(Ui.BLUE_LIGHT, 10, c));
             speakBtn.setTextColor(Ui.BLUE);
         }
+        fitResult();
     }
 }

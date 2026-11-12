@@ -1348,6 +1348,8 @@ check("new StaticLayout(" in _af_b and "TextFit.choose(" in _af_b,
       "fitter measures real line wrapping and delegates the size decision")
 check("lineCounts[i] > maxLines" in _tf_b and "heightsDp[i] > availableDp" in _tf_b,
       "both line-count and measured-height constraints are enforced")
+check("AutoFitText.fit(result," in _v_b and "fitResult();" in _v_b,
+      "dynamic result line is fitted too so long hints are not clipped")
 check('Ui.button(c, "朗读"' in _v_b and "void onSpeakAll(int selected)" in _v_b,
       "read-aloud button is visible on the quiz card and declares its callback")
 check("SpeakFocus.shouldEnter(" in _v_b and "SpeakFocus.shouldLeave(" in _v_b

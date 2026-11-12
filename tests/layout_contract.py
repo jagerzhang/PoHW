@@ -1287,4 +1287,13 @@ check("docs/online-bank/README.md" in _rm_ob
       and "## 发布流程" in _rm_ob and "auto-review" in _rm_ob,
       "slim README links the bank template and keeps the release section")
 
+# ---- 未发布：官网 Android 4.0 直链 / 面向家长的「下载」文案 ----
+_ob_site = read(os.path.join(ROOT, "site/index.html"))
+check('href="https://pohw.zhangge.net/dl/latest-legacy.apk"' in _ob_site
+      and 'Android 4.0 低配版（本站直链）' in _ob_site,
+      "site exposes a direct Android 4.0 legacy APK download")
+check('仅提供 APK 下载' in _ob_site and '侧载' not in _ob_site
+      and '家长自行下载' in _rm_ob and '家长自行侧载' not in _rm_ob,
+      "user-facing wording uses download instead of side-load")
+
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

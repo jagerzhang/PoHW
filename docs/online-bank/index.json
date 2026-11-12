@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "version": "2026-11-12",
+  "updatedAt": "2026-11-12",
+  "packs": [
+    {
+      "id": "grade3_math",
+      "grade": 3,
+      "edition": "通用(课标)",
+      "subject": "数学",
+      "url": "pack_grade3_math.json",
+      "sha256": "399deca66824b7fbc8df0e3a3782bad570727a19a5f2babdd6c4b993a7e2c454",
+      "count": 3
+    }
+  ]
+}

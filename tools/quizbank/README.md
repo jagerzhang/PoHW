@@ -38,4 +38,5 @@ python3 tools/quizbank/verify.py app/assets/quiz.db
 早期版本试过把题库做成 HTTP 服务，结论是：上游本身没有题目，在线化只是把
 「本地生成」搬到服务器上，还额外引入网络、配额、密钥与缓存一致性问题。
 现在题库随 APK 预置、App 本地随机抽题，零网络即可工作。
-在线题库源仍作为**可选能力**保留在 App 设置里，由使用者自行部署。
+在线题库源仍作为**可选能力**保留在 App 设置里，由使用者自行部署；
+`index.json` 格式模板与一键生成脚本见 [`docs/online-bank/README.md`](../../docs/online-bank/README.md)。

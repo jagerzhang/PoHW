@@ -1377,7 +1377,7 @@ check("canvas.drawPath(" in _spd_icon and "canvas.drawArc(" in _spd_icon
 check("quizView.showSpeakUnavailable()" in _svc_b,
       "triggering read aloud without an engine gives visible feedback")
 check("new ImageView(c)" in _v_b and "ImageView.ScaleType.CENTER" in _v_b
-      and "speakBtn.setBackground(null)" in _v_b,
+      and _v_b.count("speakBtn.setBackground(null)") >= 2,
       "speaker icon is centred in a transparent image view with no background block")
 _st_new = read(os.path.join(ROOT,
         "app/src/com/jager/tvquiz/SettingsStore.java"))

@@ -243,11 +243,11 @@ public final class SettingsStore implements PinGate.Store {
 
     // ---------- 频率 / 配比 / 在线源 ----------
 
-    public int intervalSec() { return sp.getInt("interval", 30); }
+    public int intervalSec() { return sp.getInt("interval", 600); }
     public void intervalSec(int v) { sp.edit().putInt("interval", v).commit(); }
     public int intervalIndex() {
         for (int i = 0; i < INTERVALS.length; i++) if (INTERVALS[i] == intervalSec()) return i;
-        return 1;
+        return 4; // 600 秒 = 10 分钟
     }
 
     public int syncIndex() { return clamp(sp.getInt("syncIdx", 1), 0, SYNC_HOURS.length - 1); }

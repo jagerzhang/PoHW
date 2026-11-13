@@ -124,7 +124,7 @@ public class QuizOverlayService extends Service {
     public static void setPracticeMode(boolean v) { practiceMode = v; }
     public static boolean isPracticeMode() { return practiceMode; }
 
-    private int interval = 30;
+    private int interval = 600;
     private String lastKey = "";
     private long nextSyncAt = 0L;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -182,6 +182,7 @@ public class QuizOverlayService extends Service {
         @Override public void onContinue() { finishQuiz(); }
         @Override public void onWindowFocus(boolean hasFocus) { onQuizWindowFocus(hasFocus); }
         @Override public void onSpeakRequest(int selected) { speakCurrent(selected); }
+        @Override public void onSpeakAll(int selected) { speakAll(selected); }
     };
 
     private final Runnable focusCheck = new Runnable() {
@@ -507,6 +508,24 @@ public class QuizOverlayService extends Service {
                 @Override public void onState(int state) { st.ttsState(state); }
             });
         }
+    }
+
+    /** 可见朗读按钮：题干 + 当前高亮选项连读；关闭状态也允许单次试听。 */
+    private void speakAll(int selected) {
+        if (current == null) return;
+        ensureSpeech();
+        if (speech.state() != SpeechReader.STATE_READY) {
+            if (quizView != null) quizView.showSpeakUnavailable();
+            return;
+        }
+        StringBuilder b = new StringBuilder();
+        if (current.text != null) b.append(current.text);
+        if (selected >= 0 && selected < 4 && current.options != null
+                && selected < current.options.length
+                && current.options[selected] != null) {
+            b.append("。选项：").append(current.options[selected]);
+        }
+        speech.speak(b.toString());
     }
 
     /** 有高亮就读该选项，否则读题干；引擎不可用或模式关闭时什么都不做。 */

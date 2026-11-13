@@ -7,8 +7,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/app"
 BUILD="$ROOT/.build"
 DIST="$ROOT/dist"
-VERSION_NAME="1.3.5"
-VERSION_CODE="52"
+VERSION_NAME="1.3.6"
+VERSION_CODE="54"
 APK_NAME="PoHW-v${VERSION_NAME}.apk"
 
 : "${JAVA_HOME:=/opt/jdk17}"
@@ -32,7 +32,8 @@ grep -q "versionCode=\"$VERSION_CODE\"" "$APP/AndroidManifest.xml"
 grep -q "versionName=\"$VERSION_NAME\"" "$APP/AndroidManifest.xml"
 # 只发布 7 个语义化版本；feature 分支的自动审核工作流必须随仓库分发。
 [ -f "$ROOT/.github/workflows/ci.yml" ] || { echo "FORBIDDEN: missing auto-review workflow"; exit 1; }
-grep -qF 'VERSION_NAME="1.3.5"' "$APP/build.sh"
+grep -qF 'VERSION_NAME="1.3.6"' "$APP/build.sh"
+grep -qF 'version: "v1.3.6"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.3.5"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.3.4"' "$ROOT/site/script.js"
 grep -qF 'version: "v1.3.3"' "$ROOT/site/script.js"
@@ -94,6 +95,12 @@ grep -q 'MediaPauseController' "$SVC"
 grep -q 'BootPolicy.shouldStartGuard' "$APP/src/com/jager/tvquiz/BootReceiver.java"
 grep -q 'new OverlayQuizView' "$SVC"             # 每次弹题不复用 View
 grep -q 'setFocusable(false)' "$VIEW"            # 子按钮不参与焦点树
+grep -qF 'Gravity.LEFT | Gravity.CENTER_VERTICAL' "$VIEW"   # 题干左对齐
+grep -qF 'AutoFitText.fit(' "$VIEW"                          # 实测自适应
+grep -qF 'setContentDescription("朗读")' "$VIEW"           # 喇叭图标按钮常驻可见
+grep -qF 'ImageView.ScaleType.CENTER' "$VIEW"                # 图标几何居中
+grep -qF 'speakBtn.setBackground(null)' "$VIEW"              # 常态无背景块
+grep -qF 'getInt("interval", 600)' "$SRC/SettingsStore.java" # 默认出题间隔 10 分钟
 grep -q 'WrongBookActivity' "$APP/AndroidManifest.xml"
 # v1.0.1 UI consolidation: one toggle, subject rows, bank entry only in settings
 MAIN="$APP/src/com/jager/tvquiz/MainActivity.java"

@@ -5,7 +5,7 @@
 > **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）、
 > **v1.2.4**（37）、**v1.2.5**（39）、**v1.2.6**（41）、**v1.2.7**（43）、
 > **v1.3.0**（44）、**v1.3.1**（45）、**v1.3.2**（46）、**v1.3.3**（47）、
-> **v1.3.4**（50，低配 51）、**v1.3.5**（52，低配 53）。
+> **v1.3.4**（50，低配 51）、**v1.3.5**（52，低配 53）、**v1.3.6**（54，低配 55）。
 > `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
@@ -13,6 +13,31 @@
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.3.6 (versionCode 54) — system TTS, visible speaker, runtime text fitting
+
+Display version 1.3.5 -> **1.3.6**, `versionCode` 52 -> **54**, same release
+keystore (SHA-256 `76eb6063b574...26172`). Eighteenth published release.
+Android 4.0 legacy variant ships as `v1.3.6-legacy` / code 55.
+
+- **System TTS read-aloud**: `SpeechReader` uses only API 4 `TextToSpeech`
+  interfaces and ships no engine, `.so` or audio assets (APK +4 KB). Three-state
+  `readMode` (off by default / manual / auto-read), TV settings row, phone admin
+  selector, and honest degradation when no Chinese engine is installed.
+- **Visible speaker affordance**: `SpeakerDrawable` is drawn in code (zero image
+  assets), centred in a transparent `ImageView` with a round focus highlight.
+  Remote `SETTINGS` / `MENU` (and the existing media play key) read the stem plus
+  the highlighted option without submitting an answer. The missing-engine notice
+  appears only after a click and auto-dismisses after 3 seconds.
+- **Runtime text fitting**: `AutoFitText` measures real line wrapping with
+  `StaticLayout` and picks the largest fitting size for the stem, all four
+  options and the dynamic result line; the stem is left aligned. Long options no
+  longer lose their last line.
+- **Default quiz interval** is now 10 minutes (600s) instead of 30s. Existing
+  installs keep their stored value; the settings page and phone admin still
+  expose every interval including the 15-second demo.
+- **Guards**: layout contract 462, JVM 486, mutation suite 128/128, and the
+  low-end build still reports `high-api=0` for minSdk 14.
 
 ## v1.3.5 (versionCode 52) — quiz stem clipping fix and honest boot-autostart guide
 

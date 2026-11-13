@@ -29,6 +29,8 @@ mkdir -p "$OUT"
   app/src/com/jager/tvquiz/PinGate.java \
   app/src/com/jager/tvquiz/SettingsStore.java \
   app/src/com/jager/tvquiz/QuizTextSizer.java \
+  app/src/com/jager/tvquiz/TextFit.java \
+  app/src/com/jager/tvquiz/SpeakFocus.java \
   app/src/com/jager/tvquiz/BootGuide.java \
   app/src/com/jager/tvquiz/GuardPolicy.java \
   app/src/com/jager/tvquiz/GuardState.java \
@@ -58,6 +60,7 @@ mkdir -p "$OUT"
   tests/src/UpdateConfigTest.java \
   tests/src/RoundPolicyTest.java \
   tests/src/QuizTextSizerTest.java \
+  tests/src/TextFitTest.java \
   tests/src/BootGuideTest.java \
   tests/src/QrEncoderTest.java \
   tests/src/StartGuardTest.java \
@@ -68,7 +71,7 @@ TOTAL=0
 for t in PinGateTest QuizLayoutTest StopGuardTest StopStateTest GradeScopeTest \
          FeatureV6Test BehaviorV601Test SubjectWeightsTest SyllabusTest \
          UnlockPolicyTest CooldownPolicyTest DifficultyPolicyTest PracticeConfigTest \
-         UpdateConfigTest RoundPolicyTest QuizTextSizerTest BootGuideTest QrEncoderTest StartGuardTest \
+         UpdateConfigTest RoundPolicyTest QuizTextSizerTest TextFitTest BootGuideTest QrEncoderTest StartGuardTest \
          OverlayChannelTest SchedulePolicyTest; do
   LOG="$ROOT/.build/$t.log"
   "$JAVA_HOME/bin/java" -Dfile.encoding=UTF-8 -cp "$OUT" "$t" > "$LOG"

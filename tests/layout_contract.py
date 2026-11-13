@@ -1374,6 +1374,21 @@ check("KEYCODE_SETTINGS" in _v_b and "KEYCODE_MENU" in _v_b
 check("canvas.drawPath(" in _spd_icon and "canvas.drawArc(" in _spd_icon
       and "import android.graphics.drawable.Drawable;" in _spd_icon,
       "speaker icon is drawn in code with no image resources")
-check("设备无中文语音引擎，暂不能朗读" in _svc_b,
+check("quizView.showSpeakUnavailable()" in _svc_b,
       "triggering read aloud without an engine gives visible feedback")
+check("new ImageView(c)" in _v_b and "ImageView.ScaleType.CENTER" in _v_b
+      and "speakBtn.setBackground(null)" in _v_b,
+      "speaker icon is centred in a transparent image view with no background block")
+_st_new = read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/SettingsStore.java"))
+check('getInt("interval", 600)' in _st_new and "private int interval = 600;" in _svc_b,
+      "default quiz interval is 10 minutes instead of 30 seconds")
+check("INTERVALS = {15, 30, 60, 300, 600, 1200, 1800}" in _st_new
+      and "return 4; // 600" in _st_new,
+      "10 minutes is an allowed interval and the fallback index")
+check("showSpeakUnavailable()" in _svc_b and "root.postDelayed(" in _v_b
+      and 'result.setText("")' in _v_b,
+      "missing-engine notice appears only after a click and auto-dismisses")
+check("（无语音引擎）" not in _v_b,
+      "footer no longer permanently shows engine status")
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

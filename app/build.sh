@@ -97,6 +97,9 @@ grep -q 'setFocusable(false)' "$VIEW"            # 子按钮不参与焦点树
 grep -qF 'Gravity.LEFT | Gravity.CENTER_VERTICAL' "$VIEW"   # 题干左对齐
 grep -qF 'AutoFitText.fit(' "$VIEW"                          # 实测自适应
 grep -qF 'setContentDescription("朗读")' "$VIEW"           # 喇叭图标按钮常驻可见
+grep -qF 'ImageView.ScaleType.CENTER' "$VIEW"                # 图标几何居中
+grep -qF 'speakBtn.setBackground(null)' "$VIEW"              # 常态无背景块
+grep -qF 'getInt("interval", 600)' "$SRC/SettingsStore.java" # 默认出题间隔 10 分钟
 grep -q 'WrongBookActivity' "$APP/AndroidManifest.xml"
 # v1.0.1 UI consolidation: one toggle, subject rows, bank entry only in settings
 MAIN="$APP/src/com/jager/tvquiz/MainActivity.java"

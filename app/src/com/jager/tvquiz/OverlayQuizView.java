@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -59,12 +60,15 @@ public final class OverlayQuizView {
     private final Root root;
     private final TextView topic, text, result, explain, footer;
     private final Button[] opts = new Button[4];
-    private final Button cont, speakBtn;
+    private final Button cont;
+    private final ImageView speakBtn;
     private final SpeakerDrawable speakIcon;
     private final Listener listener;
     private final QuizFlow flow = new QuizFlow();
     /** 第 5 个遥控器目标：题干右上角可见的朗读按钮。 */
     private boolean speakFocused = false;
+    /** 朗读不支持提示的序号：只有最后一次提示有权在延时后收起。 */
+    private int speakNoticeSeq = 0;
 
     public OverlayQuizView(Context ctx, Listener l) {
         c = ctx;
@@ -94,20 +98,20 @@ public final class OverlayQuizView {
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         // B 方案：朗读入口常驻可见，不需要家长先进设置页打开开关才发现。
         // 用代码绘制的喇叭图标替代纯文字：零图片资源，低配包同样可用。
-        speakBtn = Ui.button(c, "", Ui.BLUE_LIGHT, Ui.BLUE, 18);
-        speakBtn.setContentDescription("朗读");
-        speakBtn.setPadding(0, 0, 0, 0);
-        speakBtn.setGravity(Gravity.CENTER);
+        // ImageView + CENTER 让图标几何居中；常态透明无背景块，聚焦才给圆形高亮。
+        speakBtn = new ImageView(c);
         speakIcon = new SpeakerDrawable(Ui.dp(c, 26), Ui.BLUE);
-        speakBtn.setCompoundDrawablesWithIntrinsicBounds(
-                speakIcon, null, null, null);
+        speakBtn.setImageDrawable(speakIcon);
+        speakBtn.setScaleType(ImageView.ScaleType.CENTER);
+        speakBtn.setContentDescription("朗读");
+        speakBtn.setBackground(null);
         speakBtn.setFocusable(false);
         speakBtn.setFocusableInTouchMode(false);
         speakBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { requestSpeakAll(); }
         });
         LinearLayout.LayoutParams speakLp = new LinearLayout.LayoutParams(
-                Ui.dp(c, 60), Ui.dp(c, 44));
+                Ui.dp(c, 56), Ui.dp(c, 44));
         speakLp.setMargins(Ui.dp(c, 8), 0, 0, 0);
         topRow.addView(speakBtn, speakLp);
         card.addView(topRow, new LinearLayout.LayoutParams(
@@ -268,15 +272,30 @@ public final class OverlayQuizView {
     /** 供服务的焦点重试任务判断是否已抢回窗口焦点。 */
     public boolean hasWindowFocus() { return root.hasWindowFocus(); }
 
-    /** footer 常驻朗读提示：关闭状态也告诉家长这个入口存在。 */
+    /** footer 只说明入口，不常驻引擎状态；不支持的提示仅在点按后短暂出现。 */
     public void setReadHint(int mode, int state) {
-        String engine = state == SpeechReader.STATE_READY
-                ? "" : "（无语音引擎）";
         String speak = mode == 0 ? "设置键试听"
                 : (mode == 2 ? "自动读题已开 · 设置键复读" : "设置键读题");
         String tail = mode == 0 ? " · 答对继续"
                 : " · 播放键读选项 · 答对继续";
-        footer.setText("方向键选择 · 确定/1-4 作答 · " + speak + engine + tail);
+        footer.setText("方向键选择 · 确定/1-4 作答 · " + speak + tail);
+    }
+
+    /** 点按朗读但设备缺引擎时短暂提示，3 秒后自动收起，不占用结果行常驻。 */
+    public void showSpeakUnavailable() {
+        final int seq = ++speakNoticeSeq;
+        final String notice = "设备无中文语音引擎，暂不能朗读";
+        result.setTextColor(Ui.AMBER);
+        result.setText(notice);
+        fitResult();
+        root.postDelayed(new Runnable() {
+            @Override public void run() {
+                if (seq != speakNoticeSeq) return;
+                if (!notice.contentEquals(result.getText())) return;
+                result.setText("");
+                fitResult();
+            }
+        }, 3000);
     }
 
     public void bind(QuizEngine.Question q, String meta) {
@@ -456,12 +475,10 @@ public final class OverlayQuizView {
             }
         }
         if (speakFocused) {
-            speakBtn.setBackground(Ui.round(Ui.BLUE, 10, c));
-            speakBtn.setTextColor(0xFFFFFFFF);
+            speakBtn.setBackground(Ui.round(Ui.BLUE, 22, c));
             speakIcon.setColor(0xFFFFFFFF);
         } else {
-            speakBtn.setBackground(Ui.round(Ui.BLUE_LIGHT, 10, c));
-            speakBtn.setTextColor(Ui.BLUE);
+            speakBtn.setBackground(null);
             speakIcon.setColor(Ui.BLUE);
         }
         speakBtn.invalidate();

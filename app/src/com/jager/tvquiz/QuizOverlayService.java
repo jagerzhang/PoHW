@@ -514,7 +514,10 @@ public class QuizOverlayService extends Service {
     private void speakAll(int selected) {
         if (current == null) return;
         ensureSpeech();
-        if (speech.state() != SpeechReader.STATE_READY) return;
+        if (speech.state() != SpeechReader.STATE_READY) {
+            if (quizView != null) quizView.hint("设备无中文语音引擎，暂不能朗读");
+            return;
+        }
         StringBuilder b = new StringBuilder();
         if (current.text != null) b.append(current.text);
         if (selected >= 0 && selected < 4 && current.options != null

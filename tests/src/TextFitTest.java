@@ -1,5 +1,6 @@
 import com.jager.tvquiz.TextFit;
 import com.jager.tvquiz.SpeakFocus;
+import com.jager.tvquiz.KeyRouter;
 
 /** 运行时字号自适应决策与朗读按钮遥控器焦点：纯 JVM 回归。 */
 public class TextFitTest {
@@ -51,6 +52,19 @@ public class TextFitTest {
                 !SpeakFocus.shouldLeave(false, SpeakFocus.DIR_DOWN));
         ok("S08 朗读按钮上键保持聚焦",
                 !SpeakFocus.shouldLeave(true, SpeakFocus.DIR_UP));
+
+        ok("K01 设置键语义映射到完整朗读",
+                KeyRouter.decide(KeyRouter.ACTION_DOWN, 0,
+                        KeyRouter.SEM_SPEAK_ALL, 0).action
+                        == KeyRouter.ACT_SPEAK_ALL);
+        ok("K02 设置键长按重复被过滤",
+                KeyRouter.decide(KeyRouter.ACTION_DOWN, 3,
+                        KeyRouter.SEM_SPEAK_ALL, 0).action
+                        == KeyRouter.ACT_CONSUME);
+        ok("K03 播放键仍只读当前高亮项",
+                KeyRouter.decide(KeyRouter.ACTION_DOWN, 0,
+                        KeyRouter.SEM_SPEAK, 0).action
+                        == KeyRouter.ACT_SPEAK);
 
         System.out.println("VERIFY=" + (fail == 0 ? "PASS" : "FAIL") + " total=" + pass);
         if (fail > 0) System.exit(1);

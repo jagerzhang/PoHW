@@ -1351,17 +1351,29 @@ check("lineCounts[i] > maxLines" in _tf_b and "heightsDp[i] > availableDp" in _t
       "both line-count and measured-height constraints are enforced")
 check("AutoFitText.fit(result," in _v_b and "fitResult();" in _v_b,
       "dynamic result line is fitted too so long hints are not clipped")
-check('Ui.button(c, "朗读"' in _v_b and "void onSpeakAll(int selected)" in _v_b,
-      "read-aloud button is visible on the quiz card and declares its callback")
+check('setContentDescription("朗读")' in _v_b and "new SpeakerDrawable(" in _v_b
+      and "void onSpeakAll(int selected)" in _v_b,
+      "speaker icon button is visible on the quiz card and declares its callback")
 check("SpeakFocus.shouldEnter(" in _v_b and "SpeakFocus.shouldLeave(" in _v_b
       and "DIR_UP = 2" in _sf_b,
       "read-aloud button is reachable by the TV remote")
 check("speakAll(selected)" in _svc_b and "b.append(current.text)" in _svc_b
       and "\"。选项：\"" in _svc_b,
       "button reads both the stem and the highlighted option")
-check('mode == 0 ? "朗读键试听"' in _v_b,
+check('mode == 0 ? "设置键试听"' in _v_b,
       "footer keeps the read-aloud hint even when the mode is off")
 check("TextFitTest" in _run_b and "TextFit.java" in _run_b,
       "new fit policy and focus policy are wired into the JVM runner")
 
+_kr_icon = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/KeyRouter.java"))
+_spd_icon = read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/SpeakerDrawable.java"))
+check("KEYCODE_SETTINGS" in _v_b and "KEYCODE_MENU" in _v_b
+      and "SEM_SPEAK_ALL" in _kr_icon and "ACT_SPEAK_ALL" in _kr_icon,
+      "remote settings/menu key has a dedicated full read-aloud route")
+check("canvas.drawPath(" in _spd_icon and "canvas.drawArc(" in _spd_icon
+      and "import android.graphics.drawable.Drawable;" in _spd_icon,
+      "speaker icon is drawn in code with no image resources")
+check("设备无中文语音引擎，暂不能朗读" in _svc_b,
+      "triggering read aloud without an engine gives visible feedback")
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

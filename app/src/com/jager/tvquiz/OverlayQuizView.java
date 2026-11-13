@@ -60,6 +60,7 @@ public final class OverlayQuizView {
     private final TextView topic, text, result, explain, footer;
     private final Button[] opts = new Button[4];
     private final Button cont, speakBtn;
+    private final SpeakerDrawable speakIcon;
     private final Listener listener;
     private final QuizFlow flow = new QuizFlow();
     /** 第 5 个遥控器目标：题干右上角可见的朗读按钮。 */
@@ -92,14 +93,21 @@ public final class OverlayQuizView {
         topRow.addView(topic, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         // B 方案：朗读入口常驻可见，不需要家长先进设置页打开开关才发现。
-        speakBtn = Ui.button(c, "朗读", Ui.BLUE_LIGHT, Ui.BLUE, 18);
+        // 用代码绘制的喇叭图标替代纯文字：零图片资源，低配包同样可用。
+        speakBtn = Ui.button(c, "", Ui.BLUE_LIGHT, Ui.BLUE, 18);
+        speakBtn.setContentDescription("朗读");
+        speakBtn.setPadding(0, 0, 0, 0);
+        speakBtn.setGravity(Gravity.CENTER);
+        speakIcon = new SpeakerDrawable(Ui.dp(c, 26), Ui.BLUE);
+        speakBtn.setCompoundDrawablesWithIntrinsicBounds(
+                speakIcon, null, null, null);
         speakBtn.setFocusable(false);
         speakBtn.setFocusableInTouchMode(false);
         speakBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { requestSpeakAll(); }
         });
         LinearLayout.LayoutParams speakLp = new LinearLayout.LayoutParams(
-                Ui.dp(c, 96), Ui.dp(c, 40));
+                Ui.dp(c, 60), Ui.dp(c, 44));
         speakLp.setMargins(Ui.dp(c, 8), 0, 0, 0);
         topRow.addView(speakBtn, speakLp);
         card.addView(topRow, new LinearLayout.LayoutParams(
@@ -264,8 +272,8 @@ public final class OverlayQuizView {
     public void setReadHint(int mode, int state) {
         String engine = state == SpeechReader.STATE_READY
                 ? "" : "（无语音引擎）";
-        String speak = mode == 0 ? "朗读键试听"
-                : (mode == 2 ? "自动读题已开 · 朗读键复读" : "朗读键读题");
+        String speak = mode == 0 ? "设置键试听"
+                : (mode == 2 ? "自动读题已开 · 设置键复读" : "设置键读题");
         String tail = mode == 0 ? " · 答对继续"
                 : " · 播放键读选项 · 答对继续";
         footer.setText("方向键选择 · 确定/1-4 作答 · " + speak + engine + tail);
@@ -369,6 +377,9 @@ public final class OverlayQuizView {
                 if (speakFocused) requestSpeakAll();
                 else if (listener != null) listener.onSpeakRequest(flow.selected());
                 return true;
+            case KeyRouter.ACT_SPEAK_ALL:
+                requestSpeakAll();
+                return true;
             case KeyRouter.ACT_CONSUME:
             default:
                 return true;
@@ -392,6 +403,9 @@ public final class OverlayQuizView {
         if (k == KeyEvent.KEYCODE_VOLUME_UP || k == KeyEvent.KEYCODE_VOLUME_DOWN
                 || k == KeyEvent.KEYCODE_VOLUME_MUTE) return KeyRouter.SEM_VOLUME;
         if (k == KeyEvent.KEYCODE_BACK) return KeyRouter.SEM_BACK;
+        // 遥控器「设置 / 菜单」键：一键朗读题干 + 当前高亮选项。
+        if (k == KeyEvent.KEYCODE_SETTINGS || k == KeyEvent.KEYCODE_MENU)
+            return KeyRouter.SEM_SPEAK_ALL;
         // 播放/暂停键在答题期间没有别的用途：朗读当前高亮项，绝不提交答案。
         if (k == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) return KeyRouter.SEM_SPEAK;
         if (k == KeyEvent.KEYCODE_MEDIA_PLAY || k == KeyEvent.KEYCODE_MEDIA_PAUSE
@@ -444,10 +458,13 @@ public final class OverlayQuizView {
         if (speakFocused) {
             speakBtn.setBackground(Ui.round(Ui.BLUE, 10, c));
             speakBtn.setTextColor(0xFFFFFFFF);
+            speakIcon.setColor(0xFFFFFFFF);
         } else {
             speakBtn.setBackground(Ui.round(Ui.BLUE_LIGHT, 10, c));
             speakBtn.setTextColor(Ui.BLUE);
+            speakIcon.setColor(Ui.BLUE);
         }
+        speakBtn.invalidate();
         fitResult();
     }
 }

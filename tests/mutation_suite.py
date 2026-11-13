@@ -280,7 +280,7 @@ MUTATIONS = [
     ("AV", "auto-review workflow removed",
      lambda: os.remove(CI), False, True, False),
     ("AW", "display version rolled back to 1.0.1",
-     lambda: replace(MF, 'android:versionName="1.3.5"', 'android:versionName="1.0.2"'),
+     lambda: replace(MF, 'android:versionName="1.3.6"', 'android:versionName="1.0.2"'),
      False, True, False),
     ("AX", "alipay QR crop corrupted",
      lambda: open(APNG, "wb").write(bytes([137, 80, 78, 71, 13, 10, 26, 10]) + bytes(16)),

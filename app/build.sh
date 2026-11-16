@@ -67,8 +67,11 @@ grep -qF 'getInt("difficultyLevel", 0)' "$SRC/SettingsStore.java"
 grep -qF 'MATCH_RATE = 80' "$SRC/DifficultyPolicy.java"
 grep -qF 'setDifficultyLevel(difficultyLevel)' "$SRC/QuizOverlayService.java"
 grep -qF 'rowDifficulty = addRow' "$SRC/SettingsActivity.java"
-grep -qF 'String rootW = diffRoot.isEmpty()' "$SRC/QuizDb.java"
-grep -qF 'WHERE grade<=?' "$SRC/QuizDb.java"
+grep -qF 'for (int lower = grade - 1; lower >= 1; lower--)' "$SRC/QuizDb.java"
+grep -qF 'WHERE grade=?' "$SRC/QuizDb.java"
+if grep -qF 'grade<=?' "$SRC/QuizDb.java"; then
+  echo 'FORBIDDEN: cross-grade pool regressed (issue #46)'; exit 1
+fi
 # 品牌口号统一（code19）：官网与 TV 横幅生成脚本必须同口径，旧「续租 30 分钟」禁止回流。
 SITE="$ROOT/site/index.html"
 ICON_GEN="$ROOT/tools/branding/make_icons.py"

@@ -18,6 +18,9 @@ public final class GuardWatchdog {
 
     public static final int JOB_ID = 7301;
     public static final int ALARM_ID = 7302;
+    public static final int BOOT_RETRY_ID = 7304;
+    /** 开机短重试：60 秒后系统服务通常已就绪。 */
+    public static final long BOOT_RETRY_MS = 60L * 1000L;
     public static final long PERIOD_MS = 15L * 60L * 1000L;
     public static final String REVIVE_ACTION = "com.jager.tvquiz.REVIVE";
 
@@ -37,6 +40,22 @@ public final class GuardWatchdog {
                     PendingIntent.FLAG_UPDATE_CURRENT);
             am.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                     SystemClock.elapsedRealtime() + 5L * 60L * 1000L, PERIOD_MS, pi);
+        } catch (Exception ignored) { }
+    }
+
+    /**
+     * issue #46(2)：开机通道判定失败后的短延迟重试，
+     * 低配同样只用 AlarmManager，不引入任何 API>14 的类。
+     */
+    public static void scheduleBootRetry(Context c) {
+        try {
+            AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
+            if (am == null) return;
+            Intent i = new Intent(c, ReviveReceiver.class).setAction(REVIVE_ACTION);
+            PendingIntent pi = PendingIntent.getBroadcast(c, BOOT_RETRY_ID, i,
+                    PendingIntent.FLAG_UPDATE_CURRENT);
+            am.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    SystemClock.elapsedRealtime() + BOOT_RETRY_MS, pi);
         } catch (Exception ignored) { }
     }
 

@@ -76,6 +76,10 @@ BOOTSET = os.path.join(SRC, "BootSettings.java")
 RUNSH = os.path.join(ROOT, "tests/run.sh")
 SPEECH = os.path.join(SRC, "SpeechReader.java")
 KROUT = os.path.join(SRC, "KeyRouter.java")
+TF = os.path.join(SRC, "TextFit.java")
+AF = os.path.join(SRC, "AutoFitText.java")
+SF = os.path.join(SRC, "SpeakFocus.java")
+SPD = os.path.join(SRC, "SpeakerDrawable.java")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
 for _i, p in enumerate((M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
@@ -83,7 +87,7 @@ for _i, p in enumerate((M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, 
            RP, GW, OVL, AXML, OVLQ, ADMAS, QRJ, QTS,
            GP, BR, PV, PAIR, LAN, SGT, API, AIDX, AJS, ACSS,
            HC, SP, HA, HOLJ, HOLV, HCHK, HFETCH, SPT, RUNSH, BOOTSET,
-           SPEECH, KROUT)):
+           SPEECH, KROUT, TF, AF, SF, SPD)):
     # 不同目录下的同名文件（site/index.html 与 admin/index.html）必须用不同备份名，
     # 否则 restore() 会把手机管理页写回官网首页。
     BK[p] = os.path.join(BK_DIR, "%03d_%s.bk" % (_i, os.path.basename(p)))
@@ -92,11 +96,11 @@ ORIG = {p: hashlib.sha256(open(p, "rb").read()).hexdigest() for p in BK}
 FAIL = []
 
 OLD_OTHER_GRADE = """    private static final String POOL_OTHER_GRADE =
-            "WHERE grade<=? AND subject NOT IN ('数学','语文','英语')";"""
+            "WHERE grade=? AND subject NOT IN ('数学','语文','英语')";"""
 NEW_OTHER_GRADE = """    private static final String POOL_OTHER_GRADE =
-            "WHERE grade<=?";"""
+            "WHERE grade=?";"""
 DECOY = """
-// POOL_OTHER_GRADE = "WHERE grade<=? AND subject NOT IN ('数学','语文','英语')";
+// POOL_OTHER_GRADE = "WHERE grade=? AND subject NOT IN ('数学','语文','英语')";
 """
 
 
@@ -276,7 +280,7 @@ MUTATIONS = [
     ("AV", "auto-review workflow removed",
      lambda: os.remove(CI), False, True, False),
     ("AW", "display version rolled back to 1.0.1",
-     lambda: replace(MF, 'android:versionName="1.3.5"', 'android:versionName="1.0.2"'),
+     lambda: replace(MF, 'android:versionName="1.3.6"', 'android:versionName="1.0.2"'),
      False, True, False),
     ("AX", "alipay QR crop corrupted",
      lambda: open(APNG, "wb").write(bytes([137, 80, 78, 71, 13, 10, 26, 10]) + bytes(16)),
@@ -337,11 +341,12 @@ MUTATIONS = [
     ("BY", "knowledge preference loses the qtype filter",
      lambda: replace(D, " AND qtype='knowledge'", ""), False, True, False),
     ("BW", "core fallback loses the grade cap",
-     lambda: replace(D, 'private static final String POOL_CORE_ALL = "WHERE grade<=? AND subject=?";',
+     lambda: replace(D, 'private static final String POOL_CORE_ALL = "WHERE grade=? AND subject=?";',
                      'private static final String POOL_CORE_ALL = "WHERE subject=?";'), False, True, False),
-    ("BX", "final fallback loses the grade cap",
-     lambda: replace(D, 'String rootW = diffRoot.isEmpty() ? "WHERE grade<=?" : diffRoot + " AND grade<=?";',
-                     'String rootW = diffRoot;'), False, True, False),
+    ("BX", "core pool regressed to a cross-grade pool",
+     lambda: replace(D, 'private static final String POOL_CORE_GRADE = "WHERE grade=? AND subject=?";',
+                     'private static final String POOL_CORE_GRADE = "WHERE grade<=? AND subject=?";'),
+     False, True, False),
     ("BZ", "practice question view collapses to zero height",
      lambda: replace(PA, "card.addView(text, Ui.fill(3));", "card.addView(text, Ui.fill(0));"), False, True, False),
     ("CA", "practice grade selector back to 9",
@@ -417,7 +422,11 @@ MUTATIONS = [
     ("CZ", "showQuiz schedule gate removed",
      lambda: replace(O, 'if (!sd.allowed) {', 'if (false) {'), False, True, False),
     ("DA", "muted gate stops retrying every second",
-     lambda: replace(O, 'remainSec = 1;', 'remainSec = interval;'), False, True, False),
+     lambda: replace(O,
+                     '// 压到 1 秒让 tick 每秒重试，进入生效时段下一秒即可弹出。\n'
+                     '                remainSec = 1;',
+                     '// no per-second retry\n                remainSec = interval;'),
+     False, True, False),
     ("DB", "holiday calendar lookup dropped from the gate",
      lambda: replace(O, 'st.scheduleConfig(), HolidayAssets.get(this));',
                      'st.scheduleConfig(), HolidayCalendar.empty());'), False, True, False),
@@ -447,11 +456,66 @@ MUTATIONS = [
      lambda: replace(KROUT, "new Decision(ACT_SPEAK, 0)",
                      "new Decision(ACT_CONSUME, 0)"),
      False, True, False),
-    ("DK", "read-aloud defaults to auto",
-     lambda: replace(ST, 'sp.getInt("readMode", 0)',
-                     'sp.getInt("readMode", 2)'),
-     False, True, False),
-]
+     ("DK", "read-aloud defaults to auto",
+       lambda: replace(ST, 'sp.getInt("readMode", 0)',
+                       'sp.getInt("readMode", 2)'),
+       False, True, False),
+     ("DL", "stem alignment reverted to centre",
+       lambda: replace(OVLQ, "Gravity.LEFT | Gravity.CENTER_VERTICAL",
+                       "Gravity.CENTER"), False, True, False),
+     ("DM", "runtime text measurement dropped",
+       lambda: replace(OVLQ, "AutoFitText.fit(text,",
+                       "// AutoFitText.fit(text,"), False, True, False),
+     ("DN", "speaker icon button loses its accessible label",
+       lambda: replace(OVLQ, 'setContentDescription("朗读")',
+                       'setContentDescription("")'),
+       False, True, False),
+     ("DO", "footer read-aloud hint hidden when mode is off",
+       lambda: replace(OVLQ, 'mode == 0 ? "设置键试听"',
+                       'mode == 0 ? ""'), False, True, False),
+     ("DR", "remote settings key no longer triggers read aloud",
+       lambda: replace(OVLQ,
+                       "if (k == KeyEvent.KEYCODE_SETTINGS || k == KeyEvent.KEYCODE_MENU)",
+                       "if (false)"), False, True, False),
+     ("DS", "speaker icon replaced by an empty drawable",
+       lambda: replace(OVLQ, "new SpeakerDrawable(Ui.dp(c, 26), Ui.BLUE)",
+                       "null"), False, True, False),
+     ("DT", "speaker icon centring removed",
+       lambda: replace(OVLQ, "speakBtn.setScaleType(ImageView.ScaleType.CENTER);",
+                       "// no centring"), False, True, False),
+     ("DU", "transparent icon background replaced by a solid block",
+       lambda: replace(OVLQ,
+                       "speakBtn.setBackground(null);\n        speakBtn.setFocusable(false);",
+                       "speakBtn.setBackground(Ui.round(Ui.BLUE_LIGHT, 10, c));\n        speakBtn.setFocusable(false);"),
+       False, True, False),
+     ("DV", "default quiz interval rolled back to 30 seconds",
+       lambda: replace(ST, 'getInt("interval", 600)',
+                       'getInt("interval", 30)'), False, True, False),
+     ("DW", "missing-engine notice becomes permanent again",
+       lambda: replace(OVL, "quizView.showSpeakUnavailable();",
+                       'quizView.hint("设备无中文语音引擎，暂不能朗读");'),
+       False, True, False),
+     ("DX", "footer shows engine status all the time again",
+       lambda: replace(OVLQ,
+                       'footer.setText("方向键选择 · 确定/1-4 作答 · " + speak + tail);',
+                       'footer.setText("方向键选择 · 确定/1-4 作答 · " + speak + "（无语音引擎）" + tail);'),
+       False, True, False),
+     ("DY", "boot short retry removed",
+       lambda: replace(BR, "GuardWatchdog.scheduleBootRetry(c);",
+                       "// no boot retry"), False, True, False),
+     ("DZ", "failed guard start gives up again",
+       lambda: replace(OVL,
+                       "if (!running) { leaveForeground(); stopSelf(); return START_STICKY; }",
+                       "if (!running) { leaveForeground(); stopSelf(); return START_NOT_STICKY; }"),
+       False, True, False),
+     ("DQ", "dynamic result line loses its runtime fitting",
+       lambda: replace(OVLQ, "AutoFitText.fit(result, 21, 1, 1.0f);",
+                       "// no result fit"), False, True, False),
+     ("DP", "line-count constraint removed from the fit policy",
+       lambda: replace(os.path.join(SRC, "TextFit.java"),
+                       "if (lineCounts[i] > maxLines) continue;", ""),
+       False, True, False),
+  ]
 
 print("--- baseline ---")
 base = contract()

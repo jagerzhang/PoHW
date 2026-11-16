@@ -58,4 +58,12 @@ public final class BootPolicy {
         if (!canDrawOverlays) return false;
         return wasGuardEnabled || autoGuardOnBoot;
     }
+
+    /**
+     * issue #46(2)：开机瞬间悬浮窗 / 无障碍通道常未就绪，此时也必须安排兜底重试，
+     * 否则家长不打开 APP，守护永远不会自己起来。
+     */
+    public static boolean shouldScheduleRetry(boolean bootAutostart, boolean channelOk) {
+        return bootAutostart && !channelOk;
+    }
 }

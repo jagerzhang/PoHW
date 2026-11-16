@@ -162,7 +162,7 @@ check("s == Subjects.OTHER) s = MATH" not in _e,
       "OTHER is no longer downgraded to a math question")
 check("gradeWide" not in _d, "grade-wide cross-subject SQL is gone")
 check("NOT IN ('数学','语文','英语')" in _d, "other-subject pool uses its own SQL predicate")
-check("WHERE grade<=? AND subject=?" in _d, "core subjects keep their own SQL predicate with a grade cap")
+check("WHERE grade=? AND subject=?" in _d, "core subjects keep their own SQL predicate with the exact grade")
 check("POOL_OTHER_ALL" in _d and "POOL_CORE_ALL" in _d,
       "pool-preserving fallback predicates are declared as constants")
 check("pick(poolWhere + diffW, poolArgs)" in _d,
@@ -569,12 +569,14 @@ check("String diffW = matchLevel ? DifficultyPolicy.predicate(difficultyLevel)" 
       "difficulty predicate is conditional on the weighted roll")
 check(_qd24.count("diffW") >= 6,
       "every fallback layer keeps the difficulty predicate when matching a level")
-check('String rootW = diffRoot.isEmpty() ? "WHERE grade<=?" : diffRoot + " AND grade<=?"' in _qd24
-      and 'pick(rootW, new String[]{g})' in _qd24,
-      "final fallback keeps both the difficulty predicate and the grade cap")
+check("for (int lower = grade - 1; lower >= 1; lower--)" in _qd24
+      and "grade<=?" not in _qd24
+      and _qd24.count("POOL_CORE_GRADE") >= 2,
+      "empty-grade pools review downward one grade at a time, never grade<=?")
 check("String koW = KNOWLEDGE_ONLY_SQL + termW + diffW;" in _qd24
-      and _qd24.count("+ koW") >= 3,
-      "knowledge-only chain keeps source + term + difficulty on all three fallbacks")
+      and _qd24.count("+ koW") >= 4
+      and "pick(poolWhere + koW, poolArgs)" in _qd24,
+      "knowledge-only chain keeps source + term + difficulty on all fallbacks")
 
 # ---- versionCode 28：答对自动继续 + 暂停信号互斥 ----
 _st28 = strip_comments(read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsStore.java")))
@@ -636,11 +638,12 @@ check('asked % 3' in _c121,
       "mixed practice rotates across the three subjects")
 
 # ---- v1.2.3：所有抽题层（含最后一层保底）都必须带年级上限 ----
-check('POOL_CORE_ALL = "WHERE grade<=? AND subject=?"' in _d
-      and _d.count('grade<=?') >= 6,
-      "all four pool predicates keep the grade cap")
-check('String rootW = diffRoot.isEmpty() ? "WHERE grade<=?"' in _d,
-      "the last-resort query also keeps the grade cap")
+check('POOL_CORE_ALL = "WHERE grade=? AND subject=?"' in _d
+      and _d.count('grade=?') >= 6,
+      "all four pool predicates pin the exact grade")
+check("grade<=?" not in _d
+      and "for (int lower = grade - 1; lower >= 1; lower--)" in _d,
+      "cross-grade pools are gone; empty grades review one grade at a time")
 
 # ---- v1.2.4：练习模式题目卡片必须真的可见 ----
 # Ui.fill(w) 生成 LayoutParams(MATCH_PARENT, 0, w)：w=0 时子 View 在垂直
@@ -1049,8 +1052,8 @@ check("EDITION_SIX_THREE" in read(os.path.join(ROOT, "app/src/com/jager/tvquiz/S
       and "EDITION_FIVE_FOUR" in read(os.path.join(ROOT, "app/src/com/jager/tvquiz/Syllabus.java"))
       and "systemFamilies" in read(os.path.join(ROOT, "app/src/com/jager/tvquiz/Syllabus.java")),
       "syllabus carries independent per-system unit tables")
-check("WHERE grade<=? AND subject=?" in _qd134
-      and _qd134.count("grade<=?") >= 4,
+check("WHERE grade=? AND subject=?" in _qd134
+      and _qd134.count("grade=?") >= 4,
       "quiz pools still cap by grade and keep subject isolation")
 _db134.close()
 
@@ -1359,4 +1362,17 @@ check('"readMode"' in _api_sr and "st.readMode(clamp(v, 0" in _api_sr
       and '"readMode"' in _js_sr and "rowReadAloud" in _set_sr,
       "read mode is exposed on TV settings and the phone admin page")
 
+_svc_b = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizOverlayService.java"))
+_boot_r = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/BootReceiver.java"))
+_wdog_r = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/GuardWatchdog.java"))
+_bpol_r = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/BootPolicy.java"))
+check("GuardWatchdog.scheduleBootRetry(c)" in _boot_r
+      and "public static void scheduleBootRetry(" in _wdog_r
+      and "shouldScheduleRetry(" in _bpol_r,
+      "boot failure always schedules a short retry instead of giving up")
+check("if (!running) { leaveForeground(); stopSelf(); return START_STICKY; }" in _svc_b,
+      "failed guard start stays sticky so the system can relaunch it")
+check(_svc_b.count("remainSec = 1;") >= 2
+      and "Math.min(interval, 30)" in _svc_b,
+      "failed quiz attempts retry in seconds, not a full 10-minute interval")
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

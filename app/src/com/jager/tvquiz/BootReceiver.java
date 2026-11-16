@@ -38,6 +38,15 @@ public class BootReceiver extends BroadcastReceiver {
         if (OverlayPermissionTracker.shouldRecord(was, canDraw)) st.overlayWasGranted(canDraw);
         boolean channelOk = OverlayChannel.available(OverlayChannel.pick(
                 canDraw, GuardAccessibilityService.canHost(), Build.VERSION.SDK_INT));
+        // issue #46(2)：开机瞬间权限 / 无障碍常未就绪，绝不能因为一次判定失败
+        // 就放弃整条自启链路。先排兜底，再决定是否立即拉起服务。
+        if (st.bootAutostart() && BootPolicy.isBootAction(action)) {
+            GuardWatchdog.schedule(c);
+            GuardWatchdog.scheduleAlarm(c);
+            if (BootPolicy.shouldScheduleRetry(st.bootAutostart(), channelOk)) {
+                GuardWatchdog.scheduleBootRetry(c);
+            }
+        }
         if (!channelOk) {
             st.lastStartVia("blocked_no_channel");
             return;
@@ -54,10 +63,7 @@ public class BootReceiver extends BroadcastReceiver {
             // BOOT_COMPLETED 属于后台启动 FGS 的豁免广播，Android 8+ 允许直接拉起。
             if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(s);
             else c.startService(s);
-            // 双兜底：国产电视常拦截开机广播或掐掉后台，持久化 Job + 重复闹钟
-            // 保证最迟约 15 分钟把守护拉回来。
-            GuardWatchdog.schedule(c);
-            GuardWatchdog.scheduleAlarm(c);
+            // 双兜底已在方法开头无条件排好：持久化 Job + 重复闹钟保证自愈。
         } catch (Exception e) {
             Log.e(TAG, "开机拉起守护服务失败", e);
         }

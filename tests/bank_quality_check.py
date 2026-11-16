@@ -129,7 +129,7 @@ def main():
                 for match124 in (False, True):
                     diff124 = (" AND difficulty_level=%d" % level124
                                if match124 and level124 else "")
-                    where124 = "WHERE grade<=? AND subject=?" + diff124
+                    where124 = "WHERE grade=? AND subject=?" + diff124
                     select124 = ("SELECT topic,text,opt_a,opt_b,opt_c,opt_d,"
                                  "answer_index,explain,subject FROM questions ")
                     sql124 = (select124 + where124 +
@@ -138,6 +138,13 @@ def main():
                     row124 = cur.execute(sql124,
                                          (g124, sub124, g124, sub124)).fetchone()
                     combos124 += 1
+                    if row124 is None:
+                        # issue #46：本年级该学科无题时按产品链逐级向下复习
+                        for lower124 in range(g124 - 1, 0, -1):
+                            row124 = cur.execute(sql124,
+                                (lower124, sub124, lower124, sub124)).fetchone()
+                            if row124 is not None:
+                                break
                     if row124 is None:
                         if sub124 == "英语" and g124 <= 2:
                             continue

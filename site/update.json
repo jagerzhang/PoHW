@@ -1,24 +1,24 @@
 {
   "schema": 1,
-  "publishedAt": "2026-11-13",
+  "publishedAt": "2026-11-16",
   "main": {
-    "versionName": "1.3.6",
-    "versionCode": 54,
+    "versionName": "1.3.7",
+    "versionCode": 56,
     "minSdk": 21,
     "latest": "https://pohw.zhangge.net/dl/latest-main.apk",
-    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.6.apk",
-    "sha256": "7c83bf61aecb17973130b6064a804add5561cbeee9997b2aba41787ee7c7eafa",
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.7.apk",
+    "sha256": "0d4213e521b935924832deb0a32d51af50428ec5765e090df63b6e4bbbf6264e",
     "size": 2451363,
-    "notes": "v1.3.6：新增系统 TTS 语音朗读（默认关闭、需设备自带中文语音引擎，安装包仅 +4KB）；答题页常驻代码绘制的喇叭图标，遥控器设置键 / 菜单键 / 播放键可朗读题干与当前选项，无引擎提示只在点按后短暂出现。题干、四个选项与结果提示改为按真实宽高运行时自适应字号，长选项不再被裁切，题干左对齐。默认出题间隔由 30 秒改为 10 分钟（已装设备保留原设置）。沿用原发布证书，v1.3.5 可直接覆盖安装"
+    "notes": "v1.3.7：修复 issue #46 两个问题。① 出题严格限定当前年级（原先 grade<=? 会让选 5 年级时约 80% 抽到低年级题，学期/单元约束也随之失效）；仅当本年级该学科确无题才逐级降年级并锁定学科复习。② 开机自启后不弹题：开机通道未就绪时不再直接放弃，无条件排守护任务与 60 秒短重试，启动失败由系统重启再试，弹题失败改为 1 秒/30 秒重试。沿用原发布证书，v1.3.6 可直接覆盖安装"
   },
   "legacy": {
-    "versionName": "1.3.6",
-    "versionCode": 55,
+    "versionName": "1.3.7",
+    "versionCode": 57,
     "minSdk": 14,
     "latest": "https://pohw.zhangge.net/dl/latest-legacy.apk",
-    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.6-legacy.apk",
-    "sha256": "0d50af99f945268e12d63a59d51858617a2ac87ffc9f63f5032604ea9dfba201",
-    "size": 2447267,
-    "notes": "Android 4.0 低配变体 v1.3.6-legacy（versionCode 55 / minSdk 14）：与主线共用全部新功能，成品 dex high-api=0；读取 legacy 更新通道，可直接覆盖安装 53"
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.7-legacy.apk",
+    "sha256": "c51fc0be46799dae8622833f3ad4d7eaaaef3f7ff1a77492e2d6573ef996d067",
+    "size": 2451363,
+    "notes": "Android 4.0 低配变体 v1.3.7-legacy（versionCode 57 / minSdk 14）：与主线共用 issue #46 两项修复，开机短重试只用 AlarmManager，成品 dex high-api=0；读取 legacy 更新通道，可直接覆盖安装 55"
   }
 }

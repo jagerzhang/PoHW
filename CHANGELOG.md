@@ -1,11 +1,11 @@
 # Changelog
 
-> **版本口径**：对外发布 17 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 19 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
 > **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）、
 > **v1.2.4**（37）、**v1.2.5**（39）、**v1.2.6**（41）、**v1.2.7**（43）、
 > **v1.3.0**（44）、**v1.3.1**（45）、**v1.3.2**（46）、**v1.3.3**（47）、
-> **v1.3.4**（50，低配 51）、**v1.3.5**（52，低配 53）、**v1.3.6**（54，低配 55）。
+> **v1.3.4**（50，低配 51）、**v1.3.5**（52，低配 53）、**v1.3.6**（54，低配 55）、**v1.3.7**（56，低配 57）。
 > `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
@@ -13,6 +13,35 @@
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.3.7 (versionCode 56) — exact-grade pool and resilient boot autostart
+
+Display version 1.3.6 -> **1.3.7**, `versionCode` 54 -> **56**, same release
+keystore (SHA-256 `76eb6063b574...26172`). Nineteenth published release.
+Android 4.0 legacy variant ships as `v1.3.7-legacy` / code 57.
+
+Fixes [issue #46](https://github.com/jagerzhang/PoHW/issues/46) (Thunderbird
+He6 / Android 11):
+
+- **Exact-grade quiz pool**: the four `QuizDb` pool predicates and the final
+  fallback used `WHERE grade<=?`, so grade 5 drew from 8,979 questions while
+  only 1,839 were grade 5 — roughly 80% of prompts were below the selected
+  grade, and term/unit/edition constraints silently fell back for those lower
+  grades. All predicates are now `grade=?`. Only when the selected grade has no
+  questions for a subject (e.g. grade 6 English) does the pool review lower
+  grades one at a time, still locked to the same subject — never above grade,
+  never across subjects.
+- **Resilient boot autostart**: `BootReceiver` returned before scheduling any
+  watchdog when the overlay channel was not ready at boot, and the service then
+  stopped itself with `START_NOT_STICKY`, so nothing retried until the user
+  opened the guard screen. Boot now always schedules the persistent job and
+  periodic alarm, adds a 60-second short retry, uses `START_STICKY` on failure,
+  and retries a missed quiz after 1s / 30s instead of resetting the full 600s
+  interval. The low-end channel uses AlarmManager only, keeping `high-api=0`.
+- **Guards**: exact-grade predicates are pinned by the layout contract, the
+  bank distribution / study scope / quality checks and negative mutations;
+  `grade<=?` regressions are rejected. Main: contract 465, JVM 489, mutation
+  130/130. Legacy: contract 454, JVM 469.
 
 ## v1.3.6 (versionCode 54) — system TTS, visible speaker, runtime text fitting
 

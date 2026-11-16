@@ -1,5 +1,6 @@
 import com.jager.tvquiz.GuardPolicy;
 import com.jager.tvquiz.LaunchPolicy;
+import com.jager.tvquiz.BootPolicy;
 
 /** v1.3.1：首次开启守护必须先设置家长密码，且关闭路径不受影响。 */
 public class StartGuardTest {
@@ -22,6 +23,13 @@ public class StartGuardTest {
         ok("S08 已运行不重复拉起", !LaunchPolicy.shouldAutoGuard(true, true, true, true));
         ok("S09 未授权悬浮窗不自动拉起", !LaunchPolicy.shouldAutoGuard(true, true, false, false));
         ok("S10 家长关掉自动守护后不拉起", !LaunchPolicy.shouldAutoGuard(true, false, true, false));
+
+        ok("S11 开机通道未就绪也必须排短重试",
+                BootPolicy.shouldScheduleRetry(true, false));
+        ok("S12 通道已就绪无需短重试",
+                !BootPolicy.shouldScheduleRetry(true, true));
+        ok("S13 家长关闭自启则不排重试",
+                !BootPolicy.shouldScheduleRetry(false, false));
 
         System.out.println("VERIFY=" + (fail == 0 ? "PASS" : "FAIL") + " total=" + pass);
         if (fail > 0) System.exit(1);

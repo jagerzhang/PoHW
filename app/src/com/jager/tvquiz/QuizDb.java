@@ -32,15 +32,15 @@ public final class QuizDb {
             "SELECT topic,text,opt_a,opt_b,opt_c,opt_d,answer_index,explain,subject "
                     + "FROM questions ";
 
-    // 四个池谓词集中定义：所有层都带 grade<=? 年级上限，绝不为了凑题放出高年级内容；
+    // 四个池谓词集中定义：所有层都锁定 grade=? 当前年级，绝不跨年级凑题；
     // 学科约束也贯穿始终，避免池为空时悄悄抽到别的学科、破坏配比。tests/bank_distribution_check.py
     // 会直接从这些常量读取 SQL，改坏源码会立刻被测出来。
     private static final String POOL_OTHER_GRADE =
-            "WHERE grade<=? AND subject NOT IN ('数学','语文','英语')";
+            "WHERE grade=? AND subject NOT IN ('数学','语文','英语')";
     private static final String POOL_OTHER_ALL =
-            "WHERE grade<=? AND subject NOT IN ('数学','语文','英语')";
-    private static final String POOL_CORE_GRADE = "WHERE grade<=? AND subject=?";
-    private static final String POOL_CORE_ALL = "WHERE grade<=? AND subject=?";
+            "WHERE grade=? AND subject NOT IN ('数学','语文','英语')";
+    private static final String POOL_CORE_GRADE = "WHERE grade=? AND subject=?";
+    private static final String POOL_CORE_ALL = "WHERE grade=? AND subject=?";
     /** 可选出题偏好：只抽知识题；三层兜底都保留来源与册次约束，空池交参数化生成器。 */
     private static final String KNOWLEDGE_ONLY_SQL = " AND qtype='knowledge'";
 
@@ -237,7 +237,7 @@ public final class QuizDb {
         }
         int result;
         try (Cursor c = db.rawQuery(
-                "SELECT COUNT(*) FROM questions WHERE grade<=? AND subject=?",
+                "SELECT COUNT(*) FROM questions WHERE grade=? AND subject=?",
                 new String[]{Integer.toString(grade), subjectName(subject)})) {
             result = c.moveToFirst() ? c.getInt(0) : 0;
         } catch (Exception e) {
@@ -255,7 +255,7 @@ public final class QuizDb {
             if (v != null) return v.intValue();
         }
         int result;
-        try (Cursor c = db.rawQuery("SELECT COUNT(*) FROM questions WHERE grade<=?",
+        try (Cursor c = db.rawQuery("SELECT COUNT(*) FROM questions WHERE grade=?",
                 new String[]{Integer.toString(grade)})) {
             result = c.moveToFirst() ? c.getInt(0) : 0;
         } catch (Exception e) {
@@ -319,8 +319,8 @@ public final class QuizDb {
                                       boolean knowledgeOnly, int difficultyLevel,
                                       boolean matchLevel, int editionMode) {
         String diffW = matchLevel ? DifficultyPolicy.predicate(difficultyLevel) : "";
-        String diffRoot = matchLevel ? DifficultyPolicy.rootPredicate(difficultyLevel) : "";
         int s = Subjects.norm(subject);
+        String subjName = null;
         // 路由条件必须与此字面量一致：只有「选中 OTHER 且开启全学科」才进其他池。
         // tests/layout_contract.py 与 build.sh 都钉死了这一行。
         boolean other = s == Subjects.OTHER && allSubjects;
@@ -333,12 +333,12 @@ public final class QuizDb {
             poolWhere = POOL_OTHER_ALL;
             poolArgs = new String[]{g};
         } else {
-            String name = subjectName(s);
-            if (name == null) name = "数学";
+            subjName = subjectName(s);
+            if (subjName == null) subjName = "数学";
             where = POOL_CORE_GRADE;
-            args = new String[]{g, name};
+            args = new String[]{g, subjName};
             poolWhere = POOL_CORE_ALL;
-            poolArgs = new String[]{g, name};
+            poolArgs = new String[]{g, subjName};
         }
 
         // bank-v9 起每题都有真实册次与单元：进度谓词由两条出题路径共用，
@@ -373,6 +373,17 @@ public final class QuizDb {
             QuizEngine.Question kq = pick(where + unitW + koW, concat(args, unitA));
             if (kq == null && unitW.length() > 0) kq = pick(where + koW, args);
             if (kq == null) kq = pick(poolWhere + koW, poolArgs);
+            if (kq == null) {
+                String review = other ? POOL_OTHER_GRADE : POOL_CORE_GRADE;
+                for (int lower = grade - 1; lower >= 1; lower--) {
+                    String lg = Integer.toString(lower);
+                    String[] la = other ? new String[]{lg}
+                            : new String[]{lg, subjName};
+                    kq = pick(review + koW, la);
+                    if (kq == null) kq = pick(review + KNOWLEDGE_ONLY_SQL, la);
+                    if (kq != null) break;
+                }
+            }
             return kq;
         }
 
@@ -390,9 +401,22 @@ public final class QuizDb {
         if (q == null) q = pick(where + diffW, args);
         if (q == null) q = pick(poolWhere + diffW, poolArgs);
         if (q == null) {
-            // 最后一层保底也必须带年级上限：绝不为了「有题可出」放出高年级内容。
-            String rootW = diffRoot.isEmpty() ? "WHERE grade<=?" : diffRoot + " AND grade<=?";
-            q = pick(rootW, new String[]{g});
+            // 最后一层仍锁定当前年级与学科，只放宽难度过滤。
+            String base = other ? POOL_OTHER_GRADE : POOL_CORE_GRADE;
+            q = pick(base, other ? new String[]{g} : new String[]{g, subjName});
+        }
+        if (q == null) {
+            // issue #46：本年级该学科题库为空（如 6 年级英语）才逐级向下复习，
+            // 每次都用严格年级 + 同学科，绝不超出设定年级、不串学科。
+            String review = other ? POOL_OTHER_GRADE : POOL_CORE_GRADE;
+            for (int lower = grade - 1; lower >= 1; lower--) {
+                String lg = Integer.toString(lower);
+                String[] la = other ? new String[]{lg}
+                        : new String[]{lg, subjName};
+                q = pick(review + diffW, la);
+                if (q == null) q = pick(review, la);
+                if (q != null) break;
+            }
         }
         return q;
     }

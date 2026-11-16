@@ -22,6 +22,9 @@ public final class GuardWatchdog extends JobService {
 
     public static final int JOB_ID = 7301;
     public static final int ALARM_ID = 7302;
+    public static final int BOOT_RETRY_ID = 7304;
+    /** 开机短重试：60 秒后系统服务通常已就绪。 */
+    public static final long BOOT_RETRY_MS = 60L * 1000L;
     public static final long PERIOD_MS = 15L * 60L * 1000L;
     public static final String REVIVE_ACTION = "com.jager.tvquiz.REVIVE";
 
@@ -54,6 +57,23 @@ public final class GuardWatchdog extends JobService {
             PendingIntent pi = PendingIntent.getBroadcast(c, ALARM_ID, i, flags);
             am.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                     SystemClock.elapsedRealtime() + 5L * 60L * 1000L, PERIOD_MS, pi);
+        } catch (Exception ignored) { }
+    }
+
+    /**
+     * issue #46(2)：开机通道判定失败后的短延迟重试。
+     * 发 REVIVE 广播而不是直接拉 FGS，避开 Android 12+ 后台启动限制。
+     */
+    public static void scheduleBootRetry(Context c) {
+        try {
+            AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
+            if (am == null) return;
+            Intent i = new Intent(c, ReviveReceiver.class).setAction(REVIVE_ACTION);
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= 23) flags |= PendingIntent.FLAG_IMMUTABLE;
+            PendingIntent pi = PendingIntent.getBroadcast(c, BOOT_RETRY_ID, i, flags);
+            am.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    SystemClock.elapsedRealtime() + BOOT_RETRY_MS, pi);
         } catch (Exception ignored) { }
     }
 

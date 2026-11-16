@@ -6,7 +6,7 @@
 1. syllabus.json 是按版本隔离的真实单元表，题库每题带 term 与 edition_family；
 2. 按 term 抽题，学科一致、年级不超、册次匹配；
 3. 按 (版本族 + 单元别名) 抽题，确实能命中且版本不串；
-4. 四个池谓词与保底层仍带 grade<=?。
+4. 四个池谓词与保底层仍带 grade=?。
 """
 import io
 import json
@@ -50,15 +50,26 @@ def main():
                 for _ in range(30):
                     r = conn.execute(
                         "SELECT grade,subject,term FROM questions "
-                        "WHERE grade<=? AND subject=? AND term=? "
+                        "WHERE grade=? AND subject=? AND term=? "
                         "ORDER BY RANDOM() LIMIT 1", (g, sub, term)).fetchone()
+                    if r is None:
+                        # issue #46：本年级该册无题时按产品的逐级降年级复习链回退
+                        for lower in range(g - 1, 0, -1):
+                            r = conn.execute(
+                                "SELECT grade,subject,term FROM questions "
+                                "WHERE grade=? AND subject=? "
+                                "ORDER BY RANDOM() LIMIT 1", (lower, sub)).fetchone()
+                            if r is not None:
+                                break
                     if r is None:
                         # 小学英语三年级起点，1-2 年级无题是预期
                         if sub == "英语" and g <= 2:
                             continue
                         fail("term-scoped pool empty g=%d %s %s" % (g, sub, term))
-                    if r[1] != sub or r[0] > g or r[2] != term:
+                    if r[1] != sub or r[0] > g:
                         fail("term-scoped draw leaked %r at g=%d" % (r, g))
+                    if r[0] == g and r[2] != term:
+                        fail("term-scoped draw leaked another term %r at g=%d" % (r, g))
                     draws += 1
 
     # 出题偏好（qtype='knowledge'）也必须遵守册次：选上册不得出下册题
@@ -69,16 +80,26 @@ def main():
                 for _ in range(20):
                     r = conn.execute(
                         "SELECT grade,subject,term FROM questions "
-                        "WHERE grade<=? AND subject=? AND qtype='knowledge' "
+                        "WHERE grade=? AND subject=? AND qtype='knowledge' "
                         "AND term IN (?, '全') ORDER BY RANDOM() LIMIT 1",
                         (g, sub, want)).fetchone()
+                    if r is None:
+                        for lower in range(g - 1, 0, -1):
+                            r = conn.execute(
+                                "SELECT grade,subject,term FROM questions "
+                                "WHERE grade=? AND subject=? AND qtype='knowledge' "
+                                "ORDER BY RANDOM() LIMIT 1", (lower, sub)).fetchone()
+                            if r is not None:
+                                break
                     if r is None:
                         # 小学英语三年级起点，1-2 年级无题是预期
                         if sub == "英语" and g <= 2:
                             continue
                         fail("knowledge-only term pool empty g=%d %s %s" % (g, sub, want))
-                    if r[2] != want or r[1] != sub or r[0] > g:
+                    if r[1] != sub or r[0] > g:
                         fail("knowledge-only draw leaked %r at g=%d %s" % (r, g, want))
+                    if r[0] == g and r[2] != want:
+                        fail("knowledge-only draw leaked another term %r at g=%d" % (r, g))
                     ko_draws += 1
 
     # 单元层：取一个有真实单元的格子，验证版本隔离
@@ -96,8 +117,10 @@ def main():
             fail("unit filter leaked another edition family")
 
     qd = io.open(QUIZDB, encoding="utf-8").read()
-    if "WHERE grade<=? AND subject=?" not in qd or qd.count("grade<=?") < 4:
-        fail("QuizDb lost the grade cap")
+    if "WHERE grade=? AND subject=?" not in qd or qd.count("grade=?") < 4:
+        fail("QuizDb lost the exact-grade predicate")
+    if "grade<=?" in qd:
+        fail("QuizDb regressed to a cross-grade pool (issue #46)")
     syl = io.open(os.path.join(ROOT, "app/src/com/jager/tvquiz/Syllabus.java"),
                   encoding="utf-8").read()
     if "familiesFor(" not in qd or "editionWhere(" not in qd \
@@ -121,7 +144,7 @@ def main():
                 for _ in range(8):
                     r = conn.execute(
                         "SELECT edition_family FROM questions "
-                        "WHERE grade<=? AND subject=? AND edition_family IN (" + ph + ") "
+                        "WHERE grade=? AND subject=? AND edition_family IN (" + ph + ") "
                         "ORDER BY RANDOM() LIMIT 1", (g, sub) + tuple(families)).fetchone()
                     if r is None:
                         continue

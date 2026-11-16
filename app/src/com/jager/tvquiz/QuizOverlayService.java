@@ -288,7 +288,9 @@ public class QuizOverlayService extends Service {
         }
 
         if (!running) startGuard();
-        if (!running) { leaveForeground(); stopSelf(); return START_NOT_STICKY; }
+        // issue #46(2)：通道未就绪导致的启动失败必须让系统稍后重启再试，
+        // 不能用 START_NOT_STICKY 一走了之，否则开机后守护再也不会自己起来。
+        if (!running) { leaveForeground(); stopSelf(); return START_STICKY; }
 
         if (ACTION_QUIZ_NOW.equals(action)) {
             forceNextQuiz = true;
@@ -563,13 +565,15 @@ public class QuizOverlayService extends Service {
             // 不清 guardEnabled、不 stopAll：权限恢复后由 ReviveReceiver / APP 自愈。
             st.lastStartVia("blocked_no_channel");
             GuardNotice.overlayRevoked(this);
-            remainSec = interval;
+            // issue #46(2)：通道恢复后 1 秒内就弹，不要重置成一整个 interval。
+            remainSec = 1;
             return;
         }
         if (engine == null) reload(false);
         current = drawFresh();
         if (current == null) {
-            remainSec = interval;
+            // issue #46(2)：开机早期题库异步打开，30 秒内重试而不是等 10 分钟。
+            remainSec = Math.min(interval, 30);
             Toast.makeText(this, "题库暂不可用，稍后重试", Toast.LENGTH_SHORT).show();
             return;
         }

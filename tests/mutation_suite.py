@@ -96,11 +96,11 @@ ORIG = {p: hashlib.sha256(open(p, "rb").read()).hexdigest() for p in BK}
 FAIL = []
 
 OLD_OTHER_GRADE = """    private static final String POOL_OTHER_GRADE =
-            "WHERE grade<=? AND subject NOT IN ('数学','语文','英语')";"""
+            "WHERE grade=? AND subject NOT IN ('数学','语文','英语')";"""
 NEW_OTHER_GRADE = """    private static final String POOL_OTHER_GRADE =
-            "WHERE grade<=?";"""
+            "WHERE grade=?";"""
 DECOY = """
-// POOL_OTHER_GRADE = "WHERE grade<=? AND subject NOT IN ('数学','语文','英语')";
+// POOL_OTHER_GRADE = "WHERE grade=? AND subject NOT IN ('数学','语文','英语')";
 """
 
 
@@ -341,11 +341,12 @@ MUTATIONS = [
     ("BY", "knowledge preference loses the qtype filter",
      lambda: replace(D, " AND qtype='knowledge'", ""), False, True, False),
     ("BW", "core fallback loses the grade cap",
-     lambda: replace(D, 'private static final String POOL_CORE_ALL = "WHERE grade<=? AND subject=?";',
+     lambda: replace(D, 'private static final String POOL_CORE_ALL = "WHERE grade=? AND subject=?";',
                      'private static final String POOL_CORE_ALL = "WHERE subject=?";'), False, True, False),
-    ("BX", "final fallback loses the grade cap",
-     lambda: replace(D, 'String rootW = diffRoot.isEmpty() ? "WHERE grade<=?" : diffRoot + " AND grade<=?";',
-                     'String rootW = diffRoot;'), False, True, False),
+    ("BX", "core pool regressed to a cross-grade pool",
+     lambda: replace(D, 'private static final String POOL_CORE_GRADE = "WHERE grade=? AND subject=?";',
+                     'private static final String POOL_CORE_GRADE = "WHERE grade<=? AND subject=?";'),
+     False, True, False),
     ("BZ", "practice question view collapses to zero height",
      lambda: replace(PA, "card.addView(text, Ui.fill(3));", "card.addView(text, Ui.fill(0));"), False, True, False),
     ("CA", "practice grade selector back to 9",
@@ -421,7 +422,11 @@ MUTATIONS = [
     ("CZ", "showQuiz schedule gate removed",
      lambda: replace(O, 'if (!sd.allowed) {', 'if (false) {'), False, True, False),
     ("DA", "muted gate stops retrying every second",
-     lambda: replace(O, 'remainSec = 1;', 'remainSec = interval;'), False, True, False),
+     lambda: replace(O,
+                     '// 压到 1 秒让 tick 每秒重试，进入生效时段下一秒即可弹出。\n'
+                     '                remainSec = 1;',
+                     '// no per-second retry\n                remainSec = interval;'),
+     False, True, False),
     ("DB", "holiday calendar lookup dropped from the gate",
      lambda: replace(O, 'st.scheduleConfig(), HolidayAssets.get(this));',
                      'st.scheduleConfig(), HolidayCalendar.empty());'), False, True, False),
@@ -494,6 +499,14 @@ MUTATIONS = [
        lambda: replace(OVLQ,
                        'footer.setText("方向键选择 · 确定/1-4 作答 · " + speak + tail);',
                        'footer.setText("方向键选择 · 确定/1-4 作答 · " + speak + "（无语音引擎）" + tail);'),
+       False, True, False),
+     ("DY", "boot short retry removed",
+       lambda: replace(BR, "GuardWatchdog.scheduleBootRetry(c);",
+                       "// no boot retry"), False, True, False),
+     ("DZ", "failed guard start gives up again",
+       lambda: replace(OVL,
+                       "if (!running) { leaveForeground(); stopSelf(); return START_STICKY; }",
+                       "if (!running) { leaveForeground(); stopSelf(); return START_NOT_STICKY; }"),
        False, True, False),
      ("DQ", "dynamic result line loses its runtime fitting",
        lambda: replace(OVLQ, "AutoFitText.fit(result, 21, 1, 1.0f);",

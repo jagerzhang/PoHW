@@ -38,7 +38,7 @@ samples = []
 for grade in range(1, 7):
     for subject in ('数学', '语文', '英语'):
         pool = [dict(r) for r in db.execute(
-            'select * from questions where grade<=? and subject=?', (grade, subject))]
+            'select * from questions where grade=? and subject=?', (grade, subject))]
         if not pool: continue
         for _ in range(170):
             q = random.choice(pool)

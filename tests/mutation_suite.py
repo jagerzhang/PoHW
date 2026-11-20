@@ -80,6 +80,9 @@ TF = os.path.join(SRC, "TextFit.java")
 AF = os.path.join(SRC, "AutoFitText.java")
 SF = os.path.join(SRC, "SpeakFocus.java")
 SPD = os.path.join(SRC, "SpeakerDrawable.java")
+WC = os.path.join(SRC, "WakeClock.java")
+QA = os.path.join(SRC, "QuizAlarm.java")
+WCT = os.path.join(ROOT, "tests/src/WakeClockTest.java")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
 BK = {}
 for _i, p in enumerate((M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, SITE,
@@ -87,7 +90,7 @@ for _i, p in enumerate((M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, 
            RP, GW, OVL, AXML, OVLQ, ADMAS, QRJ, QTS,
            GP, BR, PV, PAIR, LAN, SGT, API, AIDX, AJS, ACSS,
            HC, SP, HA, HOLJ, HOLV, HCHK, HFETCH, SPT, RUNSH, BOOTSET,
-           SPEECH, KROUT, TF, AF, SF, SPD)):
+           SPEECH, KROUT, TF, AF, SF, SPD, WC, QA, WCT)):
     # 不同目录下的同名文件（site/index.html 与 admin/index.html）必须用不同备份名，
     # 否则 restore() 会把手机管理页写回官网首页。
     BK[p] = os.path.join(BK_DIR, "%03d_%s.bk" % (_i, os.path.basename(p)))
@@ -329,7 +332,7 @@ MUTATIONS = [
     ("BQ", "practice mode never suspends the guard",
      lambda: replace(PA, 'QuizOverlayService.setPracticeMode(true);', ''), False, True, False),
     ("BR", "guard ignores the practice flag",
-     lambda: replace(O, 'if (practiceMode) { remainSec = interval; return; }', ''), False, True, False),
+     lambda: replace(O, 'if (practiceMode) { arm(interval); return; }', ''), False, True, False),
     ("BS", "practice button renamed back to immediate quiz",
      lambda: replace(M, 'actionButton(row1, "练习模式",', 'actionButton(row1, "立即出题",'), False, True, False),
     ("BV", "restored overlay authorization button removed",
@@ -424,8 +427,8 @@ MUTATIONS = [
     ("DA", "muted gate stops retrying every second",
      lambda: replace(O,
                      '// 压到 1 秒让 tick 每秒重试，进入生效时段下一秒即可弹出。\n'
-                     '                remainSec = 1;',
-                     '// no per-second retry\n                remainSec = interval;'),
+                     '                arm(1);',
+                     '// no per-second retry\n                arm(interval);'),
      False, True, False),
     ("DB", "holiday calendar lookup dropped from the gate",
      lambda: replace(O, 'st.scheduleConfig(), HolidayAssets.get(this));',
@@ -511,6 +514,31 @@ MUTATIONS = [
      ("DQ", "dynamic result line loses its runtime fitting",
        lambda: replace(OVLQ, "AutoFitText.fit(result, 21, 1, 1.0f);",
                        "// no result fit"), False, True, False),
+     ("EA", "quiz deadline check reverted to a decrementing counter",
+       lambda: replace(OVL, "WakeClock.due(now, quizDeadline)", "false"),
+       False, True, False),
+     ("EB", "deadline alarm no longer scheduled",
+       lambda: replace(OVL, "QuizAlarm.schedule(this, quizDeadline);",
+                       "// no deadline alarm"), False, True, False),
+     ("EC", "dynamic wake receiver dropped",
+       lambda: replace(OVL, "        registerWakeReceiver();\n", ""),
+       False, True, False),
+     ("ED", "restart resets to a full interval again",
+       lambda: replace(OVL, "int restored = WakeClock.restoreRemaining(st.quizDeadline(), st.quizSavedWall(),\n                st.quizSavedElapsed(), System.currentTimeMillis(),\n                SystemClock.elapsedRealtime(), interval);",
+                       "int restored = interval;"), False, True, False),
+     ("EE", "detached overlay window no longer resets quizShowing",
+       lambda: replace(OVL, "v.getWindowToken() == null && v.getParent() == null",
+                       "false"), False, True, False),
+     ("EF", "expired deadline no longer triggers an immediate quiz",
+       lambda: replace(WC,
+                       "long ms = deadline - nowElapsed;\n"
+                       "        if (ms <= 0L) return 0;\n        int sec =",
+                       "long ms = deadline - nowElapsed;\n"
+                       "        if (ms <= 0L) return fallbackSec;\n        int sec ="),
+       False, True, False),
+     ("EG", "alarm can bypass a parent turning the guard off",
+       lambda: replace(OVL, "if (!st.guardEnabled() || !GuardPolicy.canStartGuard(st.hasPin())) {\n                leaveForeground(); stopSelf(); return START_NOT_STICKY;\n            }",
+                       ""), False, True, False),
      ("DP", "line-count constraint removed from the fit policy",
        lambda: replace(os.path.join(SRC, "TextFit.java"),
                        "if (lineCounts[i] > maxLines) continue;", ""),

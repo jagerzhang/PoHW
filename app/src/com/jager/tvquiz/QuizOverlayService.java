@@ -46,6 +46,8 @@ public class QuizOverlayService extends Service {
     public static final String EXTRA_STOP_TOKEN = "com.jager.tvquiz.STOP_TOKEN";
     /** 仅用于诊断：记录本次守护由哪条路径拉起（boot/revive/job/accessibility/taskRemoved）。 */
     public static final String EXTRA_VIA = "com.jager.tvquiz.VIA";
+    /** 到点闹钟专用 action：必须校验 guardEnabled，不能绕过家长关闭操作。 */
+    public static final String ACTION_QUIZ_ALARM = "com.jager.tvquiz.QUIZ_ALARM";
 
     private static final String TAG = "PoHW.Guard";
     private static final int NOTIF_ID = 1;
@@ -55,6 +57,8 @@ public class QuizOverlayService extends Service {
     private static volatile boolean running = false;
     private static volatile boolean quizShowing = false;
     private static volatile int remainSec = 0;
+    /** 下一次出题的 elapsedRealtime 绝对截止；浅待机/进程冻结后仍按真实时间推进。 */
+    private static volatile long quizDeadline = 0L;
 
     /**
      * v1.3.0 未发布：供 ReviveReceiver / GuardWatchdog / 无障碍服务复用的安全拉起入口。
@@ -84,7 +88,11 @@ public class QuizOverlayService extends Service {
 
     public static boolean isRunning() { return running; }
     public static boolean isQuizShowing() { return quizShowing; }
-    public static int remainSec() { return remainSec; }
+    public static int remainSec() {
+        return quizDeadline > 0L
+                ? WakeClock.remainingSec(SystemClock.elapsedRealtime(), quizDeadline)
+                : remainSec;
+    }
 
     /**
      * 统一关闭入口。verified=true 表示调用方已完成家长密码门禁；
@@ -176,6 +184,36 @@ public class QuizOverlayService extends Service {
         }
     };
     private boolean homeReceiverRegistered = false;
+    /** 浅待机唤醒自愈：静态 SCREEN_ON 标准上收不到，服务存活时动态注册才可靠。 */
+    private boolean wakeReceiverRegistered = false;
+    private final BroadcastReceiver wakeReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context c, Intent i) {
+            GuardWatchdog.schedule(QuizOverlayService.this);
+            GuardWatchdog.scheduleAlarm(QuizOverlayService.this);
+            handler.removeCallbacks(tick);
+            handler.post(tick);
+            if (quizShowing && quizView != null) {
+                View v = quizView.view();
+                // 黑屏时 WMS 可能摘掉 overlay，quizShowing 却仍为 true：复位并补弹，
+                // 否则 tick 的 if (!quizShowing) 会永久跳过，守护再也不出题。
+                if (v.getWindowToken() == null && v.getParent() == null) {
+                    hideQuiz();
+                    arm(1);
+                }
+            }
+        }
+    };
+    private void registerWakeReceiver() {
+        if (wakeReceiverRegistered) return;
+        try {
+            IntentFilter f = new IntentFilter();
+            f.addAction(Intent.ACTION_SCREEN_ON);
+            f.addAction(Intent.ACTION_USER_PRESENT);
+            registerReceiver(wakeReceiver, f);
+            wakeReceiverRegistered = true;
+        } catch (Exception e) { Log.w(TAG, "wake receiver register failed", e); }
+    }
+
 
     private final OverlayQuizView.Listener listener = new OverlayQuizView.Listener() {
         @Override public void onAnswer(int idx) { answer(idx); }
@@ -225,8 +263,10 @@ public class QuizOverlayService extends Service {
             if (quizShowing && quizChannel == OverlayChannel.ACCESSIBILITY
                     && !GuardAccessibilityService.canHost()) hideQuiz();
             if (!quizShowing) {
-                remainSec--;
-                if (remainSec <= 0) showQuiz();
+                long now = SystemClock.elapsedRealtime();
+                remainSec = WakeClock.remainingSec(now, quizDeadline);
+                if (quizDeadline <= 0L) arm(interval);
+                else if (WakeClock.due(now, quizDeadline)) showQuiz();
             }
             long now = System.currentTimeMillis();
             if (now >= nextSyncAt && !st.bankUrl().isEmpty()) {
@@ -292,12 +332,22 @@ public class QuizOverlayService extends Service {
         // 不能用 START_NOT_STICKY 一走了之，否则开机后守护再也不会自己起来。
         if (!running) { leaveForeground(); stopSelf(); return START_STICKY; }
 
+        if (ACTION_QUIZ_ALARM.equals(action)) {
+            // 系统闹钟到点直接拉起；家长已关闭守护时不得被旁路重新打开。
+            if (!st.guardEnabled() || !GuardPolicy.canStartGuard(st.hasPin())) {
+                leaveForeground(); stopSelf(); return START_NOT_STICKY;
+            }
+            if (!running) startGuard();
+            handler.removeCallbacks(tick);
+            handler.post(tick);
+            return START_STICKY;
+        }
         if (ACTION_QUIZ_NOW.equals(action)) {
             forceNextQuiz = true;
             showQuiz();
         } else if (ACTION_RELOAD.equals(action)) {
             reload(false);
-            if (!quizShowing) remainSec = Math.min(remainSec, interval);
+            if (!quizShowing) arm(Math.min(remainSec(), interval));
         } else if (ACTION_SYNC.equals(action)) {
             syncNow(true);
         }
@@ -317,6 +367,10 @@ public class QuizOverlayService extends Service {
         if (homeReceiverRegistered) {
             try { unregisterReceiver(homeReceiver); } catch (Exception ignored) { }
             homeReceiverRegistered = false;
+        }
+        if (wakeReceiverRegistered) {
+            try { unregisterReceiver(wakeReceiver); } catch (Exception ignored) { }
+            wakeReceiverRegistered = false;
         }
         handler.removeCallbacks(tick);
         handler.removeCallbacks(focusCheck);
@@ -371,21 +425,42 @@ public class QuizOverlayService extends Service {
                 homeReceiverRegistered = true;
             } catch (Exception e) { Log.w(TAG, "home receiver register failed", e); }
         }
+        registerWakeReceiver();
         GuardWatchdog.schedule(this);
         GuardWatchdog.scheduleAlarm(this);
         reload(true);
         // 冷却截止时间戳在进程重启后仍生效：把剩余秒数接回倒计时，
         // 不让 force-stop / 重启直接洗掉惩罚（仅当家长开启冷却）。
         int pendingCooldown = restoreCooldown();
-        remainSec = Math.max(interval, pendingCooldown);
+        int restored = WakeClock.restoreRemaining(st.quizDeadline(), st.quizSavedWall(),
+                st.quizSavedElapsed(), System.currentTimeMillis(),
+                SystemClock.elapsedRealtime(), interval);
+        // 浅待机/进程被冻结后 elapsedRealtime 继续推进：deadline 早已过就 1 秒后补弹，
+        // 不再重置成整个 interval（这正是「按关机再开机后不再弹题」的根因）。
+        int sec = restored > 0 ? Math.max(restored, pendingCooldown)
+                : Math.max(1, pendingCooldown);
+        arm(sec);
         handler.removeCallbacks(tick);
         handler.postDelayed(tick, 1000);
         Toast.makeText(this, "答题守护已开启，切到其他应用也会按时弹题", Toast.LENGTH_SHORT).show();
     }
 
+    /** 统一设置倒计时：内存 + 持久化 + 系统闹钟，三条都指向同一个 deadline。 */
+    private void arm(int seconds) {
+        if (seconds < 0) seconds = 0;
+        long now = SystemClock.elapsedRealtime();
+        quizDeadline = WakeClock.deadline(now, seconds);
+        remainSec = seconds;
+        st.saveQuizDeadline(quizDeadline, System.currentTimeMillis(), now);
+        QuizAlarm.schedule(this, quizDeadline);
+    }
+
     private void stopAll() {
         handler.removeCallbacks(tick);
         handler.removeCallbacks(focusCheck);
+        QuizAlarm.cancel(this);
+        st.clearQuizDeadline();
+        quizDeadline = 0L;
         hideQuiz();
         if (media != null) media.release();
         running = false;
@@ -544,7 +619,7 @@ public class QuizOverlayService extends Service {
     }
 
     private void showQuiz() {
-        if (practiceMode) { remainSec = interval; return; }
+        if (practiceMode) { arm(interval); return; }
         if (quizShowing) return;
         // issue #37：家长手动「立即出题」不受时段限制；自动弹题按日程判定。
         boolean force = forceNextQuiz;
@@ -556,7 +631,7 @@ public class QuizOverlayService extends Service {
             if (!sd.allowed) {
                 // 只拦新题：不停服务、不改 guardEnabled、不重置整段 interval；
                 // 压到 1 秒让 tick 每秒重试，进入生效时段下一秒即可弹出。
-                remainSec = 1;
+                arm(1);
                 return;
             }
         }
@@ -566,14 +641,14 @@ public class QuizOverlayService extends Service {
             st.lastStartVia("blocked_no_channel");
             GuardNotice.overlayRevoked(this);
             // issue #46(2)：通道恢复后 1 秒内就弹，不要重置成一整个 interval。
-            remainSec = 1;
+            arm(1);
             return;
         }
         if (engine == null) reload(false);
         current = drawFresh();
         if (current == null) {
             // issue #46(2)：开机早期题库异步打开，30 秒内重试而不是等 10 分钟。
-            remainSec = Math.min(interval, 30);
+            arm(Math.min(interval, 30));
             Toast.makeText(this, "题库暂不可用，稍后重试", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -608,7 +683,7 @@ public class QuizOverlayService extends Service {
             // addView 成功后若出异常，必须无条件移除，否则遮罩会永久盖住系统界面
             quizShowing = false;
             removeOverlayNow();
-            remainSec = interval;
+            arm(interval);
             Toast.makeText(this, "无法显示答题遮罩：" + e.getMessage(), Toast.LENGTH_LONG).show();
             return;
         }
@@ -816,7 +891,7 @@ public class QuizOverlayService extends Service {
         pendingSwapHint = null;
         hideQuiz();
         if (media != null) media.quizFinished(st);
-        remainSec = interval;
+        arm(interval);
     }
 
     private void hideQuiz() {

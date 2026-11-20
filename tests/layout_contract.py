@@ -1153,10 +1153,11 @@ check("scheduleConfig()" in _sto137
                                      "schoolWindows(", "homeWindows(",
                                      "vacationRange(", "todayOverride(")),
       "settings store persists all schedule fields for both UIs")
+_muted137 = _svc137.find("if (!sd.allowed) {")
 check("SchedulePolicy.decide(" in _svc137
       and "st.scheduleConfig(), HolidayAssets.get(this));" in _svc137
-      and "if (!sd.allowed) {" in _svc137
-      and "remainSec = 1;" in _svc137,
+      and _muted137 >= 0
+      and "arm(1);" in _svc137[_muted137:_muted137 + 320],
       "guard service gates only new quizzes and retries every second while muted")
 _q137 = _svc137.find("if (quizShowing) return;")
 _d137 = _svc137.find("SchedulePolicy.decide(")
@@ -1407,7 +1408,41 @@ check("GuardWatchdog.scheduleBootRetry(c)" in _boot_r
       "boot failure always schedules a short retry instead of giving up")
 check("if (!running) { leaveForeground(); stopSelf(); return START_STICKY; }" in _svc_b,
       "failed guard start stays sticky so the system can relaunch it")
-check(_svc_b.count("remainSec = 1;") >= 2
+check(_svc_b.count("arm(1);") >= 2
       and "Math.min(interval, 30)" in _svc_b,
       "failed quiz attempts retry in seconds, not a full 10-minute interval")
+# ---- 浅待机/伪关机：到点闹钟 + elapsedRealtime 绝对 deadline ----
+_wc_b = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/WakeClock.java")))
+_qa_b = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/QuizAlarm.java")))
+_run_w = read(os.path.join(ROOT, "tests/run.sh"))
+check("WakeClock.due(now, quizDeadline)" in _svc_b
+      and "remainSec--" not in _svc_b,
+      "quiz countdown uses an elapsedRealtime deadline, not a per-second decrement")
+check("WakeClock.restoreRemaining(st.quizDeadline()" in _svc_b
+      and "st.saveQuizDeadline(quizDeadline" in _svc_b,
+      "deadline survives process death and is restored instead of resetting to 600s")
+check("QuizAlarm.schedule(this, quizDeadline)" in _svc_b
+      and "QuizAlarm.cancel(this)" in _svc_b,
+      "an alarm revives the guard at the deadline and is cancelled when parents stop it")
+check("ACTION_QUIZ_ALARM.equals(action)" in _svc_b
+      and "if (!st.guardEnabled() || !GuardPolicy.canStartGuard(st.hasPin())) {" in _svc_b
+      and "leaveForeground(); stopSelf(); return START_NOT_STICKY;" in _svc_b,
+      "the alarm cannot silently re-enable a guard the parent turned off")
+check("setExactAndAllowWhileIdle" in _qa_b
+      and "ELAPSED_REALTIME_WAKEUP" in _qa_b
+      and "getForegroundService" in _qa_b,
+      "the deadline alarm wakes the CPU and starts the foreground service directly")
+check("Intent.ACTION_SCREEN_ON" in _svc_b
+      and _svc_b.count("registerWakeReceiver()") >= 2
+      and "ACTION_USER_PRESENT" in _svc_b,
+      "wake broadcasts are registered dynamically because manifest SCREEN_ON is unreliable")
+check("getWindowToken() == null" in _svc_b and "hideQuiz();" in _svc_b,
+      "a detached overlay window resets quizShowing instead of deadlocking the tick")
+check("long ms = deadline - nowElapsed;\n        if (ms <= 0L) return 0;\n        int sec =" in _wc_b
+      and "nowElapsed < savedElapsed" in _wc_b,
+      "expired deadlines trigger an immediate quiz while cold boots start a new interval")
+check("WakeClock.java" in _run_w and "WakeClockTest" in _run_w,
+      "the new clock policy is compiled and exercised by the JVM runner")
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

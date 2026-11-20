@@ -38,6 +38,7 @@ mkdir -p "$OUT"
   app/src/com/jager/tvquiz/RoundPolicy.java \
   app/src/com/jager/tvquiz/QrEncoder.java \
   app/src/com/jager/tvquiz/CooldownPolicy.java \
+  app/src/com/jager/tvquiz/WakeClock.java \
   app/src/com/jager/tvquiz/DifficultyPolicy.java \
   app/src/com/jager/tvquiz/PracticeConfig.java \
   app/src/com/jager/tvquiz/UpdateConfig.java \
@@ -55,6 +56,7 @@ mkdir -p "$OUT"
   tests/src/SyllabusTest.java \
   tests/src/UnlockPolicyTest.java \
   tests/src/CooldownPolicyTest.java \
+  tests/src/WakeClockTest.java \
   tests/src/DifficultyPolicyTest.java \
   tests/src/PracticeConfigTest.java \
   tests/src/UpdateConfigTest.java \
@@ -70,7 +72,7 @@ mkdir -p "$OUT"
 TOTAL=0
 for t in PinGateTest QuizLayoutTest StopGuardTest StopStateTest GradeScopeTest \
          FeatureV6Test BehaviorV601Test SubjectWeightsTest SyllabusTest \
-         UnlockPolicyTest CooldownPolicyTest DifficultyPolicyTest PracticeConfigTest \
+         UnlockPolicyTest CooldownPolicyTest WakeClockTest DifficultyPolicyTest PracticeConfigTest \
          UpdateConfigTest RoundPolicyTest QuizTextSizerTest TextFitTest BootGuideTest QrEncoderTest StartGuardTest \
          OverlayChannelTest SchedulePolicyTest; do
   LOG="$ROOT/.build/$t.log"

@@ -241,6 +241,20 @@ public final class SettingsStore implements PinGate.Store {
                 .remove("cooldownSavedElapsed").remove("cooldownWrongCount").commit();
     }
 
+    /** 下一次出题的 elapsedRealtime 截止时刻 + 双基准快照，浅待机/进程被杀后仍可恢复。 */
+    public long quizDeadline() { return sp.getLong("quizDeadline", 0L); }
+    public long quizSavedWall() { return sp.getLong("quizSavedWall", 0L); }
+    public long quizSavedElapsed() { return sp.getLong("quizSavedElapsed", 0L); }
+    public void saveQuizDeadline(long deadline, long savedWall, long savedElapsed) {
+        sp.edit().putLong("quizDeadline", deadline)
+                .putLong("quizSavedWall", savedWall)
+                .putLong("quizSavedElapsed", savedElapsed).commit();
+    }
+    public void clearQuizDeadline() {
+        sp.edit().remove("quizDeadline").remove("quizSavedWall")
+                .remove("quizSavedElapsed").commit();
+    }
+
     // ---------- 频率 / 配比 / 在线源 ----------
 
     public int intervalSec() { return sp.getInt("interval", 600); }

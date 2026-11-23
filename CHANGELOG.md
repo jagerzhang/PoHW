@@ -1,11 +1,11 @@
 # Changelog
 
-> **版本口径**：对外发布 19 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
+> **版本口径**：对外发布 20 个正式 Release，按 `MAJOR.MINOR.PATCH` 递增：
 > **v1.0.0**（versionCode 12）、**v1.0.1**（13–17）、**v1.0.2**（18–21）、
 > **v1.2.0**（25–28）、**v1.2.1**（29–31）、**v1.2.2**（33）、**v1.2.3**（35）、
 > **v1.2.4**（37）、**v1.2.5**（39）、**v1.2.6**（41）、**v1.2.7**（43）、
 > **v1.3.0**（44）、**v1.3.1**（45）、**v1.3.2**（46）、**v1.3.3**（47）、
-> **v1.3.4**（50，低配 51）、**v1.3.5**（52，低配 53）、**v1.3.6**（54，低配 55）、**v1.3.7**（56，低配 57）。
+> **v1.3.4**（50，低配 51）、**v1.3.5**（52，低配 53）、**v1.3.6**（54，低配 55）、**v1.3.7**（56，低配 57）、**v1.3.8**（58，低配 59）。
 > `v1.1.0` 是未发布的开发版本线，成果由 v1.2.0 承接。
 > `versionCode` 是单调技术计数，同一版本线内的内部构建不单独发 Release，
 > 在本文件中以 `###` 子条目保留逐次改动。`v1`–`v6` 为开发期内部编号，
@@ -13,6 +13,37 @@
 > Android 覆盖安装要求 `versionCode` 严格递增，因此它不随展示版本重置。
 > **发布流程**：改动先进 feature 分支 → 开 Pull Request → GitHub Actions
 > 自动审核通过 → 合入 main；tag 与 Release 由维护者另行指定后创建。
+
+## v1.3.8 (versionCode 58) — explanation stay, balanced answers, standby recovery
+
+Display version 1.3.7 -> **1.3.8**, `versionCode` 56 -> **58**, same release
+keystore (SHA-256 `76eb6063b574...26172`). Twentieth published release.
+Android 4.0 legacy variant ships as `v1.3.8-legacy` / code 59.
+
+- **Configurable explanation stay** (issue #51): previously `grantUnlock()`
+  called `finishQuiz()` in the very next handler message, so the answer
+  explanation was visible for about one frame; under the default 5-question
+  group mode the four intermediate questions showed no explanation at all.
+  `SettingsStore` now offers six presets (instant / 3 / 5 / 8 / 15 seconds /
+  wait for any key, default 5s), exposed on the TV settings page, the phone
+  admin page and the config API. Every correct answer shows its explanation,
+  any key advances early, BACK stays consumed and volume keys still pass
+  through. Parent-turned-off auto-continue keeps the manual button.
+- **Balanced answer positions** (issue #51): the built-in bank puts the correct
+  answer at A in 31.89% of 9,544 questions (37.41% in grade 5) and
+  `Question.fromBank()` kept that server order verbatim. It now uses a
+  content-hash seeded deterministic shuffle (stable `Question.key()` and
+  `usedInRound`), plus in-round suppression of three consecutive identical
+  positions. Measured on the real bank: A drops 31.89% -> **25.05%** overall
+  and 37.41% -> **23.49%** in grade 5; P(>=4 A in a 5-question round) drops
+  6.86% -> **1.24%**. No signed-off bank data was changed.
+- **Standby / HOME recovery** (PR #50, previously unreleased): a
+  `ELAPSED_REALTIME_WAKEUP` exact alarm starts the foreground service at the
+  deadline, countdown uses a persisted `elapsedRealtime` deadline instead of a
+  per-second in-memory counter, and wake broadcasts recalibrate detached
+  overlay windows. This is the first published build containing that fix.
+- **Guards**: main contract 489, JVM 524, mutation 146/146; legacy contract
+  474, JVM 504, `high-api=0`; both release-signed builds.
 
 ## v1.3.7 (versionCode 56) — exact-grade pool and resilient boot autostart
 

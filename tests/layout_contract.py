@@ -1445,4 +1445,56 @@ check("long ms = deadline - nowElapsed;\n        if (ms <= 0L) return 0;\n      
       "expired deadlines trigger an immediate quiz while cold boots start a new interval")
 check("WakeClock.java" in _run_w and "WakeClockTest" in _run_w,
       "the new clock policy is compiled and exercised by the JVM runner")
+# ---- issue #51(2)：答案位置均衡 ----
+_eng_b = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/QuizEngine.java")))
+_ab_b = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/AnswerBalance.java")))
+_run_ab = read(os.path.join(ROOT, "tests/run.sh"))
+check("new Random(AnswerBalance.seed(text, opts))" in _eng_b
+      and "q.options = opts;" not in _eng_b,
+      "bank questions are deterministically shuffled instead of keeping the A-heavy order")
+check("Collections.shuffle(all, r)" in _eng_b
+      and "this.answerIndex = all.indexOf(correct);" in _eng_b,
+      "shuffled options keep the answer index in sync")
+check("AnswerBalance.shouldRedraw(answerHistory, q.answerIndex)" in _svc_b
+      and _svc_b.count("noteAnswer(current.answerIndex)") >= 2
+      and "resetAnswerHistory();" in _svc_b,
+      "a round suppresses repeated answer positions and records adopted ones")
+check("if (fallback == null) fallback = q;" in _svc_b
+      and "return fallback;" in _svc_b,
+      "a small bank still yields a question instead of an empty pool")
+check("long seed(String text, String[] options)" in _ab_b
+      and "run >= 2 || count >= 3" in _ab_b,
+      "the balance policy is content-stable and bounds both streaks and group totals")
+check("AnswerBalance.java" in _run_ab and "AnswerBalanceTest" in _run_ab,
+      "the balance policy is compiled and covered by the JVM runner")
+# ---- issue #51(1)：可配置答案解析停留 ----
+_v51 = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/OverlayQuizView.java")))
+_sa51 = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/SettingsActivity.java")))
+_api51 = strip_comments(read(os.path.join(ROOT,
+        "app/src/com/jager/tvquiz/AdminApi.java")))
+_js51 = read(os.path.join(ROOT, "app/assets/admin/app.js"))
+check("EXPLAIN_STAY_SEC = {0, 3, 5, 8, 15, -1}" in _st_new
+      and 'getInt("explainStayIdx", 2)' in _st_new,
+      "explanation stay offers six choices and defaults to five seconds")
+check("rowExplainStay = addRow" in _sa51 and "st.explainStayLabel()" in _sa51
+      and 'key: "explainStayIdx"' in _js51
+      and '"explainStayIdx"' in _api51,
+      "the stay setting is exposed on TV, phone admin and the config API")
+check("private void showExplain(String msg, String exp, Runnable next)" in _svc_b
+      and "handler.postDelayed(explainTask, stay * 1000L)" in _svc_b
+      and "int stay = st.explainStaySec();" in _svc_b
+      and "showExplain(\"✓ 答对啦！\", current.explain" in _svc_b,
+      "every correct answer shows its explanation for the parent-chosen delay")
+check("void onExplainContinue();" in _v51 and "setExplainHold(true)" in _svc_b
+      and "k != KeyEvent.KEYCODE_BACK" in _v51
+      and "public void setExplainHold(boolean hold) { explainHold = hold; }" in _v51,
+      "any key advances the explanation while BACK stays consumed")
+check("if (autoContinue) {" in _svc_b and "quizView.correctAuto(" in _svc_b,
+      "auto-continue still has its own branch and keeps the no-button layout")
+check("ExplainStayTest" in _run_ab,
+      "the stay presets are covered by a JVM regression")
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

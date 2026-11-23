@@ -59,7 +59,8 @@ public class SettingsActivity extends Activity {
     private EditText urlEdit;
     private Button rowGrade, rowInterval, rowScope, rowSync, rowTerm, rowUnit, rowEdition, rowQr;
     /** v1.1.0 四项可选加固，默认全关。 */
-    private Button rowStreak, rowStrict, rowCooldown, rowSource, rowDifficulty, rowAutoContinue;
+    private Button rowStreak, rowStrict, rowCooldown, rowSource, rowDifficulty, rowAutoContinue,
+            rowExplainStay;
     /** 在线源并排行：左检查题库更新 / 右自动更新，供行内左右焦点链使用。 */
     private Button[] bankPair;
     private Button[] rowWt = new Button[Subjects.COUNT];
@@ -410,6 +411,13 @@ public class SettingsActivity extends Activity {
         rowAutoContinue = addRow(quiz, "答对自动继续", new View.OnClickListener() {
             @Override public void onClick(View v) {
                 st.autoContinueOnCorrect(!st.autoContinueOnCorrect()); refreshRows();
+            }
+        });
+        rowExplainStay = addRow(quiz, "答案解析停留", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                st.explainStayIndex((st.explainStayIndex() + 1)
+                        % SettingsStore.EXPLAIN_STAY_LABELS.length);
+                refreshRows();
             }
         });
         rowRoundSize = addRow(quiz, "每组题量", new View.OnClickListener() {
@@ -934,6 +942,7 @@ public class SettingsActivity extends Activity {
         rowDifficulty.setText(new String[]{"不限（默认）", "低 · 偏易", "中", "高 · 偏难"}[st.difficultyLevel()]);
         rowAutoContinue.setText(st.autoContinueOnCorrect()
                 ? "开启（答对直接继续）" : "关闭（需点继续观看）");
+        rowExplainStay.setText(st.explainStayLabel());
         rowRoundSize.setText(st.questionsPerRound() + " 题 / 组（默认 5）");
         rowPassRate.setText(st.passPercent() + "% 答对即通过（默认 60%）");
         rowSource.setText(st.questionSource() == SettingsStore.SOURCE_KNOWLEDGE_ONLY

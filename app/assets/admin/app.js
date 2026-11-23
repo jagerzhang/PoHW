@@ -62,6 +62,8 @@
       { group: "01 出题基础", key: "difficultyLevel", label: "题目难度", type: "sel",
         opts: [[0, "不限"], [1, "低 · 偏易"], [2, "中"], [3, "高 · 偏难"]] },
       { group: "01 出题基础", key: "syncIndex", label: "自动更新频率", type: "sel", opts: syncs },
+      { group: "01 出题基础", key: "explainStayIdx", label: "答案解析停留", type: "sel",
+        opts: [[0, "立即继续"], [1, "3 秒"], [2, "5 秒"], [3, "8 秒"], [4, "15 秒"], [5, "按任意键继续"]] },
 
       { group: "02 可选开关", key: "allSubjects", label: "全学科（含物理/历史等）", type: "bool" },
       { group: "02 可选开关", key: "strictOneShot", label: "严格模式（每题 1 次机会）", type: "bool" },

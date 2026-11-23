@@ -1,24 +1,24 @@
 {
   "schema": 1,
-  "publishedAt": "2026-11-16",
+  "publishedAt": "2026-11-23",
   "main": {
-    "versionName": "1.3.7",
-    "versionCode": 56,
+    "versionName": "1.3.8",
+    "versionCode": 58,
     "minSdk": 21,
     "latest": "https://pohw.zhangge.net/dl/latest-main.apk",
-    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.7.apk",
-    "sha256": "0d4213e521b935924832deb0a32d51af50428ec5765e090df63b6e4bbbf6264e",
-    "size": 2451363,
-    "notes": "v1.3.7：修复 issue #46 两个问题。① 出题严格限定当前年级（原先 grade<=? 会让选 5 年级时约 80% 抽到低年级题，学期/单元约束也随之失效）；仅当本年级该学科确无题才逐级降年级并锁定学科复习。② 开机自启后不弹题：开机通道未就绪时不再直接放弃，无条件排守护任务与 60 秒短重试，启动失败由系统重启再试，弹题失败改为 1 秒/30 秒重试。沿用原发布证书，v1.3.6 可直接覆盖安装"
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.8.apk",
+    "sha256": "258d8d7c0bc4d1378a7b8f10a48a20c3de13fd1a6b23f278fc666bd6a1e0ea35",
+    "size": 2455459,
+    "notes": "v1.3.8：① 新增「答案解析停留」设置（立即/3/5/8/15 秒/按任意键继续，默认 5 秒），每题答对都显示解析，任意键可提前继续、返回键仍无效，电视设置页与手机后台均可配置。② 修复答案偏 A：内置题库正确答案 A 占 31.89%（5 年级 37.41%），改为题目内容哈希的确定性洗牌后回到约 25%，并抑制一组内连续同一答案位置。③ 首发上一版已合入但尚未发布的浅待机/HOME 返回守护修复：到点闹钟拉起前台服务 + elapsedRealtime 绝对 deadline，唤醒后立即补弹。沿用原发布证书，v1.3.7 可直接覆盖安装"
   },
   "legacy": {
-    "versionName": "1.3.7",
-    "versionCode": 57,
+    "versionName": "1.3.8",
+    "versionCode": 59,
     "minSdk": 14,
     "latest": "https://pohw.zhangge.net/dl/latest-legacy.apk",
-    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.7-legacy.apk",
-    "sha256": "c51fc0be46799dae8622833f3ad4d7eaaaef3f7ff1a77492e2d6573ef996d067",
+    "versioned": "https://pohw.zhangge.net/dl/PoHW-1.3.8-legacy.apk",
+    "sha256": "d4bc85c85c1c0ee5f69a806dec16e50a5ff750d226c0662ea2f3e6960666ff43",
     "size": 2451363,
-    "notes": "Android 4.0 低配变体 v1.3.7-legacy（versionCode 57 / minSdk 14）：与主线共用 issue #46 两项修复，开机短重试只用 AlarmManager，成品 dex high-api=0；读取 legacy 更新通道，可直接覆盖安装 55"
+    "notes": "Android 4.0 低配变体 v1.3.8-legacy（versionCode 59 / minSdk 14）：与主线共用答案解析停留、答案位置均衡与浅待机守护修复，成品 dex high-api=0；读取 legacy 更新通道，可直接覆盖安装 57"
   }
 }

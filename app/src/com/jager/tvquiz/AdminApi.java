@@ -26,7 +26,7 @@ public final class AdminApi {
             "termIndex", "unitLimit", "editionMode", "unlockStreak",
             "questionSource", "difficultyLevel", "syncIndex",
             "w0", "w1", "w2", "w3",
-            "readMode"
+            "readMode", "explainStayIdx"
     };
     private static final String[] BOOL_KEYS = {
             "allSubjects", "strictOneShot", "cooldownEnabled", "autoContinueOnCorrect",
@@ -117,6 +117,7 @@ public final class AdminApi {
         s.append(",\"scheduleEnabled\":").append(st.scheduleEnabled());
         s.append(",\"skipHolidays\":").append(st.skipHolidays());
         s.append(",\"readMode\":").append(st.readMode());
+        s.append(",\"explainStayIdx\":").append(st.explainStayIndex());
         s.append(",\"ttsState\":").append(st.ttsState());
         s.append(",\"ttsStateText\":\"")
                 .append(SpeechReader.stateLabel(st.ttsState())).append("\"");
@@ -198,6 +199,8 @@ public final class AdminApi {
                     SettingsStore.SYNC_HOURS.length - 1));
             else if ("readMode".equals(key)) st.readMode(clamp(v, 0,
                     SettingsStore.READ_MODE_LABELS.length - 1));
+            else if ("explainStayIdx".equals(key)) st.explainStayIndex(clamp(v, 0,
+                    SettingsStore.EXPLAIN_STAY_LABELS.length - 1));
             else if (key.length() == 2 && key.charAt(0) == 'w') {
                 int idx = key.charAt(1) - '0';
                 if (idx >= 0 && idx < Subjects.COUNT) {

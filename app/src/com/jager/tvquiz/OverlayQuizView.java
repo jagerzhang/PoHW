@@ -38,6 +38,8 @@ public final class OverlayQuizView {
         void onSpeakRequest(int selected);
         /** 可见朗读按钮：连题干带当前高亮选项一起读，关闭状态也允许试听。 */
         void onSpeakAll(int selected);
+        /** 解析停留期间按任意键：提前继续，返回键仍被消费。 */
+        void onExplainContinue();
     }
 
     private static final class Root extends FrameLayout {
@@ -67,6 +69,8 @@ public final class OverlayQuizView {
     private final QuizFlow flow = new QuizFlow();
     /** 第 5 个遥控器目标：题干右上角可见的朗读按钮。 */
     private boolean speakFocused = false;
+    /** issue #51(1)：解析停留期间由服务接管按键。 */
+    private boolean explainHold = false;
     /** 朗读不支持提示的序号：只有最后一次提示有权在延时后收起。 */
     private int speakNoticeSeq = 0;
 
@@ -308,6 +312,7 @@ public final class OverlayQuizView {
         cont.setVisibility(View.INVISIBLE);
         // 换题必须整体重置状态机：累计答错次数、禁用选项、高亮、答对标志。
         flow.reset();
+        explainHold = false;
         int optionSp = QuizTextSizer.optionSp(q.options);
         for (int i = 0; i < 4; i++) {
             opts[i].setTextSize(TypedValue.COMPLEX_UNIT_SP, optionSp);
@@ -318,6 +323,9 @@ public final class OverlayQuizView {
     }
 
     /** 答错一次：flow.submit() 已在服务侧禁用该选项，这里只负责提示与重绘。 */
+    /** 由服务在答对后打开 / 关闭解析停留按键拦截。 */
+    public void setExplainHold(boolean hold) { explainHold = hold; }
+
     public void wrong(int idx, String msg) {
         result.setTextColor(Ui.RED);
         result.setText(msg);
@@ -371,6 +379,17 @@ public final class OverlayQuizView {
     // ---------- 键盘路由：把 Android KeyEvent 翻成语义后交给 KeyRouter ----------
 
     private boolean onKey(KeyEvent e) {
+        if (explainHold) {
+            int k = e.getKeyCode();
+            // 音量键交回系统；返回键消费但不放行，守护不可被绕过。
+            if (k == KeyEvent.KEYCODE_VOLUME_UP || k == KeyEvent.KEYCODE_VOLUME_DOWN
+                    || k == KeyEvent.KEYCODE_VOLUME_MUTE) return false;
+            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0
+                    && k != KeyEvent.KEYCODE_BACK && listener != null) {
+                listener.onExplainContinue();
+            }
+            return true;
+        }
         int[] value = new int[1];
         int semantic = semanticOf(e.getKeyCode(), value);
         KeyRouter.Decision d = KeyRouter.decide(

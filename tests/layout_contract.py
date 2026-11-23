@@ -1407,4 +1407,39 @@ check("long ms = deadline - nowElapsed;\n        if (ms <= 0L) return 0;\n"
       "expired deadlines trigger an immediate quiz while cold boots start a new interval")
 check("WakeClock.java" in _run_w and "WakeClockTest" in _run_w,
       "the new clock policy is compiled and exercised by the JVM runner")
+# ---- issue #51：答案位置均衡 + 可配置解析停留（低配同规）----
+_eng51 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizEngine.java"))
+_ab51 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/AnswerBalance.java"))
+_svc51 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/QuizOverlayService.java"))
+_view51 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/OverlayQuizView.java"))
+_st51 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsStore.java"))
+_sa51 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/SettingsActivity.java"))
+_api51 = read(os.path.join(ROOT, "app/src/com/jager/tvquiz/AdminApi.java"))
+_js51 = read(os.path.join(ROOT, "app/assets/admin/app.js"))
+_run51 = read(os.path.join(ROOT, "tests/run.sh"))
+check("new Random(AnswerBalance.seed(text, opts))" in _eng51
+      and "q.options = opts;" not in _eng51,
+      "bank questions are deterministically shuffled instead of keeping the A-heavy order")
+check("AnswerBalance.shouldRedraw(answerHistory, q.answerIndex)" in _svc51
+      and _svc51.count("noteAnswer(current.answerIndex)") >= 2,
+      "a round suppresses repeated answer positions and records adopted ones")
+check("long seed(String text, String[] options)" in _ab51
+      and "run >= 2 || count >= 3" in _ab51,
+      "the balance policy is content-stable and bounds streaks and group totals")
+check("EXPLAIN_STAY_SEC = {0, 3, 5, 8, 15, -1}" in _st51
+      and 'getInt("explainStayIdx", 2)' in _st51,
+      "explanation stay offers six choices and defaults to five seconds")
+check("rowExplainStay = addRow" in _sa51
+      and 'key: "explainStayIdx"' in _js51 and '"explainStayIdx"' in _api51,
+      "the stay setting is exposed on TV, phone admin and the config API")
+check("handler.postDelayed(explainTask, stay * 1000L)" in _svc51
+      and "int stay = st.explainStaySec();" in _svc51
+      and 'showExplain("✓ 答对啦！", current.explain' in _svc51,
+      "every correct answer shows its explanation for the parent-chosen delay")
+check("void onExplainContinue();" in _view51
+      and "public void setExplainHold(boolean hold) { explainHold = hold; }" in _view51
+      and "setExplainHold(true)" in _svc51,
+      "any key advances the explanation while BACK stays consumed")
+check("AnswerBalanceTest" in _run51 and "ExplainStayTest" in _run51,
+      "both new policies are compiled and covered by the JVM runner")
 print("LAYOUT_CONTRACT_OK total=%d" % TOTAL)

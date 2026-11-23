@@ -66,13 +66,13 @@ public final class QuizEngine {
             for (String o : opts) {
                 if (o == null || o.trim().isEmpty() || !seen.add(o)) return null;
             }
-            Question q = new Question(subject, topic, text, opts[ai],
+            // issue #51(2)：内置题库正确答案偏 A（31.89%，5 年级 37.41%）。
+            // 用题目内容哈希做种子走构造器自带的 Collections.shuffle，答案位置
+            // 回到约 25%；确定性保证同一题洗牌结果稳定，key()/usedInRound 不失效。
+            return new Question(subject, topic, text, opts[ai],
                     Arrays.asList(opts[0], opts[1], opts[2], opts[3]),
-                    explain == null ? "" : explain, "bank", new Random());
-            // 固定为服务端给出的选项顺序，不重排
-            q.options = opts;
-            q.answerIndex = ai;
-            return q;
+                    explain == null ? "" : explain, "bank",
+                    new Random(AnswerBalance.seed(text, opts)));
         }
 
         /** 稳定去重键：长度前缀编码全部语义字段，抗碰撞且答案感知。 */

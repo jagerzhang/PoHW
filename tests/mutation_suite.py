@@ -81,6 +81,9 @@ AF = os.path.join(SRC, "AutoFitText.java")
 SF = os.path.join(SRC, "SpeakFocus.java")
 SPD = os.path.join(SRC, "SpeakerDrawable.java")
 WC = os.path.join(SRC, "WakeClock.java")
+AB = os.path.join(SRC, "AnswerBalance.java")
+ABT = os.path.join(ROOT, "tests/src/AnswerBalanceTest.java")
+EST = os.path.join(ROOT, "tests/src/ExplainStayTest.java")
 QA = os.path.join(SRC, "QuizAlarm.java")
 WCT = os.path.join(ROOT, "tests/src/WakeClockTest.java")
 BK_DIR = tempfile.mkdtemp(prefix="pohw_mut_bk_")
@@ -90,7 +93,7 @@ for _i, p in enumerate((M, S, E, D, O, ST, W, DO, LP, B, MF, C, CHK, SYL, SYLJ, 
            RP, GW, OVL, AXML, OVLQ, ADMAS, QRJ, QTS,
            GP, BR, PV, PAIR, LAN, SGT, API, AIDX, AJS, ACSS,
            HC, SP, HA, HOLJ, HOLV, HCHK, HFETCH, SPT, RUNSH, BOOTSET,
-           SPEECH, KROUT, TF, AF, SF, SPD, WC, QA, WCT)):
+           SPEECH, KROUT, TF, AF, SF, SPD, WC, QA, WCT, AB, ABT, EST)):
     # 不同目录下的同名文件（site/index.html 与 admin/index.html）必须用不同备份名，
     # 否则 restore() 会把手机管理页写回官网首页。
     BK[p] = os.path.join(BK_DIR, "%03d_%s.bk" % (_i, os.path.basename(p)))
@@ -539,6 +542,38 @@ MUTATIONS = [
      ("EG", "alarm can bypass a parent turning the guard off",
        lambda: replace(OVL, "if (!st.guardEnabled() || !GuardPolicy.canStartGuard(st.hasPin())) {\n                leaveForeground(); stopSelf(); return START_NOT_STICKY;\n            }",
                        ""), False, True, False),
+     ("HA", "bank questions keep the A-heavy server order",
+       lambda: replace(os.path.join(SRC, "QuizEngine.java"),
+                       "new Random(AnswerBalance.seed(text, opts))",
+                       "new Random()"), False, True, False),
+     ("HB", "in-round answer position suppression dropped",
+       lambda: replace(OVL, "AnswerBalance.shouldRedraw(answerHistory, q.answerIndex)",
+                       "false"), False, True, False),
+     ("HC", "a new quiz no longer records its answer position",
+       lambda: replace(OVL,
+                       "resetAnswerHistory();\n        usedInRound.add(current.key());\n"
+                       "        noteAnswer(current.answerIndex);",
+                       "resetAnswerHistory();\n        usedInRound.add(current.key());"),
+       False, True, False),
+     ("HD", "streak suppression weakened",
+       lambda: replace(AB, "return run >= 2 || count >= 3;", "return false;"),
+       False, True, False),
+     ("HE", "explanation stay removed in favour of the old instant finish",
+       lambda: replace(OVL, "handler.postDelayed(explainTask, stay * 1000L);",
+                       "handler.post(explainTask);"), False, True, False),
+     ("HF", "parent-chosen stay duration ignored",
+       lambda: replace(OVL, "int stay = st.explainStaySec();", "int stay = 0;"),
+       False, True, False),
+     ("HG", "explanation hold no longer intercepts keys",
+       lambda: replace(OVLQ, "public void setExplainHold(boolean hold) { explainHold = hold; }",
+                       "public void setExplainHold(boolean hold) { explainHold = false; }"),
+       False, True, False),
+     ("HH", "the stay default falls back to instant",
+       lambda: replace(ST, 'getInt("explainStayIdx", 2)',
+                       'getInt("explainStayIdx", 0)'), False, True, False),
+     ("HI", "phone admin loses the stay selector",
+       lambda: replace(AJS, 'key: "explainStayIdx"', 'key: "explainStayRemoved"'),
+       False, True, False),
      ("DP", "line-count constraint removed from the fit policy",
        lambda: replace(os.path.join(SRC, "TextFit.java"),
                        "if (lineCounts[i] > maxLines) continue;", ""),

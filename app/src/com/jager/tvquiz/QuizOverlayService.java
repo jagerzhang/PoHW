@@ -129,11 +129,25 @@ public class QuizOverlayService extends Service {
     private static volatile boolean practiceMode = false;
     /** issue #37：家长手动「立即出题」豁免时段门禁，一次性消费。 */
     private boolean forceNextQuiz = false;
+    /** issue #51(1)：答对后解析停留状态与待执行的下一步。 */
+    private boolean explaining = false;
+    private Runnable pendingNext = null;
+    private Runnable explainTask = null;
     public static void setPracticeMode(boolean v) { practiceMode = v; }
     public static boolean isPracticeMode() { return practiceMode; }
 
     private int interval = 600;
     private String lastKey = "";
+    /** issue #51(2)：最近实际采用的答案位置（末尾最新），-1 为空位。 */
+    private final int[] answerHistory = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    private void resetAnswerHistory() {
+        for (int i = 0; i < answerHistory.length; i++) answerHistory[i] = -1;
+    }
+    private void noteAnswer(int idx) {
+        for (int i = 0; i < answerHistory.length - 1; i++)
+            answerHistory[i] = answerHistory[i + 1];
+        answerHistory[answerHistory.length - 1] = idx;
+    }
     private long nextSyncAt = 0L;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -217,7 +231,10 @@ public class QuizOverlayService extends Service {
 
     private final OverlayQuizView.Listener listener = new OverlayQuizView.Listener() {
         @Override public void onAnswer(int idx) { answer(idx); }
-        @Override public void onContinue() { finishQuiz(); }
+        @Override public void onContinue() {
+            if (explaining) proceedExplain(); else finishQuiz();
+        }
+        @Override public void onExplainContinue() { proceedExplain(); }
         @Override public void onWindowFocus(boolean hasFocus) { onQuizWindowFocus(hasFocus); }
         @Override public void onSpeakRequest(int selected) { speakCurrent(selected); }
         @Override public void onSpeakAll(int selected) { speakAll(selected); }
@@ -375,6 +392,7 @@ public class QuizOverlayService extends Service {
         handler.removeCallbacks(tick);
         handler.removeCallbacks(focusCheck);
         handler.removeCallbacks(pendingSwapTask);
+        cancelExplainTask();
         hideQuiz();
         if (media != null) media.release();
         if (speech != null) speech.close();
@@ -456,6 +474,7 @@ public class QuizOverlayService extends Service {
     }
 
     private void stopAll() {
+        cancelExplainTask();
         handler.removeCallbacks(tick);
         handler.removeCallbacks(focusCheck);
         QuizAlarm.cancel(this);
@@ -549,6 +568,7 @@ public class QuizOverlayService extends Service {
 
     /** 每次弹题都换一道与上一题不同的题；单题题库会退回同一题，由 answer() 处理。 */
     private QuizEngine.Question drawFresh() {
+        QuizEngine.Question fallback = null;
         for (int i = 0; i < 12; i++) {
             if (engine == null) break;
             QuizEngine.Question q = engine.next();
@@ -558,10 +578,17 @@ public class QuizOverlayService extends Service {
             // 选项过长在遥控器四选一里必然被固定高度裁切，直接跳过换一道。
             if (!QuizTextSizer.optionsFitTv(q.options)) continue;
             if (!QuizTextSizer.questionFitTv(q.text)) continue;
+            // issue #51(2)：连续三题同一答案位置 / 一组里同位置三次都要重抽。
+            if (AnswerBalance.shouldRedraw(answerHistory, q.answerIndex)) {
+                if (fallback == null) fallback = q;
+                continue;
+            }
             lastKey = k;
             return q;
         }
-        return null;
+        // 小题库里找不到更均衡的题时仍要出题，不能把守护卡成空池。
+        if (fallback != null) lastKey = fallback.key();
+        return fallback;
     }
 
     private String metaFor(QuizEngine.Question q) {
@@ -660,7 +687,9 @@ public class QuizOverlayService extends Service {
         unlock.reset();
         round.reset();
         usedInRound.clear();
+        resetAnswerHistory();
         usedInRound.add(current.key());
+        noteAnswer(current.answerIndex);
         pendingSwapHint = null;
         cancelPendingSwap();
         view.bind(current, metaFor(current));
@@ -764,15 +793,27 @@ public class QuizOverlayService extends Service {
             cooldown.reset();
             st.clearCooldown();
             if (roundMode == SettingsStore.ROUND_STREAK) {
-                if (!unlock.onCorrect()) { swapQuestion(unlock.progress()); return; }
+                if (!unlock.onCorrect()) {
+                    showExplain("✓ 答对啦！", current.explain, new Runnable() {
+                        @Override public void run() { swapQuestion(unlock.progress()); }
+                    });
+                    return;
+                }
             } else if (roundMode == SettingsStore.ROUND_GROUP) {
                 int r = round.onAnswer(true);
-                if (r == RoundPolicy.CONTINUE) { swapQuestion(round.progress()); return; }
+                if (r == RoundPolicy.CONTINUE) {
+                    showExplain("✓ 答对啦！", current.explain, new Runnable() {
+                        @Override public void run() { swapQuestion(round.progress()); }
+                    });
+                    return;
+                }
                 if (r == RoundPolicy.FAIL) {
-                    String msg = round.result(false);
+                    final String msg = round.result(false);
                     round.reset();
                     usedInRound.clear();
-                    swapQuestion(msg);
+                    showExplain("本组未通过", current.explain, new Runnable() {
+                        @Override public void run() { swapQuestion(msg); }
+                    });
                     return;
                 }
             }
@@ -811,16 +852,60 @@ public class QuizOverlayService extends Service {
         quizView.wrong(idx, hint);
     }
 
-    /** 组任务达标的统一解锁出口；答对自动继续时必须 post 出按键分发栈。 */
-    private void grantUnlock(String prefix) {
+    /** issue #51(1)：答对后先展示本题解析，停留时长由家长设置；任意键可提前继续。 */
+    private void showExplain(String msg, String exp, Runnable next) {
+        cancelExplainTask();
+        explaining = true;
+        pendingNext = next;
+        int stay = st.explainStaySec();
+        boolean manual = stay < 0;
         if (autoContinue) {
-            quizView.correctAuto(prefix + "自动继续观看 " + interval + " 秒", current.explain);
-            handler.post(new Runnable() {
-                @Override public void run() { if (quizShowing) finishQuiz(); }
-            });
+            if (manual) {
+                quizView.correct(msg + " · 按任意键继续", exp);
+            } else if (stay == 0) {
+                quizView.correctAuto(msg, exp);
+            } else {
+                quizView.correctAuto(msg + " · " + stay + " 秒后继续（任意键可跳过）", exp);
+            }
         } else {
-            quizView.correct(prefix + "继续观看 " + interval + " 秒", current.explain);
+            // 家长关闭「答对自动继续」时始终保持解析，点「继续观看」才走下一步。
+            quizView.correct(msg + " · 点继续观看", exp);
         }
+        quizView.setExplainHold(true);
+        if (!autoContinue || manual) return;
+        if (stay == 0) {
+            handler.post(new Runnable() {
+                @Override public void run() { proceedExplain(); }
+            });
+            return;
+        }
+        explainTask = new Runnable() {
+            @Override public void run() { proceedExplain(); }
+        };
+        handler.postDelayed(explainTask, stay * 1000L);
+    }
+
+    private void proceedExplain() {
+        if (!explaining) return;
+        explaining = false;
+        cancelExplainTask();
+        if (quizView != null) quizView.setExplainHold(false);
+        Runnable n = pendingNext;
+        pendingNext = null;
+        // post 出按键 / click 分发栈，避免在栈内同步 removeViewImmediate()。
+        if (n != null) handler.post(n);
+    }
+
+    private void cancelExplainTask() {
+        if (explainTask != null) handler.removeCallbacks(explainTask);
+        explainTask = null;
+    }
+
+    /** 组任务达标的统一解锁出口：同样先展示解析再关闭遮罩。 */
+    private void grantUnlock(String prefix) {
+        showExplain(prefix, current.explain, new Runnable() {
+            @Override public void run() { if (quizShowing) finishQuiz(); }
+        });
     }
 
     /** 原地换题：窗口不 remove/add，避免再次触发窗口焦点状态机。 */
@@ -833,6 +918,7 @@ public class QuizOverlayService extends Service {
         if (next != null) usedInRound.add(next.key());
         if (next != null && !next.key().equals(current.key())) {
             current = next;
+            noteAnswer(current.answerIndex);
             st.bumpQuestioned();
             quizView.bind(current, metaFor(current));
             if (hintMsg != null) quizView.hint(hintMsg);
@@ -883,6 +969,8 @@ public class QuizOverlayService extends Service {
     private void finishQuiz() {
         if (!quizShowing) return;
         cancelPendingSwap();
+        cancelExplainTask();
+        explaining = false;
         cooldown.reset();
         st.clearCooldown();
         unlock.reset();
@@ -896,6 +984,9 @@ public class QuizOverlayService extends Service {
 
     private void hideQuiz() {
         cancelPendingSwap();
+        cancelExplainTask();
+        explaining = false;
+        if (quizView != null) quizView.setExplainHold(false);
         handler.removeCallbacks(focusCheck);
         focusRecovering = false;
         quizShowing = false;

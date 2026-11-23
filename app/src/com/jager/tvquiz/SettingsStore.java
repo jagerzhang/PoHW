@@ -191,6 +191,20 @@ public final class SettingsStore implements PinGate.Store {
         sp.edit().putBoolean("autoContinueOnCorrect", v).commit();
     }
 
+    /** issue #51(1)：答对后解析停留档位；-1 = 按任意键才继续。默认索引 2 = 5 秒。 */
+    public static final int[] EXPLAIN_STAY_SEC = {0, 3, 5, 8, 15, -1};
+    public static final String[] EXPLAIN_STAY_LABELS = {
+            "立即继续", "3 秒", "5 秒", "8 秒", "15 秒", "按任意键继续"};
+    public int explainStayIndex() {
+        return clamp(sp.getInt("explainStayIdx", 2), 0, EXPLAIN_STAY_LABELS.length - 1);
+    }
+    public void explainStayIndex(int v) {
+        sp.edit().putInt("explainStayIdx",
+                clamp(v, 0, EXPLAIN_STAY_LABELS.length - 1)).commit();
+    }
+    public int explainStaySec() { return EXPLAIN_STAY_SEC[explainStayIndex()]; }
+    public String explainStayLabel() { return EXPLAIN_STAY_LABELS[explainStayIndex()]; }
+
     /** v1.3.0 未发布：答题模式 0=单题 1=连续答对 2=按组（默认）。 */
     public static final int ROUND_SINGLE = 0;
     public static final int ROUND_STREAK = 1;
